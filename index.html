@@ -27,7 +27,11 @@
 <div>
 <button id="btnPause" style="background-color:hotpink;height:40px;width:100%" onclick='btnPauseOnClick()'> Пауза </button>
 </div>
-    
+
+<div>
+    <textarea id="idTextTime" style="width:100%;height:20px;"> </textarea>
+</div>
+
 <div> Навигация по текущей тренировке  </div>
 <div style="height:100px;overflow-y:scroll;border:2px solid #a1a1a1;">
 <ul id="currentT"></ul>
@@ -83,7 +87,8 @@
  var Gl_aMultiCalendar  
  var Gl_DaysBeforeNowForShow = 0 //выводить в календаре дела за Gl_DaysBeforeNowForShow дней до сегодняшнего
  var Gl_DaysAfterNowForShow = 365//выводить в календаре дала за Gl_DaysАfterNowForShow дней после сегодняшнего
- 
+
+ var GlBegTime = new Date()
     
 
  //Календарь тренировок
@@ -327,7 +332,8 @@
   var inputMaxDay = document.getElementById("inputMaxDay");    
   var getTextToPrint = document.getElementById("getTextToPrint"); 
   var selectAllTrain = document.getElementById("selectAllTrain");   
-  var btnSelectAllTrain = document.getElementById("btnSelectAllTrain"); 
+  var btnSelectAllTrain = document.getElementById("btnSelectAllTrain");
+  var txtTextTime  = document.getElementById("idTextTime");
   Gl_DaysBeforeNowForShow = inputMinDay.value;  
   Gl_DaysAfterNowForShow = inputMaxDay.value;    
   var Gl_currentTrainName =""
@@ -491,8 +497,10 @@
               }
               nTime = Math.round(10*nTime/(1000*60))/10;
                 
-             //!! не удалять !! 
+             GlBegTime = new Date()
+             //!! не удалять !!
              say('Тренировка продлится ' +nTime+' минут');
+
                 //!GltxtSpeek.value+='Тренировка продлится ' +nTime+' минут'+'\n\n';
             }catch(e){};
 
@@ -500,6 +508,8 @@
           if (GlflSayIntro2) {
             if (GlnInd <(Gl_aRithmLisp.length)){
               dCurr = new Date();
+              var dT = (dCurr-GlBegTime)
+              txtTextTime.value = "Прошло:   "+Math.floor(dT/(60*1000)) + "  минут  " + (Math.floor(dT/(1000)))%60 + "  секунд"
               if((dCurr-GldPrev)>=GlnDelta){ //прошел требуемый интервал
                      //----онлайн параметры--------------------------------------
                      _номер_итерации_+=1;
