@@ -61,7 +61,7 @@ var TEST_Gl_aRithm = [ //1500 раз 180+дельта шагов в мин (3 ш
   //пытаемся вычислить строку как формулу. если не получается оставляем строку как есть
   function ev(s){
   	  if (!((s.trim())==""))
-  	    try{return eval(s)} catch {return s}
+  	    try{return eval(s)} catch (exception ){return s}
   	  else return ""
   }
  
