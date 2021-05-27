@@ -15,9 +15,9 @@ var Gl_ShortDescription = "";
 
         
 //Итоговый массив ритма, который будет расчитан по из генератора    
-var TEST_Gl_aRithm = [ //1500 раз 180+дельта шагов в мин (3 ш в сек). где дельта от -100 до 100 гармонич меняется за 2.5 мин  (750сек 125 знам) на полпериода
-                  [1500,"(180+20 + 120*Math.sin(3.14*_прошлосекунд_/100))/(2*3*60)",0,"говорим",                 
-                ];     
+//var TEST_Gl_aRithm = [ //1500 раз 180+дельта шагов в мин (3 ш в сек). где дельта от -100 до 100 гармонич меняется за 2.5 мин  (750сек 125 знам) на полпериода
+ //                 [1500,"(180+20 + 120*Math.sin(3.14*_прошлосекунд_/100))/(2*3*60)",0,"говорим",                 
+  //              ];     
 
   //=== глобали для использования в настройке массивов  =====
   var _номеритерации_  = 1
@@ -66,12 +66,12 @@ var TEST_Gl_aRithm = [ //1500 раз 180+дельта шагов в мин (3 ш
   }
  
 
-  //текст текущего упражнения.
-  function fget_TextToSpeek(aDealIndexes)
-  { alert('Заменить на ev(текст из ритма)')
-  
-     return 'Заменить на ev(текст из ритма)';
-  } //fget_TextToSpeek
+ //текст текущего упражнения.
+ function fget_TextToSpeek(aDealIndexes)
+{alert('Заменить на ev(текст из ритма)')
+
+ return 'Заменить на ev(текст из ритма)';
+} //fget_TextToSpeek
   
 
  
@@ -197,7 +197,7 @@ function testF(){alert('test')}
     //===================================================================
     ];
      
-  var button = document.getElementById("idStartBtn");//.body.firstElementChild;
+  var button = document.getElementById("idStartBtn");//.body.firstElementChild;
   var GltxtSpeek  = document.getElementById("idTextsToSpeek");  
   var GlUtterance = new SpeechSynthesisUtterance("");      
   var actions = document.getElementById("actions");  
@@ -857,112 +857,4 @@ function calcEval(nMode,str){ //вычисляем вставки [eval]
         
         
         */
-    /*  
-    //основная функция. Проверяет - если в данный момент времени нужно сгененить упражнения, то генерит
-  function fMain()
-  { //если указана отсрочка старта - не идем дальше, пока не сбросим ее в 0
-    if (GlnDelay > 0) {
-      var 
-      dCurrWait = new Date();
-      var 
-      HCurrWait = dCurrWait.getHours();
-      var 
-      MCurrWait = dCurrWait.getMinutes();
-      var 
-      SCurrWait = dCurrWait.getSeconds();
-      var 
-      MsCurrWait = dCurrWait.getMilliseconds();
-      
-      if ((HCurrWait - Gl_H)*60*60+(MCurrWait - Gl_M)*60+(SCurrWait - Gl_S) >= 1){
-        GlnDelay = GlnDelay - 1;
-        Gl_dBeg = new Date();
-        Gl_H = Gl_dBeg.getHours();
-        Gl_M = Gl_dBeg.getMinutes();
-        Gl_S = Gl_dBeg.getSeconds();    
-        Gl_Ms = Gl_dBeg.getMilliseconds();
-        if ((GlnDelay == 0)&&(!(button.firstChild.data == TXT_BTN_PAUSED))) {
-          GltxtSpeek.value = GltxtSpeek.value + "=== " + Gl_H + ":" + Gl_M + ":" + Gl_S + " ===  ОЖИДАНИЕ ОТСРОЧЕННОГО СТАРТА ЗАВЕРШЕНО ====" + "\n\n";
-          GltxtSpeek.scrollTop = GltxtSpeek.scrollHeight;
-          try {
-            var utterance2 = new SpeechSynthesisUtterance("ОЖИДАНИЕ ОТСРОЧЕННОГО СТАРТА ЗАВЕРШЕНО");
-            window.speechSynthesis.speak(utterance2);
-          }
-          catch {
-      	     //GltxtSpeek.value = GltxtSpeek.value + "НЕ ПОДКЛЮЧЕН СИНТЕЗАТОР ЗВУКА\n";
-          };            
-        };
-        return;
-      }  
-    } 
-      
-      
-    if ((GlnDelay == 0)&&
-      ((button.firstChild.data == TXT_BTN_NOTSTARTED)||(button.firstChild.data == TXT_BTN_STARTED))){ 
-      var dCurr = new Date();
-      var HCurr = dCurr.getHours();
-      var MCurr = dCurr.getMinutes();
-      var SCurr = dCurr.getSeconds();
-      var MsCurr = dCurr.getMilliseconds();
-      //попытка не дать системе заснуть
-      //if (sCurr%2 == 0){
-      	//  button.style.backgroundColor = "#F6F6f6";}
-     // else {
-      //  button.style.backgroundColor = "#fc0707";}
-      var nRandDispers = Math.floor(Math.random() *ev(String(Gl_aRithm[0][1])) * ev(String(Gl_aRithm[0][2])) / 100);
-      nRandDispers *= Math.floor(Math.random() * 3 - 1);//+1 or -1 random
-      if ((HCurr - Gl_H)*60*60+(MCurr - Gl_M)*60+(SCurr - Gl_S) + (MsCurr - Gl_Ms)/1000 >= Gl_CurrDt + nRandDispers){
-        var dNow1 = new Date()
-        _прошловремениВПроцентах_ = Math.floor(100*(dNow1 - Gl_dBegTraining)/(1000*(Gl_duration+1)))
-        _прошломилисекунд_ =Math.floor((dNow1 - Gl_dBegTraining))
-        _прошлосекунд_ = Math.floor( _прошломилисекунд_/1000)
-        _прошломинут_ = Math.floor(_прошлосекунд_/60)
-        _прошлочасов_ = Math.floor(_прошломинут_/60)
-        var sTextToSpeek = fget_TextToSpeek(Gl_aRithm[0][3]);
-        //
-        var dNow = new Date();
-        var dT = dNow - dNowPrev;
-        dNowPrev = dNow;
-        GltxtSpeek.value = GltxtSpeek.value + "  " + dNow.getHours() + ":" + dNow.getMinutes() + ":" + dNow.getSeconds()  + ":" + dNow.getMilliseconds()+ "  Случ.сдвиг = " + nRandDispers + " сек.   " + sTextToSpeek + "\n" + dT + "  прошло сек.:" + _прошлосекунд_+ "\n";
-        GltxtSpeek.scrollTop = GltxtSpeek.scrollHeight;
-        
-        
-        //
-        try {
-          var utterance = new SpeechSynthesisUtterance(/*"Внимание, " +*/ sTextToSpeek /*+ "Пошёл!"*/);
-          window.speechSynthesis.speak(utterance);
-          _номеритерации_ +=1
-          _номеритерации_1 +=1
-          if (Gl_CountOfIterations < _номеритерации_){
-           _номеритерации_ = 1
-           _номеритерации_1 = 0
-          }
-        }
-        catch {
-      	   //GltxtSpeek.value = GltxtSpeek.value + "НЕ ПОДКЛЮЧЕН СИНТЕЗАТОР ЗВУКА\n";
-        };
-        //
-        Gl_dBeg = new Date();
-        Gl_H = Gl_dBeg.getHours();
-        Gl_M = Gl_dBeg.getMinutes();
-        Gl_S = Gl_dBeg.getSeconds();
-        Gl_Ms = Gl_dBeg.getMilliseconds();
-        
-        fDecGl_aRithm();
  
-      };  
-      var  //!!!!!!!!!!???
-      Gl_dCurr = new Date();
-      if (Gl_aRithm.length <1) {
-      	GltxtSpeek.value = GltxtSpeek.value + "\n== " + Gl_dCurr.getHours() + ":" + Gl_dCurr.getMinutes() + ":" + Gl_dCurr.getSeconds() + " === ТРЕНИРОВКА ЗАВЕРШЕНА. ======================\n"
-        GltxtSpeek.scrollTop = GltxtSpeek.scrollHeight;  
-        try {
-          var utterance1 = new SpeechSynthesisUtterance("ТРЕНИРОВКА ЗАВЕРШЕНА.\n");
-          window.speechSynthesis.speak(utterance1);
-        }
-        catch {};
-      
-        button.firstChild.data = TXT_BTN_FINISHED;
-        button.disabled = true;
-      }  
-    }
-  }; //fMain   */

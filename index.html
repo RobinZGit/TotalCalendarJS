@@ -322,7 +322,7 @@
     //===================================================================
     ];
   var GlTest = 1;
-  var button = document.getElementById("btnPause");//.body.firstElementChild;
+  var button = document.getElementById("btnPause");//.body.firstElementChild;
   var GltxtSpeek  = document.getElementById("idTextsToSpeek");
   var GlUtterance = new SpeechSynthesisUtterance("");
   //!var actions = document.getElementById("actions");
@@ -344,7 +344,7 @@
 
   function fgetTextToPrint()   {
      GltxtSpeek.value = Gl_currentTrainName+'\n\n'
-     for(let node of currentT.childNodes)
+     for(var node of currentT.childNodes)
          GltxtSpeek.value += "\n"+node.innerText
   }
     
@@ -375,16 +375,16 @@
   //пытаемся вычислить строку как формулу. если не получается оставляем строку как есть
   function ev(s){
   	  if (!((s.trim())==""))
-  	    try{return eval(s)} catch {return s}
+  	    try{return eval(s)} catch (exception){return s}
   	  else return ""
   }
 
-  //текст текущего упражнения.
-  function fget_TextToSpeek(aDealIndexes)
-  { alert('Заменить на ev(текст из ритма)')
-  
-     return 'Заменить на ev(текст из ритма)';
-  } //fget_TextToSpeek
+  //текст текущего упражнения.
+  function fget_TextToSpeek(aDealIndexes)
+  {alert('Заменить на ev(текст из ритма)')
+
+     return 'Заменить на ev(текст из ритма)';
+   } //fget_TextToSpeek
 
   //Выводим данные на форму при загрузке страницы
   function loadTrainData() {
