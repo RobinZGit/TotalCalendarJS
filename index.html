@@ -917,14 +917,29 @@
       
   //Запускает цикл проговаривания тренировки
   function execTrain1(value, sMode){
+    var sDelim = '/DELIMITER/'
     if (sMode=="Calendar")  {
-      Gl_currentTrainName = Gl_aMultiCalendar[value].trim()  
-      var aRithmLisp= getArithm (Gl_aMetaRithm[getTrainIndexByName("<"+Gl_aMultiCalendar[value].trim()+">")][1])  
+      Gl_currentTrainName = Gl_aMultiCalendar[value].trim()
+      var aEv = Gl_aMetaRithm[getTrainIndexByName("<"+Gl_aMultiCalendar[value].trim()+">")][1]
+      GltxtSpeek.value= aEv.join('     '+sDelim+'\n')
+      alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
+      btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
+      //GlnInd=0
+      return
     } else if (sMode=="Act")  {
       Gl_currentTrainName = (Gl_aMetaRithm[value][1][0]).split('=')[0]
       //alert(Gl_aMetaRithm[value][1])
-      var aRithmLisp= getArithm (Gl_aMetaRithm[value][1])  
+      var aEv = Gl_aMetaRithm[value][1]
+      GltxtSpeek.value= aEv.join('     '+sDelim+'\n')
+      alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
+      btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
+      //GlnInd=0
+      return
+    } else if (sMode=="Run"){
+      var aRithmLisp=getArithm(GltxtSpeek.value.split(sDelim));
+      //fgetTextToPrint()
     }
+    var aRithmLisp=getArithm(GltxtSpeek.value.split(sDelim)); //!!!!!!!!!!!!! aEv
     //=========НАЧИТКА СПИСКА ДЕЛ ДЛЯ НАВИГАЦИИ===========
     currentT.innerHTML = '';
     var nId=''
@@ -946,7 +961,7 @@
     }  
       
     //== Вывод  тренировки в текстовом виде
-    fgetTextToPrint()
+    if (sMode!="Run") fgetTextToPrint()
       
     //== Проговаривание тренировки по массиву
     Gl_State = TXT_BTN_STARTED
