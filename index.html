@@ -42,8 +42,10 @@
 <div> Все тренировки </div>
 
 <div>
-    <select id="selectAllTrain" style="height:40px;width:69%" onchange="if (this.selectedIndex) onSelectTrain(this.selectedIndex);" ></select>
-    <button id="btnSelectAllTrain" style="height:40px;width:20%"> Начать тренировку </button>
+    <select id="selectAllTrain" style="height:40px;width:100%" onchange="if (this.selectedIndex) onSelectTrain(this.selectedIndex);" ></select>
+</div>
+    <div>
+    <button id="btnSelectAllTrain" style="height:40px;width:75%"> Начать тренировку </button>
 Без звука<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else document.getElementById('idTextTrain').style.display='block'; ">
 
 </div>
@@ -84,7 +86,7 @@
  var GldPrev = new Date();
  var GlflSayIntro = false; //сказано ввведение (сколько времени займет треня и пр.)
  var GlflSayIntro2 = false; //прошло 5000 мс с момента как начал говорить введение
-
+ var GlIsRunning = false
  //----онлайн параметры--------------------------------------
  var _номер_итерации_=0;
  //-----------------------------------------------------------
@@ -938,6 +940,10 @@
       
   //Запускает цикл проговаривания тренировки
   function execTrain1(value, sMode){
+    // if (!GlIsRunning){
+    //   GlIsRunning =!GlIsRunning;
+    //   return
+    //}
     var sDelim = '/DELIMITER/'
     if (sMode=="Calendar")  {
       Gl_currentTrainName = Gl_aMultiCalendar[value].trim()
