@@ -42,9 +42,10 @@
 <div> Все тренировки </div>
 
 <div>
-<select id="selectAllTrain" style="height:40px;width:69%" onchange="if (this.selectedIndex) onSelectTrain(this.selectedIndex);" ></select>
+    <select id="selectAllTrain" style="height:40px;width:69%" onchange="if (this.selectedIndex) onSelectTrain(this.selectedIndex);" ></select>
+    <button id="btnSelectAllTrain" style="height:40px;width:20%"> Начать тренировку </button>
 Без звука<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else document.getElementById('idTextTrain').style.display='block'; ">
-<button id="btnSelectAllTrain" style="height:40px;width:20%"> Начать тренировку </button>
+
 </div>
 
 <!--                                                              
