@@ -14,49 +14,39 @@
 </head>
  
 <body onload="loadTrainData()" onresize="resizeAll()">
-<div>
-    <textarea id="idTextTrain" style="width:100%;height:350px;font-size: 30px;display:none;"> </textarea>
-</div>
-<div> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="365"> дней от сегодняшнего </div>
+<div id = idDivCalendar> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="365"> дней от сегодняшнего </div>
 <div>
 <button id="btnRecalcCal" style="height:20px;width:100%" onclick='btnRecalcCalOnClick()'> Пересчитать календарь </button>
 </div>
-<div style="height:200px;overflow-y:scroll;border:2px solid #a1a1a1;">
-<ul id="actionsInCalendar"></ul>
+    <div id="idDivActionCalendar" style="height:200px;overflow-y:scroll;border:2px solid #a1a1a1;">
+    <ul id="actionsInCalendar"></ul>
 </div>
-<div> </div>
-    
+
+<div id = "idDivAllTrain"> Все тренировки
+    <div>
+        <select id="selectAllTrain" style="height:40px;width:100%" onchange="if (this.selectedIndex) onSelectTrain(this.selectedIndex);" ></select>
+    </div>
+</div>
 <div>
-<button id="btnPause" style="background-color:hotpink;height:40px;width:100%" onclick='btnPauseOnClick()'> Пауза </button>
+    <button id="btnSelectAllTrain" style="height:40px;width:74%" > Начать тренировку </button>
+    <button id="btnExit" style="height:40px;width:25%" onclick="window.close()"> Выход </button>
+Без звука<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else document.getElementById('idTextTrain').style.display='block'; ">
 </div>
 
 <div>
+    <textarea id="idTextTrain" style="width:100%;height:350px;font-size: 30px;text-align: center;display:none;"> </textarea>
+</div>
+
+<div id="idDivTextTime" style="display:none">
     <textarea id="idTextTime" style="width:100%;height:40px;" > </textarea>
 </div>
 
-<div> Навигация по текущей тренировке  </div>
-<div style="height:100px;overflow-y:scroll;border:2px solid #a1a1a1;">
-<ul id="currentT"></ul>
-</div>    
-
-<div> Все тренировки </div>
-
-<div>
-    <select id="selectAllTrain" style="height:40px;width:100%" onchange="if (this.selectedIndex) onSelectTrain(this.selectedIndex);" ></select>
-</div>
-    <div>
-    <button id="btnSelectAllTrain" style="height:40px;width:75%"> Начать тренировку </button>
-Без звука<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else document.getElementById('idTextTrain').style.display='block'; ">
-
+<div id = "idDivNavigation" style="display:none"> Навигация по текущей тренировке
+    <div style="height:250px;overflow-y:scroll;border:2px solid #a1a1a1;">
+        <ul id="currentT"></ul>
+    </div>
 </div>
 
-<!--                                                              
-<div style="height:100px;overflow-y:scroll;border:2px solid #a1a1a1;">
-<ul id="actions"></ul>
-</div>
--->
-
-    
 <div>
 <textarea id="idTextsToSpeek" style="width:100%;height:400px;" > </textarea>
 </div>
@@ -280,6 +270,42 @@
                 ],
                ],
               //================
+               //========================== НЕЗАМЕТНЫЕ ДВИЖЕНИЯ
+              [
+                [],
+                [
+                  "<НЕЗАМЕТНЫЕ ДВИЖЕНИЯ>=<ГЛАЗА>;<ЖЕВАТЕЛЬНЫЕ>;<ШЕЯ_ДА>;<ШЕЯ_НЕТ>;<ПЛЕЧИ>;<ПРЕДПЛЕЧЬЯ>;<СПИНА>;<ПРЕСС>;<БЕДРА>;<СТУПНИ>;",
+                  "<РАЗ_ТЕКСТ>=<РАЗ>;<#800 #>;",
+                  "<ГЛАЗА>=<ГЛАЗА_ТЕКСТ>;<ЧИСЛО ПОВТОРЕНИЙ><РАЗ_ТЕКСТ>",
+                  "<ГЛАЗА_ТЕКСТ>=<Закрыть глаза. Напрягать и расслаблять веки>;<#3000#>;",
+                  "<ЖЕВАТЕЛЬНЫЕ>=<ЖЕВАТЕЛЬНЫЕ_ТЕКСТ>;<ЧИСЛО ПОВТОРЕНИЙ><РАЗ_ТЕКСТ>;",
+                  "<ЖЕВАТЕЛЬНЫЕ_ТЕКСТ>=<Напрягать и расслаблять жевательные мышцы>;<#3000#>;",
+                  "<ШЕЯ_ДА>=<ШЕЯ_ДА_ТЕКСТ>;<ЧИСЛО ПОВТОРЕНИЙ><РАЗ_ТЕКСТ>",
+                  "<ШЕЯ_ДА_ТЕКСТ>=<Незаметные кивки вперед-назад без напряжения>;<#3000#>",
+                  "<ШЕЯ_НЕТ>=<ШЕЯ_НЕТ_ТЕКСТ>;<ЧИСЛО ПОВТОРЕНИЙ><РАЗ_ТЕКСТ>",
+                  "<ШЕЯ_НЕТ_ТЕКСТ>=<Незаметные повороты головы вправо и влево без напряжения>;<#3000#>",
+                  "<ПЛЕЧИ>=<ПЛЕЧИ_ТЕКСТ>;<ЧИСЛО ПОВТОРЕНИЙ><РАЗ_ТЕКСТ>",
+                  "<ПЛЕЧИ_ТЕКСТ>=<Незаметные напряжения и расслабления плеч, бицепсов, трицепсов>;<#3000#>",
+                  "<ПРЕДПЛЕЧЬЯ>=<ПРЕДПЛЕЧЬЯ_ТЕКСТ>;<ЧИСЛО ПОВТОРЕНИЙ><РАЗ_ТЕКСТ>",
+                  "<ПРЕДПЛЕЧЬЯ_ТЕКСТ>=<Незаметные напряжения и расслабления кистей>;<#3000#>",
+                  "<СПИНА>=<СПИНА_ТЕКСТ>;<ЧИСЛО ПОВТОРЕНИЙ><РАЗ_ТЕКСТ>",
+                  "<СПИНА_ТЕКСТ>=<Незаметные напряжения и расслабления спины>;<#3000#>",
+                  "<ПРЕСС>=<ПРЕСС_ТЕКСТ>;<ЧИСЛО ПОВТОРЕНИЙ><РАЗ_ТЕКСТ>",
+                  "<ПРЕСС_ТЕКСТ>=<Незаметные напряжения и расслабления живота>;<#3000#>",
+                  "<БЕДРА>=<БЕДРА_ТЕКСТ>;<ЧИСЛО ПОВТОРЕНИЙ><РАЗ_ТЕКСТ>",
+                  "<БЕДРА_ТЕКСТ>=<Незаметные напряжения и расслабления бедер и ягодиц>;<#3000#>",
+                  "<СТУПНИ>=<СТУПНИ_ТЕКСТ>;<ЧИСЛО ПОВТОРЕНИЙ><РАЗ_ТЕКСТ>",
+                  "<СТУПНИ_ТЕКСТ>=<Незаметные напряжения и расслабления ступней>;<#3000#>",
+                  "//",
+                  "//Блок параметров тренировки. В нем запрещены умножения на число и выбор",
+                  "//Вычисления начинаются с подстновок в данном блоке",
+                  "[BEGIN EVAL PARAMETERS]",
+                  "<ЧИСЛО ПОВТОРЕНИЙ>=30",
+                  "[END EVAL PARAMETERS]",
+
+                ],
+               ],
+              //================
               //========================== УПРАЖНЕНИЯ НА ШЕЮ 1 (ТАЛАМБУМ)
               [
                 [],
@@ -353,10 +379,8 @@
     //===================================================================
     ];
   var GlTest = 1;
-  var button = document.getElementById("btnPause");//.body.firstElementChild;
   var GltxtSpeek  = document.getElementById("idTextsToSpeek");
   var GlUtterance = new SpeechSynthesisUtterance("");
-  //!var actions = document.getElementById("actions");
   var calendar = document.getElementById("actionsInCalendar");   
   var currentT = document.getElementById("currentT");
   var inputMinDay = document.getElementById("inputMinDay");    
@@ -386,24 +410,7 @@
     Gl_DaysAfterNowForShow = inputMaxDay.value; 
     fillForm()     
   }   
-    
-  function btnPauseOnClick(){
-    var toDo =""
-    switch (Gl_State) {  
-        case TXT_BTN_STARTED: toDo="приостановить"
-        case TXT_BTN_PAUSED: toDo="возобновить"
-    }
-    switch (toDo){
-      case  "приостановить":{     
-         // alert("приостановить")
-         Gl_State = TXT_BTN_PAUSED
-         button.value="Продолжить тренировку"        }
-      case  "возобновить": {  
-         alert("Продолжить тренировку") //! фактически толькр alert останавливает процесс, в цикле статусы не проверяются
-         Gl_State = TXT_BTN_STARTED
-         button.value="Пауза"}            
-    }   
-  }
+
 
   //пытаемся вычислить строку как формулу. если не получается оставляем строку как есть
   function ev(s){
@@ -447,6 +454,7 @@
             else
               docTextTrain.style.backgroundColor='yellow'
             docTextTrain.scrollTop = docTextTrain.scrollHeight
+            window.scrollBy(0,-100)
         }
       }
 
@@ -726,10 +734,13 @@
 
     //Удаление комментариев
     var Gl_aGenRithm0 = [];
-    for(var i=0; i<Gl_aGenRithm00.length; i++)
+    for(var i=0; i<Gl_aGenRithm00.length; i++){
       if (!(Gl_aGenRithm00[i].trim().indexOf('//')==0)) Gl_aGenRithm0.push(Gl_aGenRithm00[i].split("//")[0]);
+      //if (Gl_aGenRithm00[i].trim()[Gl_aGenRithm00[i].trim().length-1]==';')
+    }
 
     var Gl_aGenRithm = Gl_aGenRithm0; //!! лишнее, осталось от старого
+
 
     //alert('после удаления комментариев \n'+Gl_aGenRithm)
     for(var i=0; i<Gl_aGenRithm.length; i++){ //?ОНО НАДО ВООБЩЕ ?? сначала возьмем слова в кавычках в угловые скобки
@@ -738,8 +749,8 @@
            Gl_aGenRithm[i]=Gl_aGenRithm[i].replace("'",">"); //!!!">;"
            //alert(Gl_aGenRithm[i])
        }
-       if (Gl_aGenRithm[i][Gl_aGenRithm[i].length-1]==";"){ //уберем последнюю ;
-           Gl_aGenRithm[i] = Gl_aGenRithm[i].substr(0,Gl_aGenRithm[i].length-1)
+       if (Gl_aGenRithm[i].trim()[Gl_aGenRithm[i].trim().length-1]==";"){ //уберем последнюю ;
+           Gl_aGenRithm[i] = Gl_aGenRithm[i].trim().substr(0,Gl_aGenRithm[i].trim().length-1) //!!!!!!!
        }
     }
     //alert('после добавления угловых скобок словам в кавычках \n'+Gl_aGenRithm)
@@ -940,10 +951,33 @@
       
   //Запускает цикл проговаривания тренировки
   function execTrain1(value, sMode){
-    // if (!GlIsRunning){
-    //   GlIsRunning =!GlIsRunning;
-    //   return
-    //}
+    if (GlIsRunning) {
+      alert("Продолжить тренировку")
+    }
+    if (!GlIsRunning && sMode=="Run"){
+       GlIsRunning =true;
+       btnSelectAllTrain.innerHTML = 'Пауза'
+
+       //скрываем/открываем контролы
+       document.getElementById("idDivCalendar").style.display ='none'
+       document.getElementById("btnRecalcCal").style.display ='none'
+       document.getElementById("idDivActionCalendar").style.display ='none'
+       document.getElementById("btnPrint").style.display ='none'
+       document.getElementById("idDivAllTrain").style.display ='none'
+       document.getElementById("idTextsToSpeek").style.display ='none'
+       document.getElementById("idDivNavigation").style.display ='block'
+       document.getElementById("idDivTextTime").style.display ='block'
+       //document.getElementById("idTextTrain").style.display ='block'
+       /*
+       document.getElementById("idDivTextTime").style.display ='none'// = document.getElementById("selectAllTrain");
+       //btnSelectAllTrain = document.getElementById("btnSelectAllTrain");
+       //txtTextTime  = document.getElementById("idTextTime");
+       //docTextTrain = document.getElementById("idTextTrain");
+       //docNoSound = document.getElementById("idNoSound");
+       */
+
+    }
+
     var sDelim = '/DELIMITER/'
     if (sMode=="Calendar")  {
       Gl_currentTrainName = Gl_aMultiCalendar[value].trim()
@@ -958,7 +992,7 @@
       //alert(Gl_aMetaRithm[value][1])
       var aEv = Gl_aMetaRithm[value][1]
       GltxtSpeek.value= aEv.join('     '+sDelim+'\n')
-      alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
+      //alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
       btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
       //GlnInd=0
       return
