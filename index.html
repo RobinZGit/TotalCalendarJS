@@ -406,19 +406,14 @@
   Gl_DaysBeforeNowForShow = inputMinDay.value;  
   Gl_DaysAfterNowForShow = inputMaxDay.value;    
   var Gl_currentTrainName =""
-
+  var Gl_sDelim = '/DELIMITER/'
   var Gl_txtPrint = document.createElement('textarea');
     
   //длЯ задержки начала тренировки (чтобы закрепить смартфон после нажатия стартовой кнопки)
   var GlnDelay = 0;
   var glTxtSay="1";
 
-  function fgetTextToPrint()   {
-     GltxtSpeek.value = Gl_currentTrainName+'\n\n'
-     for(var node of currentT.childNodes)
-         GltxtSpeek.value += "\n"+node.innerText
-  }
-    
+
   function btnRecalcCalOnClick() {
     Gl_DaysBeforeNowForShow = inputMinDay.value;  
     Gl_DaysAfterNowForShow = inputMaxDay.value; 
@@ -966,7 +961,30 @@
      GlnDelta = 1000;// Number(Gl_aRithmLisp[i-1]);
      GlnInd =i
   }
-      
+
+
+  function getText2Print(sTrainName){ //текст для печати
+      var aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim));//Gl_aMetaRithm[value]);//
+      //alert(aRithmLisp)
+      Gl_txtPrint.value=sTrainName+"\n\n"
+      var str = ""
+      var strNext = ""
+      var strPrev = ""
+      var nRepeat = 1
+      for(var i=1;i<aRithmLisp.length;i+=2){
+        str=aRithmLisp[i]+"   :"+aRithmLisp[i+1]+" ms  "+"\n"
+        strNext=aRithmLisp[i+2]+"   :"+aRithmLisp[i+1+2]+" ms  "+"\n"
+        if ((str!=strNext)/*&&(str!=strPrev)*/){
+           Gl_txtPrint.value += aRithmLisp[i]+"   :"+aRithmLisp[i+1]+" ms  "+ ((nRepeat==1)?"":"(повторить "+ nRepeat +" раз)") +"\n"
+           nRepeat = 1
+        }
+        else nRepeat++
+
+        strPrev = str
+      }
+      //---------------------
+    }
+
   //Запускает цикл проговаривания тренировки
   function execTrain1(value, sMode){
     if (GlIsRunning) {
@@ -996,50 +1014,31 @@
 
     }
 
-    var sDelim = '/DELIMITER/'
     if (sMode=="Calendar")  {
       Gl_currentTrainName = Gl_aMultiCalendar[value].trim()
       var aEv = Gl_aMetaRithm[getTrainIndexByName("<"+Gl_aMultiCalendar[value].trim()+">")][1]
-      GltxtSpeek.value= aEv.join('     '+sDelim+'\n')
+      GltxtSpeek.value= aEv.join('     '+Gl_sDelim+'\n')
       alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
       btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
-      //GlnInd=0
+      getText2Print(Gl_currentTrainName)
       return
     } else if (sMode=="Act")  {
       Gl_currentTrainName = (Gl_aMetaRithm[value][1][0]).split('=')[0]
       //alert(Gl_aMetaRithm[value][1])
       var aEv = Gl_aMetaRithm[value][1]
-      GltxtSpeek.value= aEv.join('     '+sDelim+'\n')
+      GltxtSpeek.value= aEv.join('     '+Gl_sDelim+'\n')
       //alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
       btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
-
-      //!!! ДОДЕЛАТЬ !!! текст для печати ---- ! не меняет текст после перевыбора
-
-      var aRithmLisp=getArithm(GltxtSpeek.value.split(sDelim));
-      //alert(aRithmLisp)
-      var str = ""
-      var strNext = ""
-      var strPrev = ""
-      var nRepeat = 1
-      for(var i=1;i<aRithmLisp.length;i+=2){
-        str=aRithmLisp[i]+"   :"+aRithmLisp[i+1]+" ms  "+"\n"
-        strNext=aRithmLisp[i+2]+"   :"+aRithmLisp[i+1+2]+" ms  "+"\n"
-        if ((str!=strNext)/*&&(str!=strPrev)*/){
-           Gl_txtPrint.value += aRithmLisp[i]+"   :"+aRithmLisp[i+1]+" ms  "+ ((nRepeat==1)?"":"(повторить "+ nRepeat +" раз)") +"\n"
-           nRepeat = 1
-        }
-        else nRepeat++
-
-        strPrev = str
-      }
-      //---------------------
+      getText2Print(Gl_currentTrainName)
       return
     } else if (sMode=="Run"){
-      var aRithmLisp=getArithm(GltxtSpeek.value.split(sDelim));
+      var aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim));
       //Gl_txtPrint.value = aRithmLisp.join("/n")
-      //fgetTextToPrint()
+
     }
-    var aRithmLisp=getArithm(GltxtSpeek.value.split(sDelim)); //!!!!!!!!!!!!! aEv
+    var aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim)); //!!!!!!!!!!!!! aEv
+
+
     //=========НАЧИТКА СПИСКА ДЕЛ ДЛЯ НАВИГАЦИИ===========
     currentT.innerHTML = '';
     var nId=''
@@ -1093,10 +1092,10 @@
 
       
     //Печать тренировки  
-    function CallPrint(oPrint) {
+    function CallPrint() {
       //
-      alert (oPrint.value)
-      var prtContent = oPrint;//document.getElementById(strid);
+      alert (Gl_txtPrint.value)
+      var prtContent = Gl_txtPrint;//oPrint;//document.getElementById(strid);
       var prtCSS = '<link rel="stylesheet" href="/templates/css/template.css" type="text/css" />';
       var WinPrint = window.open('','','left=50,top=50,width=800,height=640,toolbar=0,scrollbars=1,status=0');
       //WinPrint.document.write('<div id="print" class="contentpane">');
@@ -1111,7 +1110,7 @@
    }
       
    function btnPrintOnClick(){
-     javascript:CallPrint(Gl_txtPrint)
+     javascript:CallPrint()
    }
 
 
