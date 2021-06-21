@@ -27,7 +27,7 @@
         <select id="selectAllTrain" style="height:40px;width:100%" onchange="if (this.selectedIndex) onSelectTrain(this.selectedIndex);" ></select>
     </div>
 </div>
-<div>
+<div id="idDivStatrPause">
     <button id="btnSelectAllTrain" style="height:40px;width:74%" > Начать тренировку </button>
     <button id="btnExit" style="height:40px;width:25%" onclick="window.close()"> Выход </button>
 Без звука<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else document.getElementById('idTextTrain').style.display='block'; ">
@@ -52,7 +52,7 @@
 </div>
 
 <div>
-<button id="btnPrint" style="height:40px;width:100%" onclick='btnPrintOnClick()'> Печать </button>
+<button id="btnPrint" style="height:40px;width:100%" onclick='btnPrintOnClick()'> Текст тренировки для печати </button>
 </div>
                                                                                 
 <script>
@@ -156,7 +156,7 @@
                 [
                   "<УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ ЧАСТЬ 1>="+
                            "<ДЛИННЫЕ РАЗГИБАТЕЛИ ШЕИ>;<#6 [СЕК]#>;"+
-                          // "<СТОПА>;<#6 [СЕК]#>;"+
+                           "<СТОПА>;<#6 [СЕК]#>;"+
                            "<ВНЕШНИЕ ГОЛЕНИ С РЕЗИНОЙ>;<#6 [СЕК]#>;"+
                            "<РАСТЯЖЕНИЕ ГРУДНЫХ МЫШЦ>;<#10 [СЕК]#>;"+
                            "<РОМБОВИДНАЯ>;<#6 [СЕК]#>;"+
@@ -176,7 +176,8 @@
                   "<КОМАНДА ДЕРЖИМ>=<Держим>;<#1000 #>",
 
                   "<КОМАНДА ВЫДОХ>=<ВЫДОХ ХА>;<#1200 #>",
-                  "<СТОПА>=<Стопа. Стопу на шарик и катать>;<#10 [СЕК]#>;10<КОМАНДА>;<#4 [СЕК]#>;<Сменить ногу>;<#4 [СЕК]#>;10<КОМАНДА>;<#6 [СЕК]#>;<Сидя, стопы на весу - согнуть пальцы - согнуть стопу - разогнуть пальцы-разогнуть стопу>;<#8 [СЕК]#>;10<КОМАНДА>;<#6 [СЕК]#>;<Сидя, стопы на весу - согнуть пальцы - стопа внутрь - разогнуть пальцы-стопа наружу>;<#8 [СЕК]#>;10<КОМАНДА>",
+                  //"<СТОПА>=<Стопа. Стопу на шарик и катать>;<#10 [СЕК]#>;10<КОМАНДА>;<#4 [СЕК]#>;<Сменить ногу>;<#4 [СЕК]#>;10<КОМАНДА>;<#6 [СЕК]#>;<Сидя, стопы на весу - согнуть пальцы - согнуть стопу - разогнуть пальцы-разогнуть стопу>;<#8 [СЕК]#>;10<КОМАНДА>;<#6 [СЕК]#>;<Сидя, стопы на весу - согнуть пальцы - стопа внутрь - разогнуть пальцы-стопа наружу>;<#8 [СЕК]#>;10<КОМАНДА>",
+                  "<СТОПА>=<Стопа. Стопу на шарик и катать>;<#10 [СЕК]#>;10<КОМАНДА>;<#4 [СЕК]#>;<Сменить ногу>;<#4 [СЕК]#>;10<КОМАНДА>",
                   "<ДЛИННЫЕ РАЗГИБАТЕЛИ ШЕИ>=<Растяжение левой лестничной мышцы. Пальцы прижимают мышцу, наклоны головы вперед-вправо и назад-влево>;<#10 [СЕК]#>;25<КОМАНДА>;<#4 [СЕК]#>;<Растяжение правой лестничной мышцы. Пальцы прижимают мышцу, наклоны головы вперед-влево и назад-вправо>;<#10 [СЕК]#>;25<КОМАНДА>;<#6 [СЕК]#>;<Длинные разгибатели шеи. Слабую резинку на турник и на затылок, разгибание , макушка тянется при этом вверх>;<#10 [СЕК]#>;10<КОМАНДА>",
                   "<ВНЕШНИЕ ГОЛЕНИ С РЕЗИНОЙ>=<Внешние голени. Сесть на пол с прямыми ногами, среднюю резинку на ножку кровати и на пальцы ног, сгибание стоп к животу>;<#3 [СЕК]#>;10<КОМАНДА>",
                   "<РАСТЯЖЕНИЕ ГРУДНЫХ МЫШЦ>=<РАСТЯЖЕНИЕ ГРУДНЫХ МЫШЦ. Стоя, ладони на дверные косяки, локти на уровне ушей. Шаг вперед, тянем.>;<# 8[СЕК]#>;10<КОМАНДА>",   
@@ -1093,6 +1094,20 @@
       
     //Печать тренировки  
     function CallPrint() {
+      GltxtSpeek.value=Gl_txtPrint.value
+      document.getElementById("idDivCalendar").style.display ='none'
+      document.getElementById("btnRecalcCal").style.display ='none'
+      document.getElementById("idDivActionCalendar").style.display ='none'
+      document.getElementById("btnPrint").style.display ='none'
+      document.getElementById("idDivAllTrain").style.display ='none'
+      document.getElementById("idDivNavigation").style.display ='none'
+      document.getElementById("idDivTextTime").style.display ='none'
+      document.getElementById("idNoSound").style.display ='none'
+      document.getElementById("idDivStatrPause").style.display ='none'
+      //
+      document.getElementById("idTextsToSpeek").style.height =(200+document.getElementById("idTextsToSpeek").scrollHeight)+"px"
+
+    /*
       //
       alert (Gl_txtPrint.value)
       var prtContent = Gl_txtPrint;//oPrint;//document.getElementById(strid);
@@ -1107,6 +1122,7 @@
       WinPrint.print();
       WinPrint.close();
      // prtContent.innerHTML=strOldOne;
+    */
    }
       
    function btnPrintOnClick(){
