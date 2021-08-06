@@ -24,13 +24,14 @@
 
 <div id = "idDivAllTrain"> Все тренировки
     <div>
-        <select id="selectAllTrain" style="height:40px;width:60%" onchange="if (this.selectedIndex) onSelectTrain(this.selectedIndex);" ></select>
-           Содержит подстроку:<input id = "filterStr" style="height:40px;width:23%" onchange="readFilteredListOfTrainings(value)">
+        <select id="selectAllTrain" style="height:40px;width:50%" onchange="if (this.selectedIndex) onSelectTrain(this.selectedIndex);" ></select>
+        Содержит подстроку:
+        <input id = "filterStr"  style="float:right;height:30px;width:20%" onchange="readFilteredListOfTrainings(value)">
     </div>
 </div>
 <div id="idDivStatrPause">
     <button id="btnSelectAllTrain" style="height:40px;width:74%" > Начать тренировку </button>
-    <button id="btnExit" style="height:40px;width:25%" onclick="window.close()"> Выход </button>
+    <button id="btnExit" style="float:right;height:40px;width:25%" onclick="window.close()"> Выход </button>
 Без звука<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else document.getElementById('idTextTrain').style.display='block'; ">
 </div>
 
