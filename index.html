@@ -16,22 +16,23 @@
 <body onload="loadTrainData()" onresize="resizeAll()">
 <div id = idDivCalendar> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="365"> дней от сегодняшнего </div>
 <div>
-<button id="btnRecalcCal" style="height:20px;width:100%" onclick='btnRecalcCalOnClick()'> Пересчитать календарь </button>
+<button id="btnRecalcCal" style="height:20px;width:100%" onclick='btnRecalcCalOnClick()'> Показать календарь </button>
 </div>
-    <div id="idDivActionCalendar" style="height:200px;overflow-y:scroll;border:2px solid #a1a1a1;">
+<div id="idDivActionCalendar" style="height:200px;overflow-y:scroll;border:2px solid #a1a1a1;display:none;">
     <ul id="actionsInCalendar"></ul>
 </div>
 
-<div id = "idDivAllTrain"> Все тренировки
+<div id = "idDivAllTrain"> Выбор тренировки
     <div>
-        <select id="selectAllTrain" style="height:40px;width:50%" onchange="if (this.selectedIndex) onSelectTrain(this.selectedIndex);" ></select>
-        Содержит подстроку:
-        <input id = "filterStr"  style="float:right;height:30px;width:20%" onchange="readFilteredListOfTrainings(value)">
+        <select id="selectAllTrain" style="height:100px;width:100%" onchange="if (this.selectedIndex) onSelectTrain(this.selectedIndex);" ></select>
+        <div>Тренировка cодержит подстроку (фильтр перед выбором):
+             <input id = "filterStr"  style="height:20px;width:20%" onchange="readFilteredListOfTrainings(value,null)">
+        </div>
     </div>
 </div>
 <div id="idDivStatrPause">
-    <button id="btnSelectAllTrain" style="height:40px;width:74%" > Начать тренировку </button>
-    <button id="btnExit" style="float:right;height:40px;width:25%" onclick="window.close()"> Выход </button>
+    <button id="btnSelectAllTrain" style="height:100px;width:74%" > Начать тренировку </button>
+    <button id="btnExit" style="float:right;height:100px;width:25%" onclick="window.close()"> Выход </button>
 Без звука<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else document.getElementById('idTextTrain').style.display='block'; ">
 </div>
 
@@ -500,16 +501,26 @@
   var Gl_currentTrainName =""
   var Gl_sDelim = '/DELIMITER/'
   var Gl_txtPrint = document.createElement('textarea');
-    
+  var Gl_calendarVisible = false;
   //длЯ задержки начала тренировки (чтобы закрепить смартфон после нажатия стартовой кнопки)
   var GlnDelay = 0;
   var glTxtSay="1";
 
 
   function btnRecalcCalOnClick() {
-    Gl_DaysBeforeNowForShow = inputMinDay.value;  
-    Gl_DaysAfterNowForShow = inputMaxDay.value; 
-    fillForm()     
+    Gl_calendarVisible = !Gl_calendarVisible
+    if (Gl_calendarVisible){
+
+      Gl_DaysBeforeNowForShow = inputMinDay.value;
+      Gl_DaysAfterNowForShow = inputMaxDay.value;
+      fillForm()
+      document.getElementById("btnRecalcCal").innerHTML = 'Скрыть календарь'
+      document.getElementById("idDivActionCalendar").style.display ='inline'
+    } else {
+      document.getElementById("idDivActionCalendar").style.display ='none'
+      document.getElementById("btnRecalcCal").innerHTML = 'Показать календарь'
+    }
+
   }   
 
 
@@ -520,17 +531,15 @@
   	  else return ""
   }
 
-  //текст текущего упражнения.
-  function fget_TextToSpeek(aDealIndexes)
-  {alert('Заменить на ev(текст из ритма)')
-
-     return 'Заменить на ev(текст из ритма)';
-   } //fget_TextToSpeek
-
   //Выводим данные на форму при загрузке страницы
   function loadTrainData() {
-    fillForm()
-    GltxtSpeek.value += "\n\n Для изменения тренировки необходимо редактировать запускаемый файл html.\n";
+    var loadTrain = location.href
+    try{
+      loadTrain = loadTrain.split('?')[1].split('&').filter((v)=>{return (v.indexOf('startwith')>=0)}).join(' ').split('=')[1];
+    } catch(e){ loadTrain= null};
+
+    fillForm(decodeURIComponent(loadTrain))
+    //GltxtSpeek.value += "\n\n Для изменения тренировки необходимо редактировать запускаемый файл html.\n";
     alert("Чтобы не было перерыва в тренировке из-за выключения экрана не забудьте запустить программу типа Stay Alive (android)")
 
   }
@@ -628,7 +637,18 @@
                      return sRet;
    }
 
-
+   function calcTtrainTime(){
+   //расчет времени трени
+            try{
+              var nTime = 0
+              for(var i =-1; i<Gl_aRithmLisp.length-1;i=i+2){
+                if (Gl_flBegWord) nTime+=calcInterval(Gl_aRithmLisp[i+1])
+                else nTime+=calcInterval(Gl_aRithmLisp[i+1]);
+              }
+              nTime = Math.round(10*nTime/(1000*60))/10;
+            } catch(e) {nTime = 0}
+            return nTime
+    }
    function fSayInTime(){
         if(Gl_IsFinished) return
                                                  
@@ -641,6 +661,7 @@
         if (!GlflSayIntro){
             GlflSayIntro=true;
             //расчет времени трени
+            /*
             try{
               var nTime = 0
               for(var i =-1; i<Gl_aRithmLisp.length-1;i=i+2){
@@ -655,6 +676,9 @@
 
                 //!GltxtSpeek.value+='Тренировка продлится ' +nTime+' минут'+'\n\n';
             }catch(e){};
+            */
+            say('Тренировка продлится ' +calcTtrainTime()+' минут');
+            GlBegTime = new Date();
 
         } else
           if (GlflSayIntro2) {
@@ -750,28 +774,29 @@
         else if (isSelected) li.selected = true;
         oListbox.appendChild(li); 
       }
-      
       return retId
     }
   }
 
-  function readFilteredListOfTrainings(sFilt){
-      selectAllTrain.options.length = 0
-      for(var i=0; i<Gl_aMetaRithm.length; i++) {
-        if ((sFilt.length==0)||((sFilt.length>0)&&(Gl_aMetaRithm[i].join(' ').toUpperCase().indexOf(sFilt.toUpperCase())>=0)))
-            addAction("all",null/*actions*/,Gl_aMetaRithm[i][1][0].split('=')[0],i,false,false,"width:100%",false)
+  function readFilteredListOfTrainings(sFilt,loadTrain){
+    selectAllTrain.options.length = 0
+    for(var i=0; i<Gl_aMetaRithm.length; i++) {
+      if ((sFilt.length==0)||((sFilt.length>0)&&(Gl_aMetaRithm[i].join(' ').toUpperCase().indexOf(sFilt.toUpperCase())>=0)))
+          addAction("all",null/*actions*/,Gl_aMetaRithm[i][1][0].split('=')[0],i,false,false,"width:100%",false)
 
     }
+    if (loadTrain!==null)
+      selectAllTrain.selectedIndex = getTrainIndexByName("<"+loadTrain+">")
   }
 
-  function fillForm()
+  function fillForm(loadTrain=null)
   {
     //GlTest+=1;
     calendar.innerHTML = ''
     currentT.innerHTML = ''
      
     //=========НАЧИТКА СПИСКА ВСЕХ ТРЕНИРОВОК===========
-    readFilteredListOfTrainings('');
+    readFilteredListOfTrainings('',loadTrain);
 
     onSelectTrain(selectAllTrain.value);
     
@@ -1060,7 +1085,8 @@
   function getText2Print(sTrainName){ //текст для печати
       var aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim));//Gl_aMetaRithm[value]);//
       //alert(aRithmLisp)
-      Gl_txtPrint.value=sTrainName+"\n\n"
+      Gl_txtPrint.value=sTrainName+"\n"
+      Gl_txtPrint.value+='Тренировка продлится ' +calcTtrainTime()+' минут'+"\n\n"
       var str = ""
       var strNext = ""
       var strPrev = ""
@@ -1081,6 +1107,10 @@
 
   //Запускает цикл проговаривания тренировки
   function execTrain1(value, sMode){
+    //скрываем календарь
+    document.getElementById("idDivActionCalendar").style.display ='none'
+    document.getElementById("btnRecalcCal").innerHTML = 'Показать календарь'
+
     if (GlIsRunning) {
       alert("Продолжить тренировку")
     }
@@ -1219,7 +1249,7 @@
    }
       
    function btnPrintOnClick(){
-     javascript:CallPrint()
+     CallPrint()
    }
 
 
