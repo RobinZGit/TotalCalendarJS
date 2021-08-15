@@ -1075,9 +1075,13 @@
         } catch(e) {}
      }
      for(var k=i; k<Gl_aRithmLisp.length;k++){
+        //if(i<GlnInd){alert(document.getElementById('buttonCurrentTr' + k).style.background + ' i='+i+' k='+k+' Gl_aRithmLisp.length' + Gl_aRithmLisp.length+' InnerHTML=  '+document.getElementById('buttonCurrentTr' + k).innerHTML)}
         try{
           document.getElementById('buttonCurrentTr' + k).style.background='light-gray'
-        } catch(e) {}
+          //if(i<GlnInd) alert(2)
+        } catch(e) {
+          //if(i<GlnInd) alert(1)
+        }
      }
      GlnDelta = 1000;// Number(Gl_aRithmLisp[i-1]);
      GlnInd =i
