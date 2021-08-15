@@ -508,7 +508,7 @@
   //длЯ задержки начала тренировки (чтобы закрепить смартфон после нажатия стартовой кнопки)
   var GlnDelay = 0;
   var glTxtSay="1";
-
+  var Gl_trainTime
 
   function btnRecalcCalOnClick() {
     Gl_calendarVisible = !Gl_calendarVisible
@@ -664,23 +664,8 @@
         if (!GlflSayIntro){
             GlflSayIntro=true;
             //расчет времени трени
-            /*
-            try{
-              var nTime = 0
-              for(var i =-1; i<Gl_aRithmLisp.length-1;i=i+2){
-                if (Gl_flBegWord) nTime+=calcInterval(Gl_aRithmLisp[i+1])
-                else nTime+=calcInterval(Gl_aRithmLisp[i+1]);
-              }
-              nTime = Math.round(10*nTime/(1000*60))/10;
-                
-             GlBegTime = new Date()
-             //!! не удалять !!
-             say('Тренировка продлится ' +nTime+' минут');
-
-                //!GltxtSpeek.value+='Тренировка продлится ' +nTime+' минут'+'\n\n';
-            }catch(e){};
-            */
-            say('Тренировка продлится ' +calcTtrainTime()+' минут');
+            Gl_trainTime = calcTtrainTime();
+            say('Тренировка продлится ' +Gl_trainTime+' минут');
             GlBegTime = new Date();
 
         } else
@@ -688,12 +673,14 @@
             if (GlnInd <(Gl_aRithmLisp.length)){
               dCurr = new Date();
               var dT = (dCurr-GlBegTime)
-              txtTextTime.value = "Прошло:   "+Math.floor(dT/(60*1000)) + "  минут  " + (Math.floor(dT/(1000)))%60 + "  секунд"
+              txtTextTime.value = "Прошло:   "+Math.floor(dT/(60*1000)) + "  минут  " + (Math.floor(dT/(1000)))%60 + "  секунд из  "+Gl_trainTime+" мин."
               if((dCurr-GldPrev)>=GlnDelta){ //прошел требуемый интервал
                      //----онлайн параметры--------------------------------------
                      _номер_итерации_+=1;
                      //-----------------------------------------------------------
-
+                     try{
+                       document.getElementById('buttonCurrentTr' + GlnInd).style.background='yellow'
+                     } catch(e){}
                      //сказать текст текущего дела
                      Gl_aRithmLisp[GlnInd]= calcEval("S",Gl_aRithmLisp[GlnInd])
                      say(Gl_aRithmLisp[GlnInd]);
@@ -1080,8 +1067,22 @@
 
   function navigate(i){ // для навигации по делам текущей трени
      alert ("Будет произведен переход на дело '"+Gl_aRithmLisp[i]+"'")
+     window.speechSynthesis.cancel()
      GlnDelta = 1000;// Number(Gl_aRithmLisp[i-1]);
      GlnInd =i
+     for(var j=0; j<i;j++){
+        try{
+          document.getElementById('buttonCurrentTr' + j).style.background='yellow'
+        } catch(e) {}
+     }
+     for(var k=i; k<Gl_aRithmLisp.length;k++){
+        try{
+          document.getElementById('buttonCurrentTr' + k).style.background='light-gray'
+        } catch(e) {}
+     }
+
+
+
   }
 
 
