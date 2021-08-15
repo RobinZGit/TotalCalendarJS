@@ -1068,8 +1068,7 @@
   function navigate(i){ // для навигации по делам текущей трени
      alert ("Будет произведен переход на дело '"+Gl_aRithmLisp[i]+"'")
      window.speechSynthesis.cancel()
-     GlnDelta = 1000;// Number(Gl_aRithmLisp[i-1]);
-     GlnInd =i
+
      for(var j=0; j<i;j++){
         try{
           document.getElementById('buttonCurrentTr' + j).style.background='yellow'
@@ -1080,6 +1079,8 @@
           document.getElementById('buttonCurrentTr' + k).style.background='light-gray'
         } catch(e) {}
      }
+     GlnDelta = 1000;// Number(Gl_aRithmLisp[i-1]);
+     GlnInd =i
 
 
 
