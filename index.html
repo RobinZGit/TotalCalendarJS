@@ -33,7 +33,10 @@
 <div id="idDivStatrPause" style="font-weight:bold">
     <button id="btnSelectAllTrain" style="height:100px;width:74%" > Начать тренировку </button>
     <button id="btnExit" style="float:right;height:100px;width:25%" onclick="window.close()"> Выход </button>
-Без звука<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else document.getElementById('idTextTrain').style.display='block'; ">
+Без звука:<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else document.getElementById('idTextTrain').style.display='block'; ">
+    Темп речи:
+        <input id = "inputRate"  style="height:30px;width:5%" value="1.5">
+
 </div>
 
 <div>
@@ -557,7 +560,8 @@
         //alert(str);
         if (!docNoSound.checked){
             var utterance0 = new SpeechSynthesisUtterance(str);
-            utterance0.rate= 2.0; //скорость речи
+            utterance0.rate=document.getElementById("inputRate").value;// 1.5; //скорость речи
+            //!! window.speechSynthesis.cancel()
             window.speechSynthesis.speak(utterance0);
             //
         } else{
