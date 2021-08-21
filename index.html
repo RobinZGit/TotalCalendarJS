@@ -14,9 +14,11 @@
 </head>
  
 <body onload="loadTrainData()" onresize="resizeAll()">
+<div id="externalcall" style="height:30px;width:100%;background-color:red;display:none"> ЗАПЛАНИРОВАНА ТРЕНИРОВКА
+</div>
 <div id = idDivCalendar style="font-weight:bold;height:30px;"> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="365"> дней от сегодняшнего </div>
 <div>
-<button id="btnRecalcCal" style="height:30px;width:100%" onclick='btnRecalcCalOnClick()'> Показать календарь </button>
+    <button id="btnRecalcCal" style="height:30px;width:100%" onclick='btnRecalcCalOnClick()'> Показать календарь </button>
 </div>
 <div id="idDivActionCalendar" style="height:200px;overflow-y:scroll;border:2px solid #a1a1a1;display:none;">
     <ul id="actionsInCalendar"></ul>
@@ -26,16 +28,16 @@
     <div>
         <select id="selectAllTrain" style="height:100px;width:100%" onchange="if (this.selectedIndex) onSelectTrain(this.selectedIndex);" ></select>
         <div>Тренировка cодержит подстроку (фильтр перед выбором):
-             <input id = "filterStr"  style="height:30px;width:20%" onchange="readFilteredListOfTrainings(value,null)">
+            <input id = "filterStr"  style="height:30px;width:20%" onchange="readFilteredListOfTrainings(value,null)">
         </div>
     </div>
 </div>
 <div id="idDivStatrPause" style="font-weight:bold">
     <button id="btnSelectAllTrain" style="height:100px;width:74%" > Начать тренировку </button>
     <button id="btnExit" style="float:right;height:100px;width:25%" onclick="window.close()"> Выход </button>
-Без звука:<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else document.getElementById('idTextTrain').style.display='block'; ">
+    Без звука:<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else document.getElementById('idTextTrain').style.display='block'; ">
     Темп речи:
-        <input id = "inputRate"  style="height:30px;width:5%" value="1.5">
+    <input id = "inputRate"  style="height:30px;width:5%" value="1.5">
 
 </div>
 
@@ -54,17 +56,17 @@
 </div>
 
 <div>
-<textarea id="idTextsToSpeek" style="width:100%;height:400px;" > </textarea>
+    <textarea id="idTextsToSpeek" style="width:100%;height:400px;" > </textarea>
 </div>
 
 <div>
-<button id="btnPrint" style="height:40px;width:100%" onclick='btnPrintOnClick()'> Текст тренировки для печати </button>
+    <button id="btnPrint" style="height:40px;width:100%" onclick='btnPrintOnClick()'> Текст тренировки для печати </button>
 </div>
 <div style="font-size:small;color:blue;">Info: Можно в параметр startwith url-ссылки передать имя тренировки, и форма сразу после запуска покажет ее выбранной</div>
 <div style="font-size:small;color:blue;">Например:  http://localhost:63342/TotalCalendarJS/index.html?_ijt=p3hgufvl6ok7084qaistkcbqgu&_ij_reload&startwith=УПРАЖНЕНИЯ НА ШЕЮ </div>
-                                                                                
+
 <script>
-    
+
 
  //надписи на кнопке при изменении статуса тренировки (эти же константы используются как ИД статусов - не делать тексты одинаковыми!)
  const TXT_BTN_NOTSTARTED = "Начать";
@@ -89,7 +91,7 @@
  var _номер_итерации_=0;
  //-----------------------------------------------------------
  var Gl_SelectedInd=-1; //выбранная тренировка
- var Gl_aMultiCalendar  
+ var Gl_aMultiCalendar
  var Gl_DaysBeforeNowForShow = 0 //выводить в календаре дела за Gl_DaysBeforeNowForShow дней до сегодняшнего
  var Gl_DaysAfterNowForShow = 365//выводить в календаре дала за Gl_DaysАfterNowForShow дней после сегодняшнего
 
@@ -102,7 +104,7 @@
 
  //Календарь тренировок
  var Gl_aMetaMetaCalendar =
-       [        
+       [
            [[new Date(2021,0,1)], //дата начала действия календаря (нач. условие "интегрирования")
             [ "<КАЛЕНДАРЬ>=1000<РАСПИСАНИЕ>",
               //"<РАСПИСАНИЕ>=<УПРАЖНЕНИЯ НА ШЕЮ>;<#0#>;<УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ>;<#0#>;<АЭРОБНЫЕ>;<#0#>;<ДЫХАТЕЛЬНАЯ ЛЕСЕНКА>;<#1 [СУТ]#>",
@@ -113,8 +115,8 @@
               "[END EVAL PARAMETERS]",
             ]
            ],
-           
-           
+
+
            [[new Date(2021,0,1)],
             [ "<КАЛЕНДАРЬ1>=1000<РАСПИСАНИЕ1>",
               "<РАСПИСАНИЕ1>=<РАСПИСАНИЕ11>;<#2 [СУТ]#>",
@@ -122,7 +124,7 @@
               "[BEGIN EVAL PARAMETERS]",
               "[END EVAL PARAMETERS]",
             ]
-           ], 
+           ],
            /*
            [[new Date(2021,0,1)],
                    [ "<КАЛЕНДАРЬ1>=1000<РАСПИСАНИЕ1>",
@@ -130,7 +132,7 @@
               "[BEGIN EVAL PARAMETERS]",
               "[END EVAL PARAMETERS]",
             ]
-           ],  
+           ],
         [[new Date(2021,0,1)],
           [ "<КАЛЕНДАРЬ2>=1000<РАСПИСАНИЕ2>",
               "<РАСПИСАНИЕ2>=<200>;<#3 [СУТ]#>;<110>",
@@ -146,7 +148,7 @@
 
  //Массив тренировок
  var Gl_aMetaRithm =
-        [  
+        [
           /*    //===========================
               [
                [],
@@ -154,8 +156,8 @@
                  "<РАСПИСАНИЕ>=<УПРАЖНЕНИЯ НА ШЕЮ>;<ДЫХАТЕЛЬНАЯ ЛЕСЕНКА>;<#1 [СУТ]#>",
                  "[BEGIN EVAL PARAMETERS]",
                  "[END EVAL PARAMETERS]",
-               ],    
-                  
+               ],
+
               ],
             */
                 //========================== УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ ЧАСТЬ 1
@@ -191,7 +193,7 @@
                   "<СТОПА>=<Стопа. Стопу на шарик и катать>;<#10 [СЕК]#>;10<КОМАНДА>;<#4 [СЕК]#>;<Сменить ногу>;<#4 [СЕК]#>;10<КОМАНДА>",
                   "<ДЛИННЫЕ РАЗГИБАТЕЛИ ШЕИ>=<Растяжение левых лестничных мышц. Пальцы прижимают мышцы, наклоны головы вперед-вправо и назад-влево>;<#10 [СЕК]#>;25<КОМАНДА>;<#4 [СЕК]#>;<Растяжение правых лестничных мышц. Пальцы прижимают мышцы, наклоны головы вперед-влево и назад-вправо>;<#10 [СЕК]#>;25<КОМАНДА>;<#6 [СЕК]#>;<Длинные разгибатели шеи. Слабую резинку на турник и на затылок, разгибание , макушка тянется при этом вверх>;<#10 [СЕК]#>;10<КОМАНДА>",
                   "<ВНЕШНИЕ ГОЛЕНИ С РЕЗИНОЙ>=<Внешние голени. Сесть на пол с прямыми ногами, среднюю резинку на ножку кровати и на пальцы ног, сгибание стоп к животу>;<#8 [СЕК]#>;20<КОМАНДА>",
-                  "<РАСТЯЖЕНИЕ ГРУДНЫХ МЫШЦ>=<РАСТЯЖЕНИЕ ГРУДНЫХ МЫШЦ. Стоя, ладони на дверные косяки, локти на уровне ушей. Шаг вперед, тянем.>;<# 8[СЕК]#>;10<КОМАНДА>",   
+                  "<РАСТЯЖЕНИЕ ГРУДНЫХ МЫШЦ>=<РАСТЯЖЕНИЕ ГРУДНЫХ МЫШЦ. Стоя, ладони на дверные косяки, локти на уровне ушей. Шаг вперед, тянем.>;<# 8[СЕК]#>;10<КОМАНДА>",
                   "<ПОДКЛЮЧИЧНАЯ>=<Подключичная мышца. Соединить ладони рук над головой, подать их немного вперед. Правая ладонь делает движение назад над своим плечом, левая сопротивляется. Повторить в другую сторону>;<#13 [СЕК]#>;20<КОМАНДА>",
                   "<РОМБОВИДНАЯ>=<Ромбовидная мышца. Промять мячиком у стенки область между лопаток>;<#10 [СЕК]#>;45<КОМАНДА>;<#6 [СЕК]#>;<Разведение рук с резинкой, локти выше головы>;<#5 [СЕК]#>;10<КОМАНДА>",
                   "<ТЕМЯ> =<Темя. Напрягать мышцы скальпа>;<#5 [СЕК]#>;15<КОМАНДА>",
@@ -262,7 +264,7 @@
               //================
 
 
-             //========================== УПРАЖНЕНИЯ ШИШОНИНА НА ШЕЮ 
+             //========================== УПРАЖНЕНИЯ ШИШОНИНА НА ШЕЮ
               [
                 [],
                 [
@@ -540,17 +542,17 @@
   var GlTest = 1;
   var GltxtSpeek  = document.getElementById("idTextsToSpeek");
   var GlUtterance = new SpeechSynthesisUtterance("");
-  var calendar = document.getElementById("actionsInCalendar");   
+  var calendar = document.getElementById("actionsInCalendar");
   var currentT = document.getElementById("currentT");
-  var inputMinDay = document.getElementById("inputMinDay");    
-  var inputMaxDay = document.getElementById("inputMaxDay");    
-  var getTextToPrint = document.getElementById("getTextToPrint"); 
-  var selectAllTrain = document.getElementById("selectAllTrain");   
+  var inputMinDay = document.getElementById("inputMinDay");
+  var inputMaxDay = document.getElementById("inputMaxDay");
+  var getTextToPrint = document.getElementById("getTextToPrint");
+  var selectAllTrain = document.getElementById("selectAllTrain");
   var btnSelectAllTrain = document.getElementById("btnSelectAllTrain");
   var txtTextTime  = document.getElementById("idTextTime");
   var docTextTrain = document.getElementById("idTextTrain");
   var docNoSound = document.getElementById("idNoSound");
-  Gl_DaysBeforeNowForShow = inputMinDay.value;  
+  Gl_DaysBeforeNowForShow = inputMinDay.value;
   Gl_DaysAfterNowForShow = inputMaxDay.value;
   var inputFilterStr = document.getElementById('filterStr');
   var Gl_currentTrainName =""
@@ -561,6 +563,7 @@
   var GlnDelay = 0;
   var glTxtSay="1";
   var Gl_trainTime
+  var Gl_decodeExternalCallValue=""
 
   function btnRecalcCalOnClick() {
     Gl_calendarVisible = !Gl_calendarVisible
@@ -576,7 +579,7 @@
       document.getElementById("btnRecalcCal").innerHTML = 'Показать календарь'
     }
 
-  }   
+  }
 
 
   //пытаемся вычислить строку как формулу. если не получается оставляем строку как есть
@@ -588,15 +591,30 @@
 
   //Выводим данные на форму при загрузке страницы
   function loadTrainData() {
-    var loadTrain = location.href
+    //параметр - с какую треню выбрать по умолчанию
+    var startWithValue = location.href
     try{
-      loadTrain = loadTrain.split('?')[1].split('&').filter((v)=>{return (v.indexOf('startwith')>=0)}).join(' ').split('=')[1];
-    } catch(e){ loadTrain= null};
+      startWithValue = location.href.split('?')[1].split('&').filter((v)=>{return (v.indexOf('startwith')>=0)}).join(' ').split('=')[1];
+    } catch(e){ startWithValue= ''};
 
-    fillForm(decodeURIComponent(loadTrain))
+    //параметр - для вызова с сервера
+    var externalCallValue = location.href
+   // alert(externalCallValue)
+    try{
+      externalCallValue = location.href.split('?')[1].split('&').filter((v)=>{return (v.indexOf('externalcall')>=0)}).join(' ').split('=')[1];
+    } catch(e){ externalCallValue= ''};
+
+    if (externalCallValue!=undefined)
+      Gl_decodeExternalCallValue = decodeURIComponent(externalCallValue)
+    else
+      Gl_decodeExternalCallValue=''
+    fillForm(decodeURIComponent(startWithValue))
+
     //GltxtSpeek.value += "\n\n Для изменения тренировки необходимо редактировать запускаемый файл html.\n";
-    alert("Чтобы не было перерыва в тренировке из-за выключения экрана не забудьте запустить программу типа Stay Alive (android)")
-
+    if (Gl_decodeExternalCallValue.valueOf().length==0)
+      alert("Чтобы не было перерыва в тренировке из-за выключения экрана не забудьте запустить программу типа Stay Alive (android)")
+    else
+      document.getElementById('externalcall').style.display='block'
   }
 
   //изменение размеров элементов при изменении размеров окна
@@ -637,7 +655,7 @@
             )
    }
 
-      
+
    function calcInterval(sInterval){ //распарсить интервал вида <#19 [СЕК][%ДИСПЕРС]10#> или <#19 [СЕК]#>
         //дисперсия
 
@@ -647,9 +665,9 @@
           if (sRet.indexOf('[%ДИСПЕРС]')>=0)
              nDisp = Number(sRet.split('[%ДИСПЕРС]')[1]);
         }catch(e){}
-       
+
         sRet = calcMilliseconds(sRet)
-       
+
         if (nDisp>0){
             nDipOne = 2*(0.5-Math.random())*nDisp;
             sRet = Math.round((Number(sRet)*(100+nDipOne)/100)*100)/100;
@@ -707,7 +725,7 @@
     }
    function fSayInTime(){
         if(Gl_IsFinished) return
-                                                 
+
         var dCurr = new Date();
         if(!GlflSayIntro2)
            if((dCurr-GldPrev)>=0/*!10000*/){
@@ -771,7 +789,7 @@
   function addAction (sMode, oListbox, text, value, isDefaultSelected, isSelected,sStyle,fl,btnPrevId,nRepeat)
   {
     var retId=""
-      
+
     if (sMode=='currentTShort'){
       btn = document.getElementById(btnPrevId)
       btn.innerHTML= text +" (повторить "+nRepeat
@@ -779,28 +797,28 @@
       //Gl_txtPrint.value += text +"/n"
       //Gl_txtPrint.value += text +" (повторить "+nRepeat
       //    +" раз)"+"/n"
-      retId = btnPrevId  
+      retId = btnPrevId
       return retId
     }else{
       //! Gl_txtPrint.value += text +"/n"
       var li = document.createElement("li");
       var btn = document.createElement('button');
       var txt = document.createTextNode(text);
-      
+
       btn.appendChild(txt);
       btn.setAttribute('type', 'button');
-      
+
       if(sStyle.length>0){
         if(fl) btn.setAttribute('style',sStyle+';background:yellow')
-        else  btn.setAttribute('style',sStyle+';background:lightgreen') 
+        else  btn.setAttribute('style',sStyle+';background:lightgreen')
       }
       if (sMode=='currentT') btn.setAttribute('style',sStyle)
-      
+
       if (sMode=='all'){
-        var oOption =  new Option(text,value); 
+        var oOption =  new Option(text,value);
         btnSelectAllTrain.setAttribute('onclick','execTrain1(selectAllTrain.value,"Act")'); //!! RUN
-        selectAllTrain.options.add( oOption ) ;//!!!   
-      }else if (sMode=='calendar'){    
+        selectAllTrain.options.add( oOption ) ;//!!!
+      }else if (sMode=='calendar'){
         btn.setAttribute('onclick','execTrain1('+value+',"Calendar")');
         retId = 'buttonCalendar' + value
         btn.setAttribute('id', retId);
@@ -811,12 +829,12 @@
         retId = 'buttonCurrentTr' + value
         btn.setAttribute('id', retId);
       }
-      
+
       if (sMode!='all'){
         li.appendChild(btn);
         if (isDefaultSelected) li.defaultSelected = true;
         else if (isSelected) li.selected = true;
-        oListbox.appendChild(li); 
+        oListbox.appendChild(li);
       }
       return retId
     }
@@ -838,18 +856,18 @@
     //GlTest+=1;
     calendar.innerHTML = ''
     currentT.innerHTML = ''
-     
+
     //=========НАЧИТКА СПИСКА ВСЕХ ТРЕНИРОВОК===========
     readFilteredListOfTrainings('',loadTrain);
 
     onSelectTrain(selectAllTrain.value);
-    
+
     //собираем все календари в один:
-    
+
     //1. Собираем одномерный массив, одновременно заменяя промежутки времени на даты ("интегрирование")
     Gl_aMultiCalendar=[].slice()
     var now0 = new Date()
-    for (var i=0; i<Gl_aMetaMetaCalendar.length; i++){        
+    for (var i=0; i<Gl_aMetaMetaCalendar.length; i++){
         var  dCurr =  Gl_aMetaMetaCalendar[i][0][0]
         var aCalendar = getArithm(Gl_aMetaMetaCalendar[i][1])//.slice()
         for (var j=1; j<aCalendar.length-1; j=j+2){
@@ -863,21 +881,21 @@
             }
         }
     }
- 
-    //2. Сортируем пары 
-    for (var i=0; i<Gl_aMultiCalendar.length-1; i=i+2)  
+
+    //2. Сортируем пары
+    for (var i=0; i<Gl_aMultiCalendar.length-1; i=i+2)
         for (var j=i; j<Gl_aMultiCalendar.length-1; j=j+2)
             if (Gl_aMultiCalendar[i]>Gl_aMultiCalendar[j]){
               var d = new Date(Gl_aMultiCalendar[j])
               var s=   String(Gl_aMultiCalendar[j+1])
               Gl_aMultiCalendar[j] = new Date(Gl_aMultiCalendar[i])
-              Gl_aMultiCalendar[j+1] = String(Gl_aMultiCalendar[i+1])   
+              Gl_aMultiCalendar[j+1] = String(Gl_aMultiCalendar[i+1])
               Gl_aMultiCalendar[j] = new Date(d)
-              Gl_aMultiCalendar[i+1] = String(s)    
-              
+              Gl_aMultiCalendar[i+1] = String(s)
+
             }
-      
-    //3. Выводим отсортированные дела 
+
+    //3. Выводим отсортированные дела
     var sStyle =""
     var now = new Date()
     var dCurr = new Date(Gl_aMultiCalendar[0])
@@ -885,7 +903,7 @@
     for(var i=1; i<Gl_aMultiCalendar.length-1; i+=2) {
        dCurrPrev = new Date(dCurr)
        dCurr = new Date(Gl_aMultiCalendar[i-1]);
-       if (!((dCurr.getFullYear()==dCurrPrev.getFullYear())&&(dCurr.getMonth()==dCurrPrev.getMonth())&&(dCurr.getDate()==dCurrPrev.getDate())))  fl=!fl    
+       if (!((dCurr.getFullYear()==dCurrPrev.getFullYear())&&(dCurr.getMonth()==dCurrPrev.getMonth())&&(dCurr.getDate()==dCurrPrev.getDate())))  fl=!fl
         if ((dCurr.getFullYear()==now.getFullYear())&&(dCurr.getMonth()==now.getMonth())&&(dCurr.getDate()==now.getDate()))
           sStyle ="width:100%;color:red;"
         else sStyle ="width:100%";
@@ -893,12 +911,12 @@
                             +'   :    '+Gl_aMultiCalendar[i] ,i,false,false,sStyle,fl);
     }
   }
-      
-  //поиск тренировки по наименованию (в угловых скобках)      
+
+  //поиск тренировки по наименованию (в угловых скобках)
   function getTrainIndexByName(sName){
     //  alert(sName);
     for(var i=0; i<Gl_aMetaRithm.length; i++)// alert (Gl_aMetaRithm[i][1].length)
-      for(var j=0; j<Gl_aMetaRithm[i][1].length; j++) //  alert(Gl_aMetaRithm[i][1][j].split('=')[0].trim()) 
+      for(var j=0; j<Gl_aMetaRithm[i][1].length; j++) //  alert(Gl_aMetaRithm[i][1][j].split('=')[0].trim())
           if(Gl_aMetaRithm[i][1][j].split('=')[0].trim()==sName) return i;
   }
 
@@ -971,7 +989,7 @@
         for(var j=0; j<nBeg; j++)
             Gl_aGenRithm[j]=Gl_aGenRithm[j].split("=")[0]+"="+Gl_aGenRithm[j].split("=")[1].split(sOld).join(sNew);
     }
-        
+
     for(var i=0; i<nBeg; i++){//вычищаем угловые скобки внутри блоков интервала (внутри #..#)
        var aRr = Gl_aGenRithm[i].split("#")
        for (var j = 1; j < aRr.length; j+=2){
@@ -980,7 +998,7 @@
        }
     }
     //alert('перед удалением угловых скобок из умножений \n'+Gl_aGenRithm)
-    
+
     for(var i=0; i<nBeg; i++){//вычищаем угловые скобки вокруг умножений (признак - наличие >< без разделителя)
        var sClear = ""
        var flIsTmsDetected= false
@@ -1105,14 +1123,14 @@
       Gl_aRithmLisp[i] = Gl_aRithmLisp[i].split('>').join(' ');
       Gl_aRithmLisp[i] = Gl_aRithmLisp[i].split('>').join(' ');
     }
-                                             
+
     //Добавим "тренировка завершена"
       var sDelim ="%%%%%%%%"
     if (Gl_aRithmLisp.length%2==1)
         Gl_aRithmLisp = (Gl_aRithmLisp.join(sDelim)+sDelim+TXT_BTN_FINISHED).split(sDelim)
-    else  
+    else
          Gl_aRithmLisp = (Gl_aRithmLisp.join(sDelim)+sDelim+"1000"+sDelim+TXT_BTN_FINISHED).split(sDelim)
-      
+
     //ИТОГОВЫЙ ОДНОМЕРНЫЙ МАССИВ Gl_aRithmLisp, ПРИЧЕМ ЕСЛИ Gl_flBegWord ТО ОН НАЧИНАЕТСЯ С ДЕЛА ИНАЧЕ С ИНТЕРВАЛА
     //alert ('МАССИВ перед проговариванием \n'+Gl_aRithmLisp)
     //=========================================================
@@ -1121,7 +1139,8 @@
 
 
   function navigate(i){ // для навигации по делам текущей трени
-     alert ("Будет произведен переход на дело '"+Gl_aRithmLisp[i]+"'")
+     if (Gl_decodeExternalCallValue.length=0)
+         alert ("Будет произведен переход на дело '"+Gl_aRithmLisp[i]+"'")
      window.speechSynthesis.cancel()
 
      for(var j=0; j<i;j++){
