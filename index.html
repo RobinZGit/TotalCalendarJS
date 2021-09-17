@@ -920,6 +920,12 @@
           if(Gl_aMetaRithm[i][1][j].split('=')[0].trim()==sName) return i;
   }
 
+  //Случайное от 0 до 1 (Math.random() каж-ся тупит)
+  function fgetRandom(){
+    var d = new Date()
+    return d.getMilliseconds()/1000
+  }
+
   //выдает массив тренировки (начинается всегда с интервала, чередуется интервал-команда)
   function getArithm(aGen){
     var Gl_aGenRithm00 = aGen
@@ -1075,7 +1081,7 @@
                   var nSum = 0;
                   for(var jj=0; jj<aProportions.length; jj++) nSum+=Number(aProportions[jj]);
                   while(Gl_aGenRithm[j].indexOf(sOld)>=0){
-                      var nRand = Math.floor(Math.random()*(nSum+1));
+                      var nRand = Math.floor(fgetRandom()*(nSum+1));
                       var k =0;
                       var nSumCurr = 0;
                       while((nSumCurr<=nRand)&&(k<aProportions.length)){
