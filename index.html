@@ -14,6 +14,7 @@
 </head>
  
 <body onload="loadTrainData()" onresize="resizeAll()">
+<!--<button id="ttt" style="float:right;height:100px;width:25%" onclick="beep0(1000,0.5)">BEEP </button>-->
 <div id="externalcall" style="height:30px;width:100%;background-color:red;display:none"> ЗАПЛАНИРОВАНА ТРЕНИРОВКА
 </div>
 <div id = idDivCalendar style="font-weight:bold;height:30px;"> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="365"> дней от сегодняшнего </div>
@@ -89,6 +90,7 @@
  var GlIsRunning = false
  //----онлайн параметры--------------------------------------
  var _номер_итерации_=0;
+ var _history_ = [];
  //-----------------------------------------------------------
  var Gl_SelectedInd=-1; //выбранная тренировка
  var Gl_aMultiCalendar
@@ -591,6 +593,8 @@
 
   //Выводим данные на форму при загрузке страницы
   function loadTrainData() {
+
+    //beep0(1000, 0.5)
     //параметр - с какую треню выбрать по умолчанию
     var startWithValue = location.href
     try{
@@ -640,6 +644,10 @@
             docTextTrain.scrollTop = docTextTrain.scrollHeight
             window.scrollBy(0,-100)
         }
+
+        var d=new Date();
+        aCurr = [d,str];
+        _history_.push(aCurr);
       }
 
   function hasOnlineCalcedParams(str){
@@ -652,6 +660,7 @@
              ||(str.indexOf('_прошло_минут_')>=0)
              ||(str.indexOf('_прошло_секунд_')>=0)
              ||(str.indexOf('_прошло_милисекунд_')>=0)
+             ||(str.indexOf('_history_')>=0)
             )
    }
 
@@ -1337,6 +1346,36 @@
      CallPrint()
    }
 
+    function beep(f, d) { // частота в герцах, длительность в секундах
+      var ctx = new AudioContext();
+      var oscillator = ctx.createOscillator();
+      oscillator.frequency.value = f;
+      oscillator.connect(ctx.destination);
+      oscillator.start();
+      oscillator.stop(d);
+      //alert(1)
+    }
+    function beep2(f, d) {
+      var volume = 10000,
+        u1 = -volume,
+        u2 = volume,
+        u = u1,
+        samples = [],
+        titlestring = decodeURIComponent(escape(window.atob("UklGRgAAAABXQVZFZm10IBAAAAABAAIARMKsAAAQwrECAAQAEABkYXRh"))),
+        title = [];
+      for (i = 0; i < titlestring.length; i++) title[i] = titlestring.charCodeAt(i);
+      for (i = 0; i < d * 44100; i++) {
+        u += f;
+        if (u > u2) u = u1;
+        samples[i] = u;
+      }
+      var outbuffer = new Int16Array(title.length / 2 + samples.length * 2);
+      for (i = 0; i < title.length; i += 2) outbuffer[i / 2] = title[i] + title[i + 1] * 256;
+      for (i = 0; i < samples.length * 2; i++) outbuffer[i * 2 + 44] = outbuffer[i * 2 + 45] = samples[i];
+      var audio = new Audio(URL.createObjectURL(new Blob([outbuffer])));
+      audio.play();
+
+    }
 
 
 
