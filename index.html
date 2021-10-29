@@ -20,11 +20,11 @@
 -->
 <div id="externalcall" style="height:30px;width:100%;background-color:red;display:none"> ЗАПЛАНИРОВАНА ТРЕНИРОВКА
 </div>
-<div id = idDivCalendar style="font-weight:bold;height:30px;"> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="365"> дней от сегодняшнего </div>
+<div id = idDivCalendar style="font-weight:bold;height:30px;"> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="1"> дней от сегодняшнего </div>
 <div>
-    <button id="btnRecalcCal" style="height:30px;width:100%" onclick='btnRecalcCalOnClick()'> Показать календарь </button>
+    <button id="btnRecalcCal" style="height:30px;width:100%" onclick='btnRecalcCalOnClick()'> Пересчитать календарь </button>
 </div>
-<div id="idDivActionCalendar" style="height:200px;overflow-y:scroll;border:2px solid #a1a1a1;display:none;">
+<div id="idDivActionCalendar" style="height:100px;overflow-y:scroll;border:2px solid #a1a1a1;">
     <ul id="actionsInCalendar"></ul>
 </div>
 
@@ -98,7 +98,7 @@
  var Gl_SelectedInd=-1; //выбранная тренировка
  var Gl_aMultiCalendar
  var Gl_DaysBeforeNowForShow = 0 //выводить в календаре дела за Gl_DaysBeforeNowForShow дней до сегодняшнего
- var Gl_DaysAfterNowForShow = 365//выводить в календаре дала за Gl_DaysАfterNowForShow дней после сегодняшнего
+ var Gl_DaysAfterNowForShow = 1//выводить в календаре дала за Gl_DaysАfterNowForShow дней после сегодняшнего
 
  var GlBegTime = new Date()
 
@@ -110,18 +110,19 @@
  //Календарь тренировок
  var Gl_aMetaMetaCalendar =
        [
-           [[new Date(2021,0,1)], //дата начала действия календаря (нач. условие "интегрирования")
+           [[new Date(2021,9,29)], //дата начала действия календаря (нач. условие "интегрирования")
             [ "<КАЛЕНДАРЬ>=1000<РАСПИСАНИЕ>",
               //"<РАСПИСАНИЕ>=<УПРАЖНЕНИЯ НА ШЕЮ>;<#0#>;<УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ>;<#0#>;<АЭРОБНЫЕ>;<#0#>;<ДЫХАТЕЛЬНАЯ ЛЕСЕНКА>;<#1 [СУТ]#>",
-              "<РАСПИСАНИЕ>=<С АЭРОБНЫМИ>;<#1 [СУТ]#>;<С АЭРОБНЫМИ>;<#1 [СУТ]#>;<БЕЗ АЭРОБНЫХ>;<#1 [СУТ]#>",
-              "<С АЭРОБНЫМИ>=<УПРАЖНЕНИЯ НА ШЕЮ>;<#0#>;<УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ ЧАСТЬ 1>;<#0#>;<АЭРОБНЫЕ>",
-              "<БЕЗ АЭРОБНЫХ>=<УПРАЖНЕНИЯ НА ШЕЮ>;<#0#>;<УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ ЧАСТЬ 1>;<#0#>;<ДЫХАТЕЛЬНАЯ ЛЕСЕНКА>",
+              //"<РАСПИСАНИЕ>=<С АЭРОБНЫМИ>;<#1 [СУТ]#>;<С АЭРОБНЫМИ>;<#1 [СУТ]#>;<БЕЗ АЭРОБНЫХ>;<#1 [СУТ]#>",
+              "<РАСПИСАНИЕ>=<РАСТЯЖКА>;<#1 [СУТ]#>;<БАЗОВАЯ>;<#1 [СУТ]#>",
+              //"<С АЭРОБНЫМИ>=<УПРАЖНЕНИЯ НА ШЕЮ>;<#0#>;<УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ ЧАСТЬ 1>;<#0#>;<АЭРОБНЫЕ>",
+              //"<БЕЗ АЭРОБНЫХ>=<УПРАЖНЕНИЯ НА ШЕЮ>;<#0#>;<УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ ЧАСТЬ 1>;<#0#>;<ДЫХАТЕЛЬНАЯ ЛЕСЕНКА>",
               "[BEGIN EVAL PARAMETERS]",
               "[END EVAL PARAMETERS]",
             ]
            ],
 
-
+           /*
            [[new Date(2021,0,1)],
             [ "<КАЛЕНДАРЬ1>=1000<РАСПИСАНИЕ1>",
               "<РАСПИСАНИЕ1>=<РАСПИСАНИЕ11>;<#2 [СУТ]#>",
@@ -130,6 +131,7 @@
               "[END EVAL PARAMETERS]",
             ]
            ],
+           */
            /*
            [[new Date(2021,0,1)],
                    [ "<КАЛЕНДАРЬ1>=1000<РАСПИСАНИЕ1>",
@@ -169,7 +171,7 @@
               [
                 [],
                 [
-                  "<ЕЖЕДНЕВНАЯ БАЗОВАЯ>="+
+                  "<БАЗОВАЯ>="+
                            "<ДЛИННЫЕ РАЗГИБАТЕЛИ ШЕИ>;<#6 [СЕК]#>;"+
                            "<СТОПА>;<#3 [СЕК]#>;"+
                            "<ВНЕШНИЕ ГОЛЕНИ С РЕЗИНОЙ>;<#6 [СЕК]#>;"+
@@ -259,6 +261,27 @@
                 ],
                ],
               //===============
+              //================  РАСТЯЖКА
+              [
+                [],
+                [ "<РАСТЯЖКА>=1<ЦИКЛ>",
+                  "<ЦИКЛ>=<У0>;<У1>;<У2>;<У3>;<У4>;<У5>;<У6>;<У7>;",
+                  "<У0>=<Перед растяжкой необходимо выполнить короткую разминку, подойдет любой комплекс аэробных упражнений. После чего переходите к стретчингу>;<#7 [СЕК]#>;<для улучшения ощущений и качества тренировки, включите приятную, спокойную музыку.>;<#4 [СЕК]#>;<Все упражнения выполняйте без резких движений, оставайтесь в каждой позе несколько минут.>;<#4 [СЕК]#>",
+                  "<У1>=<«Собака мордой вверх». Данная поза хорошо растягивает мышцы пресса. Лежа на животе, поставьте руки под плечи. Поднимите верхнюю часть тела и обопритесь на прямые руки. Старайтесь сохранять плечи опущенными. Как можно глубже прогнитесь в грудном отделе.>;<#8 [СЕК]#>;7(<тянем>;<#10 [СЕК]#>)",
+                  "<У2>=<«Поза ребенка». Встаньте на четвереньки, колени подальше друг от друга, чтобы хорошо растянуть мышцы бедер. Отведите ягодицы назад, руками тянитесь по полу вперед. Прогнитесь в пояснице, чтобы лучше размять мышцы спины и груди.>;<#8 [СЕК]#>;7(<тянем>;<#10 [СЕК]#>)",
+                  "<У3>=<Скручивание лежа. Растяжка косых мышц живота и ягодиц. Перевернитесь на спину, согните одну ногу в колене и перенесите на противоположную сторону пока не коснетесь пола, при желании, противоположной рукой можно аккуратно надавить на колено. Грудную клетку сохраняйте открытой и прижатой к полу.>;<#8 [СЕК]#>;4(<тянем>;<#10 [СЕК]#>);<Поменяйте ноги.>;<#2 [СЕК]#>;4(<тянем>;<#10 [СЕК]#>)",
+                  "<У4>=<Поперечная складка вперед. Сядьте ровно и разведите ноги как можно шире. Положите руки перед собой, тянитесь вперед и постарайтесь медленно лечь на пол. Упражнение расслабляет подколенные сухожилия и приводящую мышцу.>;<#8 [СЕК]#>;7(<тянем>;<#10 [СЕК]#>)",
+                  "<У5>=<Растяжка трицепсов и плеч. Встаньте ровно и поднимите одну руку вверх, согните ее в локте за головой. Вторую руку оставьте внизу и тоже согните в локте за спиной. Постарайтесь дотянуться одной рукой до другой. Если зацепиться пальцами не получается, воспользуйтесь веревкой или небольшим полотенцем.>;4(<тянем>;<#10 [СЕК]#>);<Поменяйте руки.>;<#2 [СЕК]#>;4(<тянем>;<#10 [СЕК]#>)",
+                  "<У6>=<Растяжка бицепсов. Встаньте прямо, скрепите руки в замок за спиной, так чтобы ладони смотрели вниз. В таком положении постарайтесь поднять руки как можно выше, корпус держите прямо.>;<#8 [СЕК]#>;7(<тянем>;<#10 [СЕК]#>)",
+                  "<У7>=<Завершите комплекс упражнений наклонами головы, чтобы растянуть мышцы шеи.Медленно и аккуратно наклоните голову сначала влево, затем вправо, потом вперед и назад.>;<#8 [СЕК]#>;",
+
+                  "//Блок параметров тренировки. В нем запрещены умножения на число и выбор",
+                  "//Вычисления начинаются с подстновок в данном блоке",
+                  "[BEGIN EVAL PARAMETERS]",
+                  "[END EVAL PARAMETERS]",
+                ],
+               ],
+              //=================================================
               //================  УПРАЖНЕНИЯ НА ПОЗВОНОЧНИК (ТАЛАМБУМ)
               [
                 [],
@@ -598,7 +621,7 @@
   var Gl_currentTrainName =""
   var Gl_sDelim = '/DELIMITER/'
   var Gl_txtPrint = document.createElement('textarea');
-  var Gl_calendarVisible = false;
+  var Gl_calendarVisible = true;//false;
   //длЯ задержки начала тренировки (чтобы закрепить смартфон после нажатия стартовой кнопки)
   var GlnDelay = 0;
   var glTxtSay="1";
@@ -606,18 +629,18 @@
   var Gl_decodeExternalCallValue=""
 
   function btnRecalcCalOnClick() {
-    Gl_calendarVisible = !Gl_calendarVisible
-    if (Gl_calendarVisible){
+    //? Gl_calendarVisible = !Gl_calendarVisible
+    //? if (Gl_calendarVisible){
 
       Gl_DaysBeforeNowForShow = inputMinDay.value;
       Gl_DaysAfterNowForShow = inputMaxDay.value;
       fillForm()
-      document.getElementById("btnRecalcCal").innerHTML = 'Скрыть календарь'
-      document.getElementById("idDivActionCalendar").style.display ='inline'
-    } else {
-      document.getElementById("idDivActionCalendar").style.display ='none'
-      document.getElementById("btnRecalcCal").innerHTML = 'Показать календарь'
-    }
+      //? document.getElementById("btnRecalcCal").innerHTML = 'Скрыть календарь'
+      //? document.getElementById("idDivActionCalendar").style.display ='inline'
+    //? } else {
+    //  //? document.getElementById("idDivActionCalendar").style.display ='none'
+    //  document.getElementById("btnRecalcCal").innerHTML = 'Показать календарь'
+    //}
 
   }
 
@@ -1307,8 +1330,8 @@
   //Запускает цикл проговаривания тренировки
   function execTrain1(value, sMode){
     //скрываем календарь
-    document.getElementById("idDivActionCalendar").style.display ='none'
-    document.getElementById("btnRecalcCal").innerHTML = 'Показать календарь'
+    //? document.getElementById("idDivActionCalendar").style.display ='none'
+    //? document.getElementById("btnRecalcCal").innerHTML = 'Показать календарь'
 
     if (GlIsRunning) {
       alert("Продолжить тренировку")
@@ -1320,7 +1343,7 @@
        //скрываем/открываем контролы
        document.getElementById("idDivCalendar").style.display ='none'
        document.getElementById("btnRecalcCal").style.display ='none'
-       document.getElementById("idDivActionCalendar").style.display ='none'
+       //?document.getElementById("idDivActionCalendar").style.display ='none'
        document.getElementById("btnPrint").style.display ='none'
        document.getElementById("idDivAllTrain").style.display ='none'
        document.getElementById("idTextsToSpeek").style.display ='none'
@@ -1341,6 +1364,7 @@
       Gl_currentTrainName = Gl_aMultiCalendar[value].trim()
       var aEv = Gl_aMetaRithm[getTrainIndexByName("<"+Gl_aMultiCalendar[value].trim()+">")][1]
       GltxtSpeek.value= aEv.join('     '+Gl_sDelim+'\n')
+      selectAllTrain.selectedIndex = getTrainIndexByName("<"+Gl_aMultiCalendar[value].trim()+">") //!!!!
       alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
       btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
       getText2Print(Gl_currentTrainName)
