@@ -1335,7 +1335,7 @@
   //Запускает цикл проговаривания тренировки
   function execTrain1(value, sMode){
     //скрываем календарь
-    //? document.getElementById("idDivActionCalendar").style.display ='none'
+    //?! document.getElementById("idDivActionCalendar").style.display ='none'
     //? document.getElementById("btnRecalcCal").innerHTML = 'Показать календарь'
 
     if (GlIsRunning) {
@@ -1348,7 +1348,7 @@
        //скрываем/открываем контролы
        document.getElementById("idDivCalendar").style.display ='none'
        document.getElementById("btnRecalcCal").style.display ='none'
-       //?document.getElementById("idDivActionCalendar").style.display ='none'
+       document.getElementById("idDivActionCalendar").style.display ='none'
        document.getElementById("btnPrint").style.display ='none'
        document.getElementById("idDivAllTrain").style.display ='none'
        document.getElementById("idTextsToSpeek").style.display ='none'
