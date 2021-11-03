@@ -1212,6 +1212,13 @@
               if (sNum.trim().length>0)
                 var nNum =  Number(sNum)
               sI = sI + sVal.repeat(nNum)
+              /* ! Попытка использовать вставку ИНДЕКС при повторениях - проблема - в случае вложенных скобок не работает как хотелось бы - в этом случае вообще говоря имеется несколько вложенных индексов, наверное их нужно суммировать в один
+              for(var k=0;k<nNum;k++) {
+                if (sVal.indexOf('[ИНДЕКС]')>=0) alert (sVal+'   k='+k)
+                sI+=sVal
+                sI=sI.replaceAll('[ИНДЕКС]',k+1).replaceAll('[ПОСЛЕДНИЙ ИНДЕКС]',nNum)
+              }
+              */
             }
             Gl_aGenRithm[i] = sHead+'='+sI;
         }
