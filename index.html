@@ -14,8 +14,9 @@
 </head>
  
 <body onload="loadTrainData()" onresize="resizeAll()">
-<!--
+
 <button id="ttt" style="float:right;height:100px;width:25%" onclick="test()">test </button>
+<!--
 <textarea id="idTestText" style="width:100%;height:400px;" > </textarea>
 -->
 <div id="externalcall" style="height:30px;width:100%;background-color:red;display:none"> ЗАПЛАНИРОВАНА ТРЕНИРОВКА
@@ -926,6 +927,87 @@
       selectAllTrain.selectedIndex = getTrainIndexByName("<"+loadTrain+">")
   }
 
+  //"стусовка" тренировок из массива (может не работать, если промежутки времени зависят от онлайн-вычисляемых параметров)
+  //  nMode == 'paint' - вывод календаря (и входной массив 3-мерный)
+  //           'diff' - "дифференцирование", расчет промежутков времени (и входной массив 2-мерный)
+  function stus(aTrains, nMode){
+      //собираем все календари в один:
+
+    //1. Собираем одномерный массив, одновременно заменяя промежутки времени на даты ("интегрирование")
+    var ret_aMultiCalendar=[].slice()
+    var now0 = new Date()
+
+    for (var i=0; i<aTrains.length; i++){
+        if (nMode == 'paint') {
+          var  dCurr =  aTrains[i][0][0]
+          var aCalendar = getArithm(aTrains[i][1])//.slice()
+        } else {
+          var  dCurr =  now0
+          var aCalendar = getArithm(aTrains[i][1])
+        }
+        for (var j=1; j<aCalendar.length-1; j=j+2){
+            if (hasOnlineCalcedParams(aCalendar[j-1])){
+               alert('Слияние тренировок невозможно, поскольку имеются интервалы, расчитываемые во время выполнения ('+aCalendar[j-1]+')');
+               return null;
+            }
+            var sDeltaMs=aCalendar[j-1]
+            var deltaMs = calcMilliseconds(sDeltaMs)
+            dCurr= new Date(dCurr.setMilliseconds(dCurr.getMilliseconds()+deltaMs));
+            var nFromNow0 = ((dCurr.getTime()- now0.getTime())/(1000*60*60*24))
+            if ((nMode != 'paint')||((nFromNow0>(-Gl_DaysBeforeNowForShow-1))&&(nFromNow0<Gl_DaysAfterNowForShow))){
+              ret_aMultiCalendar.push(new Date(dCurr))
+              ret_aMultiCalendar.push(aCalendar[j])
+            }
+        }
+    }
+
+    //2. Сортируем пары
+    for (var i=0; i<ret_aMultiCalendar.length-1; i=i+2)
+        for (var j=i; j<ret_aMultiCalendar.length-1; j=j+2)
+            if (ret_aMultiCalendar[i]>ret_aMultiCalendar[j]){
+              var d = new Date(ret_aMultiCalendar[j])
+              var s=   String(ret_aMultiCalendar[j+1])
+
+              ret_aMultiCalendar[j] = new Date(ret_aMultiCalendar[i])
+              ret_aMultiCalendar[j+1] = String(ret_aMultiCalendar[i+1])
+              ret_aMultiCalendar[j] = new Date(d)
+              ret_aMultiCalendar[i+1] = String(s)
+
+            }
+    if (nMode == 'paint') {
+        //3. Выводим отсортированные дела
+        var sStyle =""
+        var now = new Date()
+        var dCurr = new Date(ret_aMultiCalendar[0])
+        var fl= true
+        for(var i=1; i<ret_aMultiCalendar.length-1; i+=2) {
+           dCurrPrev = new Date(dCurr)
+           dCurr = new Date(ret_aMultiCalendar[i-1]);
+           if (!((dCurr.getFullYear()==dCurrPrev.getFullYear())&&(dCurr.getMonth()==dCurrPrev.getMonth())&&(dCurr.getDate()==dCurrPrev.getDate())))  fl=!fl
+            if ((dCurr.getFullYear()==now.getFullYear())&&(dCurr.getMonth()==now.getMonth())&&(dCurr.getDate()==now.getDate()))
+              sStyle ="width:100%;height:40px;color:red;"
+            else sStyle ="width:100%;height:40px";
+             addAction("calendar",calendar,dCurr.toDateString()  //!! преобразовать от даты + ...
+                                +'   :    '+ret_aMultiCalendar[i] ,i,false,false,sStyle,fl);
+        }
+    } else {
+        //3. "дифференцирование"
+        var now = new Date()
+        var dCurr = new Date(ret_aMultiCalendar[0])
+        var dCurrPrev = new Date(dCurr)
+        ret_aMultiCalendar[0]=1000
+        for(var i=1; i<ret_aMultiCalendar.length-1; i+=2) {
+          dCurrPrev = new Date(dCurr)
+          if (i<ret_aMultiCalendar.length-1){
+            dCurr = new Date(ret_aMultiCalendar[i+1]);  //!! было i-1
+            ret_aMultiCalendar[i+1]=dCurr.getTime() - dCurrPrev.getTime()
+          }
+        }
+        alert(ret_aMultiCalendar)
+    }
+    return ret_aMultiCalendar.slice()
+  }
+
   function fillForm(loadTrain=null)
   {
     //GlTest+=1;
@@ -938,53 +1020,7 @@
     onSelectTrain(selectAllTrain.value);
 
     //собираем все календари в один:
-
-    //1. Собираем одномерный массив, одновременно заменяя промежутки времени на даты ("интегрирование")
-    Gl_aMultiCalendar=[].slice()
-    var now0 = new Date()
-    for (var i=0; i<Gl_aMetaMetaCalendar.length; i++){
-        var  dCurr =  Gl_aMetaMetaCalendar[i][0][0]
-        var aCalendar = getArithm(Gl_aMetaMetaCalendar[i][1])//.slice()
-        for (var j=1; j<aCalendar.length-1; j=j+2){
-            var sDeltaMs=aCalendar[j-1]
-            var deltaMs = calcMilliseconds(sDeltaMs)
-            dCurr= new Date(dCurr.setMilliseconds(dCurr.getMilliseconds()+deltaMs));
-            var nFromNow0 = ((dCurr.getTime()- now0.getTime())/(1000*60*60*24))
-            if ((nFromNow0>(-Gl_DaysBeforeNowForShow-1))&&(nFromNow0<Gl_DaysAfterNowForShow)){
-              Gl_aMultiCalendar.push(new Date(dCurr))
-              Gl_aMultiCalendar.push(aCalendar[j])
-            }
-        }
-    }
-
-    //2. Сортируем пары
-    for (var i=0; i<Gl_aMultiCalendar.length-1; i=i+2)
-        for (var j=i; j<Gl_aMultiCalendar.length-1; j=j+2)
-            if (Gl_aMultiCalendar[i]>Gl_aMultiCalendar[j]){
-              var d = new Date(Gl_aMultiCalendar[j])
-              var s=   String(Gl_aMultiCalendar[j+1])
-              Gl_aMultiCalendar[j] = new Date(Gl_aMultiCalendar[i])
-              Gl_aMultiCalendar[j+1] = String(Gl_aMultiCalendar[i+1])
-              Gl_aMultiCalendar[j] = new Date(d)
-              Gl_aMultiCalendar[i+1] = String(s)
-
-            }
-
-    //3. Выводим отсортированные дела
-    var sStyle =""
-    var now = new Date()
-    var dCurr = new Date(Gl_aMultiCalendar[0])
-    var fl= true
-    for(var i=1; i<Gl_aMultiCalendar.length-1; i+=2) {
-       dCurrPrev = new Date(dCurr)
-       dCurr = new Date(Gl_aMultiCalendar[i-1]);
-       if (!((dCurr.getFullYear()==dCurrPrev.getFullYear())&&(dCurr.getMonth()==dCurrPrev.getMonth())&&(dCurr.getDate()==dCurrPrev.getDate())))  fl=!fl
-        if ((dCurr.getFullYear()==now.getFullYear())&&(dCurr.getMonth()==now.getMonth())&&(dCurr.getDate()==now.getDate()))
-          sStyle ="width:100%;height:40px;color:red;"
-        else sStyle ="width:100%;height:40px";
-         addAction("calendar",calendar,dCurr.toDateString()  //!! преобразовать от даты + ...
-                            +'   :    '+Gl_aMultiCalendar[i] ,i,false,false,sStyle,fl);
-    }
+    Gl_aMultiCalendar = stus(Gl_aMetaMetaCalendar, 'paint')
   }
 
   //поиск тренировки по наименованию (в угловых скобках)
@@ -1002,10 +1038,10 @@
   }
 
   function test(){
-  var s='1234 ;)'
-  alert(s)
-  s=s.replaceAll(' *;)',')')
-  alert(s)
+    aA=[];
+    for(i=12;i<14;i++) aA.push(Gl_aMetaRithm[i])
+    //alert(aA)
+    stus(aA, 'diff')
   }
 
   //<<для раскрытия скобок - первая и последняя открывающая скобка строки
@@ -1397,23 +1433,23 @@
     var prevId = '*'
     var prevText = '';//Gl_aRithmLisp[1]
     var nRepeat = 1
-    for(var i=1; i<Gl_aRithmLisp.length; i+=2) {  
+    for(var i=1; i<Gl_aRithmLisp.length; i+=2) {
         var sDelta = Gl_aRithmLisp[i-1]
         if (!(sDelta.indexOf('[')>=0)) sDelta+=' [МСЕК]'
-        if ((Gl_aRithmLisp[i]==prevText)&&(prevId!='*')){  
+        if ((Gl_aRithmLisp[i]==prevText)&&(prevId!='*')){
           nRepeat+=1
-          nId=addAction("currentTShort",currentT,sDelta+"   ,"+Gl_aRithmLisp[i],i,false,false,"width:100%",false,prevId,nRepeat)     
-        }else{    
+          nId=addAction("currentTShort",currentT,sDelta+"   ,"+Gl_aRithmLisp[i],i,false,false,"width:100%",false,prevId,nRepeat)
+        }else{
             nId=addAction("currentT",currentT,sDelta+"   ,"+Gl_aRithmLisp[i],i,false,false,"width:100%",false)
             nRepeat = 1
         }
         prevId=nId
         prevText=Gl_aRithmLisp[i]
-    }  
-      
+    }
+
     //== Вывод  тренировки в текстовом виде
     if (sMode!="Run") fgetTextToPrint()
-      
+
     //== Проговаривание тренировки по массиву
     Gl_State = TXT_BTN_STARTED
     if (1==1) //(button.firstChild.data == TXT_BTN_NOTSTARTED)
@@ -1442,8 +1478,8 @@
 
     }
 
-      
-    //Печать тренировки  
+
+    //Печать тренировки
     function CallPrint() {
       GltxtSpeek.value=Gl_txtPrint.value
       document.getElementById("idDivCalendar").style.display ='none'
@@ -1475,7 +1511,7 @@
      // prtContent.innerHTML=strOldOne;
     */
    }
-      
+
    function btnPrintOnClick(){
      CallPrint()
    }
