@@ -21,7 +21,7 @@
 -->
 <div id="externalcall" style="height:30px;width:100%;background-color:red;display:none"> ЗАПЛАНИРОВАНА ТРЕНИРОВКА
 </div>
-<div id = idDivCalendar style="font-weight:bold;height:30px;"> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="1"> дней от сегодняшнего </div>
+<div id = idDivCalendar style="font-weight:bold;height:30px"> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="1"> дней от сегодняшнего </div>
 <div>
     <button id="btnRecalcCal" style="height:30px;width:100%" onclick='btnRecalcCalOnClick()'> Пересчитать календарь </button>
 </div>
@@ -29,7 +29,7 @@
     <ul id="actionsInCalendar"></ul>
 </div>
 
-<div id = "idDivAllTrain"  style="font-weight:bold"> Выбор тренировки:
+<div id = "idDivAllTrain"  style="font-weight:bold;background:lightgreen"> Выбор тренировки:
     <div>
         <select id="selectAllTrain" style="height:100px;width:100%" onchange="onSelectTrain(this.selectedIndex);" ></select>
         <div>Тренировка cодержит подстроку (фильтр перед выбором):
@@ -353,7 +353,46 @@
                   "//Вычисления начинаются с подстновок в данном блоке",
                   "[BEGIN EVAL PARAMETERS]",
                   "[END EVAL PARAMETERS]",
-
+                ],
+               ],
+              //================
+              //================  ХОККЕЙ - РУКИ
+              [
+                [],
+                [ "<ХОККЕЙ - РУКИ>=1<ЦИКЛ>",
+                  "<ЦИКЛ>=5(<ДЕЙСТВИЕ ДРИБЛИНГА>;<#400 #>)",
+                  "<ДЕЙСТВИЕ ДРИБЛИНГА>=[ВЫБОР ИЗ]<Мяч вправо>:<Мяч влево>:<Мяч вперед>:<Мяч назад>[КАК]1:1:1:1",
+                  "//",
+                  "//Блок параметров тренировки. В нем запрещены умножения на число и выбор",
+                  "//Вычисления начинаются с подстновок в данном блоке",
+                  "[BEGIN EVAL PARAMETERS]",
+                  "[END EVAL PARAMETERS]",
+                ],
+               ],
+              //================
+               //================  ХОККЕЙ - НОГИ
+              [
+                [],
+                [ "<ХОККЕЙ - НОГИ>=1<ЦИКЛ>",
+                  "<ЦИКЛ>=5(<ДЕЙСТВИЕ>;<#1100 #>)",
+                  "<ДЕЙСТВИЕ>=[ВЫБОР ИЗ]<Шаг вправо>:<Шаг влево>:<Шаг вперед>:<Шаг назад>[КАК]1:1:1:1",
+                  "//",
+                  "//Блок параметров тренировки. В нем запрещены умножения на число и выбор",
+                  "//Вычисления начинаются с подстновок в данном блоке",
+                  "[BEGIN EVAL PARAMETERS]",
+                  "[END EVAL PARAMETERS]",
+                ],
+               ],
+              //================
+              //================  ХОККЕЙ - ОДНОВРЕМЕННО РУКИ И НОГИ
+              [
+                [],
+                [ "<ХОККЕЙ - ОДНОВРЕМЕННО РУКИ И НОГИ>=<ХОККЕЙ - НОГИ> [ОДНОВРЕМЕННО С] <ХОККЕЙ - РУКИ>",
+                  "//",
+                  "//Блок параметров тренировки. В нем запрещены умножения на число и выбор",
+                  "//Вычисления начинаются с подстновок в данном блоке",
+                  "[BEGIN EVAL PARAMETERS]",
+                  "[END EVAL PARAMETERS]",
                 ],
                ],
               //================
@@ -796,6 +835,7 @@
             return nTime
     }
    function fSayInTime(){
+   //alert(Gl_aRithmLisp)
         if(Gl_IsFinished) return
 
         var dCurr = new Date();
@@ -937,13 +977,17 @@
     var ret_aMultiCalendar=[].slice()
     var now0 = new Date()
 
+    var  dCurr =  now0
+    var  nCurr = 0
+    var aCalendar = []
     for (var i=0; i<aTrains.length; i++){
         if (nMode == 'paint') {
-          var  dCurr =  aTrains[i][0][0]
-          var aCalendar = getArithm(aTrains[i][1])//.slice()
+          dCurr =  aTrains[i][0][0]
+          aCalendar = getArithm(aTrains[i][1])//.slice()
         } else {
-          var  dCurr =  now0
-          var aCalendar = getArithm(aTrains[i][1])
+          dCurr =  now0
+          nCurr = 0
+          aCalendar = getArithm(aTrains[i][1])
         }
         for (var j=1; j<aCalendar.length-1; j=j+2){
             if (hasOnlineCalcedParams(aCalendar[j-1])){
@@ -953,27 +997,33 @@
             var sDeltaMs=aCalendar[j-1]
             var deltaMs = calcMilliseconds(sDeltaMs)
             dCurr= new Date(dCurr.setMilliseconds(dCurr.getMilliseconds()+deltaMs));
+            nCurr+=deltaMs
             var nFromNow0 = ((dCurr.getTime()- now0.getTime())/(1000*60*60*24))
             if ((nMode != 'paint')||((nFromNow0>(-Gl_DaysBeforeNowForShow-1))&&(nFromNow0<Gl_DaysAfterNowForShow))){
-              ret_aMultiCalendar.push(new Date(dCurr))
+              if(nMode=='diff') ret_aMultiCalendar.push(nCurr); else ret_aMultiCalendar.push(new Date(dCurr));
               ret_aMultiCalendar.push(aCalendar[j])
+
             }
         }
     }
-
+//if (nMode=='diff'){alert (ret_aMultiCalendar)}
     //2. Сортируем пары
     for (var i=0; i<ret_aMultiCalendar.length-1; i=i+2)
         for (var j=i; j<ret_aMultiCalendar.length-1; j=j+2)
+        //if (nMode=='diff'){alert (ret_aMultiCalendar[i]>ret_aMultiCalendar[j]);alert (ret_aMultiCalendar[i]);alert (ret_aMultiCalendar[j])}
             if (ret_aMultiCalendar[i]>ret_aMultiCalendar[j]){
               var d = new Date(ret_aMultiCalendar[j])
+              var nd = ret_aMultiCalendar[j]
               var s=   String(ret_aMultiCalendar[j+1])
-
-              ret_aMultiCalendar[j] = new Date(ret_aMultiCalendar[i])
+              if(nMode=='diff') ret_aMultiCalendar[j] = ret_aMultiCalendar[i]; else ret_aMultiCalendar[j] = new Date(ret_aMultiCalendar[i]);
               ret_aMultiCalendar[j+1] = String(ret_aMultiCalendar[i+1])
-              ret_aMultiCalendar[j] = new Date(d)
-              ret_aMultiCalendar[i+1] = String(s)
 
+ //?????????????????????????????????????????????????????????????????????? j->i ???
+              if(nMode=='diff') ret_aMultiCalendar[i]=nd; else ret_aMultiCalendar[j] = new Date(d);  //??? j->i ???
+
+              ret_aMultiCalendar[i+1] = String(s)
             }
+ //if (nMode=='diff'){alert (ret_aMultiCalendar)}
     if (nMode == 'paint') {
         //3. Выводим отсортированные дела
         var sStyle =""
@@ -996,15 +1046,18 @@
         var dCurr = new Date(ret_aMultiCalendar[0])
         var dCurrPrev = new Date(dCurr)
         ret_aMultiCalendar[0]=1000
+        //alert(ret_aMultiCalendar.length)
         for(var i=1; i<ret_aMultiCalendar.length-1; i+=2) {
           dCurrPrev = new Date(dCurr)
           if (i<ret_aMultiCalendar.length-1){
             dCurr = new Date(ret_aMultiCalendar[i+1]);  //!! было i-1
-            ret_aMultiCalendar[i+1]=dCurr.getTime() - dCurrPrev.getTime()
+            var deltaT = dCurr.getTime() - dCurrPrev.getTime()
+            //alert(deltaT)
+            ret_aMultiCalendar[i+1]=deltaT
           }
         }
-        alert(ret_aMultiCalendar)
     }
+    //if (nMode=='diff'){alert (ret_aMultiCalendar.slice())}
     return ret_aMultiCalendar.slice()
   }
 
@@ -1028,13 +1081,15 @@
     //  alert(sName);
     for(var i=0; i<Gl_aMetaRithm.length; i++)// alert (Gl_aMetaRithm[i][1].length)
       for(var j=0; j<Gl_aMetaRithm[i][1].length; j++) //  alert(Gl_aMetaRithm[i][1][j].split('=')[0].trim())
-          if(Gl_aMetaRithm[i][1][j].split('=')[0].trim()==sName) return i;
+          if(Gl_aMetaRithm[i][1][j].split('=')[0].trim()==sName.trim()) return i;
   }
 
   //Случайное от 0 до 1 (Math.random() каж-ся тупит)
   function fgetRandom(){
-    var d = new Date()
-    return d.getMilliseconds()/1000
+    //var d = new Date()
+    //return d.getMilliseconds()/1000 //!плохо если вычисляется подряд неск-ко раз, одни и те же мсек..
+    Math.random();
+    return Math.random()
   }
 
   function test(){
@@ -1094,6 +1149,17 @@
     }
 
     var Gl_aGenRithm = Gl_aGenRithm0; //!! лишнее, осталось от старого
+
+    //Если тренировка является одновременным выполнением других тренировок (тогда смотрим только первую строку, и только стусовываем тренировки , указанные в ней)
+    if (Gl_aGenRithm[0].indexOf("[ОДНОВРЕМЕННО С]")>=0){
+      aSimultTrain = Gl_aGenRithm[0].split('=')[1].split("[ОДНОВРЕМЕННО С]");
+      var aRet =[]
+      for(var i=0;i<aSimultTrain.length;i++)
+          aRet.push(Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i])])
+      Gl_aRithmLisp = stus(aRet, 'diff')
+      finish_Gl_aRithmLisp();
+      return Gl_aRithmLisp.slice()
+    }
 
 
     //alert('после удаления комментариев \n'+Gl_aGenRithm)
@@ -1299,35 +1365,35 @@
        Gl_sTrain ="<0#>"+Gl_sTrain; //! без первой #
        Gl_flBegWord = false;
     }
-
-
-
     Gl_aRithmLisp = Gl_sTrain.split("#");
 
-
-
-
-    for (var i = 0; i < Gl_aRithmLisp.length; i++){
-      //убираем спецсимволы из речи
-      Gl_aRithmLisp[i] = Gl_aRithmLisp[i].split('><').join(' ');
-      Gl_aRithmLisp[i] = Gl_aRithmLisp[i].split('<').join(' ');
-      Gl_aRithmLisp[i] = Gl_aRithmLisp[i].split('>').join(' ');
-      Gl_aRithmLisp[i] = Gl_aRithmLisp[i].split('>').join(' ');
-    }
-
-    //Добавим "тренировка завершена"
-      var sDelim ="%%%%%%%%"
-    if (Gl_aRithmLisp.length%2==1)
-        Gl_aRithmLisp = (Gl_aRithmLisp.join(sDelim)+sDelim+TXT_BTN_FINISHED).split(sDelim)
-    else
-         Gl_aRithmLisp = (Gl_aRithmLisp.join(sDelim)+sDelim+"1000"+sDelim+TXT_BTN_FINISHED).split(sDelim)
-
-    //ИТОГОВЫЙ ОДНОМЕРНЫЙ МАССИВ Gl_aRithmLisp, ПРИЧЕМ ЕСЛИ Gl_flBegWord ТО ОН НАЧИНАЕТСЯ С ДЕЛА ИНАЧЕ С ИНТЕРВАЛА
+    finish_Gl_aRithmLisp()
+    //ИТОГОВЫЙ ОДНОМЕРНЫЙ МАССИВ Gl_aRithmLisp
     //alert ('МАССИВ перед проговариванием \n'+Gl_aRithmLisp)
     //=========================================================
     return Gl_aRithmLisp.slice(); //#####
     }  //#####
 
+    function  finish_Gl_aRithmLisp(){
+      for (var i1 = 0; i1 < Gl_aRithmLisp.length; i1++){
+          //alert(Gl_aRithmLisp[i1])
+          //убираем спецсимволы из речи
+          try{
+          if (Gl_aRithmLisp[i1].trim()=='') Gl_aRithmLisp[i1]='_'
+          Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('><').join(' ');
+          Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('<').join(' ');
+          Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('>').join(' ');
+          Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('>').join(' ');
+          }catch(e){}
+      }
+
+      //Добавим "тренировка завершена"
+      var sDelim1 ="%%%%%%%%"
+      if (Gl_aRithmLisp.length%2==1)
+        Gl_aRithmLisp = (Gl_aRithmLisp.join(sDelim1)+sDelim1+TXT_BTN_FINISHED).split(sDelim1)
+      else
+         Gl_aRithmLisp = (Gl_aRithmLisp.join(sDelim1)+sDelim1+"1000"+sDelim1+TXT_BTN_FINISHED).split(sDelim1)
+  }
 
   function navigate(i){ // для навигации по делам текущей трени
      if (Gl_decodeExternalCallValue.length=0)
@@ -1430,8 +1496,10 @@
       var aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim));
       //Gl_txtPrint.value = aRithmLisp.join("/n")
 
+
     }
     var aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim)); //!!!!!!!!!!!!! aEv
+
 
 
     //=========НАЧИТКА СПИСКА ДЕЛ ДЛЯ НАВИГАЦИИ===========
@@ -1442,7 +1510,7 @@
     var nRepeat = 1
     for(var i=1; i<Gl_aRithmLisp.length; i+=2) {
         var sDelta = Gl_aRithmLisp[i-1]
-        if (!(sDelta.indexOf('[')>=0)) sDelta+=' [МСЕК]'
+        try{if (!(sDelta.indexOf('[')>=0)) sDelta+=' [МСЕК]';}catch(e){sDelta = sDelta.toString()+' [МСЕК]'}  //try-ПРОБЛЕМА С ИНТЕРВАЛОМ ПРИ СТУСОВЫВАНИ
         if ((Gl_aRithmLisp[i]==prevText)&&(prevId!='*')){
           nRepeat+=1
           nId=addAction("currentTShort",currentT,sDelta+"   ,"+Gl_aRithmLisp[i],i,false,false,"width:100%",false,prevId,nRepeat)
