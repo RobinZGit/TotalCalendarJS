@@ -1487,6 +1487,14 @@
       Gl_currentTrainName = (Gl_aMetaRithm[value][1][0]).split('=')[0]
       //alert(Gl_aMetaRithm[value][1])
       var aEv = Gl_aMetaRithm[value][1]
+      /*
+      ...
+      GltxtSpeek.value должен получиться  в виде "список трени 1 (а не имя трени!) [ОДНОВРЕМЕННО С] список трени 2 (а не имя трени!)..."
+      Т.е. в цикле по aEv.split('[ОДНОВРЕМЕННО С]') (это имена трень) ищем текущую треню currIndex = найти индекс по имени..,
+         берем ее список Gl_aMetaRithm[currIndex][1] и добавляем к GltxtSpeek.value,
+         если есть трени за ней (смотрим по длине массива цикла) - добавляем еще "[ОДНОВРЕМЕННО С]"
+      ...
+      */
       GltxtSpeek.value= aEv.join('     '+Gl_sDelim+'\n')
       //alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
       btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
@@ -1495,6 +1503,15 @@
     } else if (sMode=="Run"){
       //null..
     }
+
+    /*
+    ...
+    заменить ниже
+    getArithm(GltxtSpeek.value.split(Gl_sDelim)); - только если (GltxtSpeek.value.indexOf("[ОДНОВРЕМЕННО С]")>=0)
+    иначе в цикле по GltxtSpeek.value.split("[ОДНОВРЕМЕННО С]") начитываем массив для стусовывания aTrain и затем Gl_aRithmLisp =?? stus(aTrain,'diff')
+    а в getArithm убираем обработку "[ОДНОВРЕМЕННО С]", тк такой текст теперь не попадает в нее
+    ...
+    */
     getArithm(GltxtSpeek.value.split(Gl_sDelim));
 
 
