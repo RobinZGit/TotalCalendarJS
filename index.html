@@ -1150,20 +1150,6 @@
 
     var Gl_aGenRithm = Gl_aGenRithm0; //!! лишнее, осталось от старого
 
-    //Если тренировка является одновременным выполнением других тренировок (тогда смотрим только первую строку, и только стусовываем тренировки , указанные в ней)
-
-    if (Gl_aGenRithm[0].indexOf("[ОДНОВРЕМЕННО С]")>=0){
-      aSimultTrain = Gl_aGenRithm[0].split('=')[1].split("[ОДНОВРЕМЕННО С]");
-      var aRet =[]
-      for(var i=0;i<aSimultTrain.length;i++)
-          aRet.push(Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i])])
-      Gl_aRithmLisp = stus(aRet, 'diff')
-      finish_Gl_aRithmLisp();
-      return Gl_aRithmLisp.slice()
-    }
-
-
-
     //alert('после удаления комментариев \n'+Gl_aGenRithm)
     for(var i=0; i<Gl_aGenRithm.length; i++){ //?ОНО НАДО ВООБЩЕ ?? сначала возьмем слова в кавычках в угловые скобки
        while(Gl_aGenRithm[i].indexOf("'")>=0){
