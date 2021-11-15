@@ -31,9 +31,12 @@
 
 <div id = "idDivAllTrain"  style="font-weight:bold;background:lightgreen"> Выбор тренировки:
     <div>
-        <select id="selectAllTrain" style="height:100px;width:100%" onchange="onSelectTrain(this.selectedIndex);" ></select>
+        <select id="selectAllTrain"  style="height:100px;width:100%" onchange="onSelectTrain(this.selectedIndex);" ></select>
         <div>Тренировка cодержит подстроку (фильтр перед выбором):
             <input id = "filterStr"  style="height:30px;width:20%" onchange="readFilteredListOfTrainings(value,null)">
+        </div>
+        <div>Выбор нескольких тренировок для одновременного выполнения:
+            <input id = "simultMode" type="checkbox" style="height:30px;width:20%" onclick="changeSelectMode(this.checked)">
         </div>
     </div>
 </div>
@@ -384,6 +387,8 @@
                 ],
                ],
               //================
+              /*! в такой реализации нельзя будет использовать [ОДНОВРЕМЕННО С] в текстах трень во множественном режиме( нельзя выбрать треню, в которой есть [ОДНОВРЕМЕННО С] и другую вместе с ней..
+
               //================  ХОККЕЙ - ОДНОВРЕМЕННО РУКИ И НОГИ
               [
                 [],
@@ -396,7 +401,7 @@
                 ],
                ],
               //================
-
+               */
               //========================== СПИНА ДЖЕФФ КАВАЛЬЕР
               [
                 [],
@@ -667,6 +672,13 @@
   var glTxtSay="1";
   var Gl_trainTime
   var Gl_decodeExternalCallValue=""
+
+  function changeSelectMode(isChecked){
+    if (isChecked) {
+      selectAllTrain.setAttribute("multiple","multiple")
+      alert('Вы можете выбрать несколько тренировок для одновременного выполнения, используя клавишу [CTRL].')
+    } else selectAllTrain.removeAttribute("multiple")
+  }
 
   function btnRecalcCalOnClick() {
     //? Gl_calendarVisible = !Gl_calendarVisible
@@ -1472,32 +1484,43 @@
       getText2Print(Gl_currentTrainName)
       return
     } else if (sMode=="Act")  {
-      Gl_currentTrainName = (Gl_aMetaRithm[value][1][0]).split('=')[0]
-      //alert(Gl_aMetaRithm[value][1])
-      var aEv = Gl_aMetaRithm[value][1]
+      var aSimultTrain =[]
+      if (selectAllTrain.getAttribute("multiple")=="multiple"){
+        GltxtSpeek.value =''
+        Gl_currentTrainName = ''
+        for (var i =0; i<selectAllTrain.options.length; i++)
+          if (selectAllTrain.options[i].selected){
+            //Gl_currentTrainName += (Gl_aMetaRithm[i][1][0]).split('=')[0] + ' /nОДНОВРЕМЕННО С/n'
+            Gl_currentTrainName += selectAllTrain.options[i].text + ' /nОДНОВРЕМЕННО С/n'
+            aSimultTrain.push(Gl_aMetaRithm[i][1][0]) //!!? сделать в цикле по Gl_aMetaRithm[i][1][0].split("[ОДНОВРЕМЕННО С]")
+          }
+      }else{ //! в такой реализации нельзя будет использовать [ОДНОВРЕМЕННО С] в текстах трень во множественном режиме( нельзя выбрать треню, в которой есть [ОДНОВРЕМЕННО С] и другую вместе с ней..
+          Gl_currentTrainName = (Gl_aMetaRithm[value][1][0]).split('=')[0]
+          var aEv = Gl_aMetaRithm[value][1]
 
-      /*
-      в случае если треня есть одновременное выполнение других трень (первая строка - перречисление трень через [ОДНОВРЕМЕННО С])
-      GltxtSpeek.value должен получиться  в виде "список трени 1 (а не имя трени!) [ОДНОВРЕМЕННО С] список трени 2 (а не имя трени!)..."
-      Т.е. в цикле по aEv.split('[ОДНОВРЕМЕННО С]') (это имена трень) ищем текущую треню currIndex = найти индекс по имени..,
-         берем ее список Gl_aMetaRithm[currIndex][1] и добавляем к GltxtSpeek.value,
-         если есть трени за ней (смотрим по длине массива цикла) - добавляем еще "[ОДНОВРЕМЕННО С]"
-      */
-      GltxtSpeek.value=''
-      var sTrain = aEv[0]  //0!
-      var aSimultTrain = sTrain.split("[ОДНОВРЕМЕННО С]");
-      var aRet =[]
+          /*
+          в случае если треня есть одновременное выполнение других трень (первая строка - перречисление трень через [ОДНОВРЕМЕННО С])
+          GltxtSpeek.value должен получиться  в виде "список трени 1 (а не имя трени!) [ОДНОВРЕМЕННО С] список трени 2 (а не имя трени!)..."
+          Т.е. в цикле по aEv.split('[ОДНОВРЕМЕННО С]') (это имена трень) ищем текущую треню currIndex = найти индекс по имени..,
+             берем ее список Gl_aMetaRithm[currIndex][1] и добавляем к GltxtSpeek.value,
+             если есть трени за ней (смотрим по длине массива цикла) - добавляем еще "[ОДНОВРЕМЕННО С]"
+          */
+          GltxtSpeek.value=''
+          var sTrain = aEv[0]  //0!
+          aSimultTrain = sTrain.split("[ОДНОВРЕМЕННО С]");
+      }
+
       for(var i=0;i<aSimultTrain.length;i++){
           if ((i==0)&&(aSimultTrain.length>1))
-            GltxtSpeek.value+=Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[1])][1].join('     '+Gl_sDelim+'\n')
+            try{
+              GltxtSpeek.value+=Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[1])][1].join('     '+Gl_sDelim+'\n')
+            } catch(e){ //падает в режиме множественного выбора
+              GltxtSpeek.value+=Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[0])][1].join('     '+Gl_sDelim+'\n')
+            }
           else
             GltxtSpeek.value+=Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[0])][1].join('     '+Gl_sDelim+'\n')
           if((i<aSimultTrain.length-1)&&(aSimultTrain.length>1)) GltxtSpeek.value+='\n[ОДНОВРЕМЕННО С]\n'
       }
-      //---------------------------------------------
-      //OLD!GltxtSpeek.value= aEv.join('     '+Gl_sDelim+'\n')
-      //---------------------------------------------
-
 
       //alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
       btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
@@ -1521,10 +1544,6 @@
       finish_Gl_aRithmLisp();
       //return Gl_aRithmLisp.slice()
     } else getArithm(GltxtSpeek.value.split(Gl_sDelim));
-    //------------------------------------------------------------
-    //OLD  getArithm(GltxtSpeek.value.split(Gl_sDelim));
-    //----------------------------------------------------------------------
-
 
 
     //=========НАЧИТКА СПИСКА ДЕЛ ДЛЯ НАВИГАЦИИ===========
