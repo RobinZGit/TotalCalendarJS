@@ -84,8 +84,6 @@
  var Gl_State = TXT_BTN_NOTSTARTED;
  var Gl_IsFinished =false
 
-    //
-
  //----------------------------------
  var GlnInd=0;
  var GlnDelta=0;
@@ -160,18 +158,8 @@
  //Массив тренировок
  var Gl_aMetaRithm =
         [
-          /*    //===========================
-              [
-               [],
-               [ "<КАЛЕНДАРЬ>=10<РАСПИСАНИЕ>",
-                 "<РАСПИСАНИЕ>=<УПРАЖНЕНИЯ НА ШЕЮ>;<ДЫХАТЕЛЬНАЯ ЛЕСЕНКА>;<#1 [СУТ]#>",
-                 "[BEGIN EVAL PARAMETERS]",
-                 "[END EVAL PARAMETERS]",
-               ],
 
-              ],
-            */
-                //========================== УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ ЧАСТЬ 1
+              //========================== УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ ЧАСТЬ 1
               [
                 [],
                 [
@@ -388,7 +376,7 @@
                ],
               //================
               /*! в такой реализации нельзя будет использовать [ОДНОВРЕМЕННО С] в текстах трень во множественном режиме( нельзя выбрать треню, в которой есть [ОДНОВРЕМЕННО С] и другую вместе с ней..
-
+                   */
               //================  ХОККЕЙ - ОДНОВРЕМЕННО РУКИ И НОГИ
               [
                 [],
@@ -401,7 +389,7 @@
                 ],
                ],
               //================
-               */
+               /**/
               //========================== СПИНА ДЖЕФФ КАВАЛЬЕР
               [
                 [],
@@ -802,7 +790,6 @@
 
    function calcEval(nMode,str){ //вычисляем вставки [eval]
                               // nMode ="N"- число  ="S"-строка
-
                     var sRet=str
 
                     if ((str.indexOf('[eval]')>=0)){//нужно досчитать интервал по онлайн-параметрам
@@ -846,8 +833,9 @@
             } catch(e) {nTime = 0}
             return nTime
     }
+
    function fSayInTime(){
-   //alert(Gl_aRithmLisp)
+        //alert(Gl_aRithmLisp)
         if(Gl_IsFinished) return
 
         var dCurr = new Date();
@@ -880,13 +868,10 @@
                      Gl_aRithmLisp[GlnInd]= calcEval("S",Gl_aRithmLisp[GlnInd])
                      say(Gl_aRithmLisp[GlnInd]);
                      if(Gl_aRithmLisp[GlnInd]==TXT_BTN_FINISHED) Gl_IsFinished=true
-                     //!GltxtSpeek.value+='+'+GlnDelta+' ms\n'+Gl_aRithmLisp[GlnInd]+'\n\n';
                      //сбросить начало отсчета отсчет времени, пересчитать текущий интервал и индекс дела
                      GldPrev = new Date();
                      Gl_aRithmLisp[GlnInd+1]= calcEval("N",Gl_aRithmLisp[GlnInd+1])
                      GlnInd+=2;
-                     //сказать текст текущего дела
-                     //say(Gl_aRithmLisp[GlnInd]);
               }
             } else {
                 GlnInd+=2;
@@ -918,13 +903,10 @@
       btn = document.getElementById(btnPrevId)
       btn.innerHTML= text +" (повторить "+nRepeat
           +" раз)"
-      //Gl_txtPrint.value += text +"/n"
-      //Gl_txtPrint.value += text +" (повторить "+nRepeat
-      //    +" раз)"+"/n"
+
       retId = btnPrevId
       return retId
     }else{
-      //! Gl_txtPrint.value += text +"/n"
       var li = document.createElement("li");
       var btn = document.createElement('button');
       var txt = document.createTextNode(text);
@@ -951,7 +933,6 @@
             document.getElementById("idDivActionCalendar").style.height =Number(document.getElementById("idDivActionCalendar").style.height.replace("px","")) +Number(btn.style.height.replace("px","")) + "px"
         }catch(e) {}
       }else if (sMode=='currentT'){
-        //? Gl_txtPrint.value += text +"/n"
         btn.setAttribute('onclick','navigate('+value+')');
         btn.style.background='yellow';
         retId = 'buttonCurrentTr' + value
@@ -971,8 +952,15 @@
   function readFilteredListOfTrainings(sFilt,loadTrain){
     selectAllTrain.options.length = 0
     for(var i=0; i<Gl_aMetaRithm.length; i++) {
-      if ((sFilt.length==0)||((sFilt.length>0)&&(Gl_aMetaRithm[i].join(' ').toUpperCase().indexOf(sFilt.toUpperCase())>=0)))
-          addAction("all",null/*actions*/,Gl_aMetaRithm[i][1][0].split('=')[0],i,false,false,"width:100%",false)
+      var flAdd = true
+      if (flAdd)
+        flAdd = ((sFilt.length==0)
+          ||((sFilt.length>0)&&(Gl_aMetaRithm[i].join(' ').toUpperCase().indexOf(sFilt.toUpperCase())>=0))
+          )
+      if (flAdd && (selectAllTrain.getAttribute("multiple")=="multiple"))
+        flAdd = !(Gl_aMetaRithm[i].join(' ').toUpperCase().indexOf('[ОДНОВРЕМЕННО С]')>=0)
+      if (flAdd)
+        addAction("all",null/*actions*/,Gl_aMetaRithm[i][1][0].split('=')[0],i,false,false,"width:100%",false)
 
     }
     if (loadTrain!==null)
@@ -983,7 +971,7 @@
   //  nMode == 'paint' - вывод календаря (и входной массив 3-мерный)
   //           'diff' - "дифференцирование", расчет промежутков времени (и входной массив 2-мерный)
   function stus(aTrains, nMode){
-      //собираем все календари в один:
+    //собираем все календари в один:
 
     //1. Собираем одномерный массив, одновременно заменяя промежутки времени на даты ("интегрирование")
     var ret_aMultiCalendar=[].slice()
@@ -1029,13 +1017,9 @@
               var s=   String(ret_aMultiCalendar[j+1])
               if(nMode=='diff') ret_aMultiCalendar[j] = ret_aMultiCalendar[i]; else ret_aMultiCalendar[j] = new Date(ret_aMultiCalendar[i]);
               ret_aMultiCalendar[j+1] = String(ret_aMultiCalendar[i+1])
-
- //?????????????????????????????????????????????????????????????????????? j->i ???
-              if(nMode=='diff') ret_aMultiCalendar[i]=nd; else ret_aMultiCalendar[j] = new Date(d);  //??? j->i ???
-
+              if(nMode=='diff') ret_aMultiCalendar[i]=nd; else ret_aMultiCalendar[j] = new Date(d);
               ret_aMultiCalendar[i+1] = String(s)
             }
- //if (nMode=='diff'){alert (ret_aMultiCalendar)}
     if (nMode == 'paint') {
         //3. Выводим отсортированные дела
         var sStyle =""
@@ -1058,18 +1042,15 @@
         var dCurr = new Date(ret_aMultiCalendar[0])
         var dCurrPrev = new Date(dCurr)
         ret_aMultiCalendar[0]=1000
-        //alert(ret_aMultiCalendar.length)
         for(var i=1; i<ret_aMultiCalendar.length-1; i+=2) {
           dCurrPrev = new Date(dCurr)
           if (i<ret_aMultiCalendar.length-1){
             dCurr = new Date(ret_aMultiCalendar[i+1]);  //!! было i-1
             var deltaT = dCurr.getTime() - dCurrPrev.getTime()
-            //alert(deltaT)
             ret_aMultiCalendar[i+1]=deltaT
           }
         }
     }
-    //if (nMode=='diff'){alert (ret_aMultiCalendar.slice())}
     return ret_aMultiCalendar.slice()
   }
 
@@ -1090,13 +1071,12 @@
 
   //поиск тренировки по наименованию (в угловых скобках)
   function getTrainIndexByName(sName){
-    //  alert(sName);
-    for(var i=0; i<Gl_aMetaRithm.length; i++)// alert (Gl_aMetaRithm[i][1].length)
-      for(var j=0; j<Gl_aMetaRithm[i][1].length; j++) //  alert(Gl_aMetaRithm[i][1][j].split('=')[0].trim())
+    for(var i=0; i<Gl_aMetaRithm.length; i++)
+      for(var j=0; j<Gl_aMetaRithm[i][1].length; j++)
           if(Gl_aMetaRithm[i][1][j].split('=')[0].trim()==sName.trim()) return i;
   }
 
-  //Случайное от 0 до 1 (Math.random() каж-ся тупит)
+  //Случайное от 0 до 1
   function fgetRandom(){
     //var d = new Date()
     //return d.getMilliseconds()/1000 //!плохо если вычисляется подряд неск-ко раз, одни и те же мсек..
@@ -1157,7 +1137,6 @@
     var Gl_aGenRithm0 = [];
     for(var i=0; i<Gl_aGenRithm00.length; i++){
       if (!(Gl_aGenRithm00[i].trim().indexOf('//')==0)) Gl_aGenRithm0.push(Gl_aGenRithm00[i].split("//")[0]);
-      //if (Gl_aGenRithm00[i].trim()[Gl_aGenRithm00[i].trim().length-1]==';')
     }
 
     var Gl_aGenRithm = Gl_aGenRithm0; //!! лишнее, осталось от старого
@@ -1166,11 +1145,10 @@
     for(var i=0; i<Gl_aGenRithm.length; i++){ //?ОНО НАДО ВООБЩЕ ?? сначала возьмем слова в кавычках в угловые скобки
        while(Gl_aGenRithm[i].indexOf("'")>=0){
            Gl_aGenRithm[i]=Gl_aGenRithm[i].replace("'","<");
-           Gl_aGenRithm[i]=Gl_aGenRithm[i].replace("'",">"); //!!!">;"
-           //alert(Gl_aGenRithm[i])
+           Gl_aGenRithm[i]=Gl_aGenRithm[i].replace("'",">");
        }
        if (Gl_aGenRithm[i].trim()[Gl_aGenRithm[i].trim().length-1]==";"){ //уберем последнюю ;
-           Gl_aGenRithm[i] = Gl_aGenRithm[i].trim().substr(0,Gl_aGenRithm[i].trim().length-1) //!!!!!!!
+           Gl_aGenRithm[i] = Gl_aGenRithm[i].trim().substr(0,Gl_aGenRithm[i].trim().length-1)
        }
     }
     //alert('после добавления угловых скобок словам в кавычках \n'+Gl_aGenRithm)
@@ -1182,6 +1160,9 @@
       var posOp = 0;
       var posCl =0;
       while (posOp>=0){
+
+        //!! слабое звено, //улучшить через регулярки - произвольное кол-во пробелов
+
         Gl_aGenRithm[iCurr]=Gl_aGenRithm[iCurr].replaceAll(';)',')').replaceAll(' ;)',')').replaceAll('  ;)',')')//улучшить через регулярки - произвольное кол-во пробелов
         posOp = fgetPosBracketOpen(Gl_aGenRithm[iCurr],posOp);
         posCl = fgetPosBracketClose(Gl_aGenRithm[iCurr],posOp);
@@ -1195,7 +1176,6 @@
      iCurr++;
      flContinue = (iCurr< Gl_aGenRithm.length)
     }
-    //document.getElementById('idTestText').value =Gl_aGenRithm.join('\n')
     //alert('после раскрытия скобок типа <A> = 3(<AA>;5(<A2>;<A3>)) \n'+Gl_aGenRithm)
 
 
@@ -1211,7 +1191,7 @@
         for(var i=nEnd; i>=nBeg; i--){
             var sOld = Gl_aGenRithm[i].split("=")[0].trim();//разобрали в массив правую часть после =
             var sNew = Gl_aGenRithm[i].split("=")[1];//разобрали в массив правую часть после =
-            for(var j = nEnd/*!!i-1*/; j>=nBeg; j--)
+            for(var j = nEnd; j>=nBeg; j--)
                    Gl_aGenRithm[j]=Gl_aGenRithm[j].split("=")[0]+"="+Gl_aGenRithm[j].split("=")[1].split(sOld).join(sNew); //replace заменит только первое вхождение..
         }
     if (nBeg>0){
@@ -1323,7 +1303,7 @@
             var sOld = Gl_aGenRithm[i].split("=")[0].trim();//разобрали в массив левую часть после =
             var sNew = Gl_aGenRithm[i].split("=")[1];//разобрали в массив правую часть после =
             var aProb = sNew.split("[ВЫБОР ИЗ]");//выбор вероятностных дел.
-            for(var j =  /*Gl_aGenRithm.length-1*/i-1; j>=0; j--){
+            for(var j = i-1; j>=0; j--){
                if (aProb.length>1){
                   //выбираем случ число от 0 до суммы пропорций, в какой отрезок оно попадет - то дело и выберем
                   var a2Prob=aProb[1].split("[КАК]");
@@ -1358,7 +1338,6 @@
     if (!(Gl_sTrain.trim().indexOf("<#")==0))
       Gl_flBegWord = true;
     else Gl_sTrain = Gl_sTrain.replace("<#","<") //убрать первую решетку если начинается с интервала! чтобы после следующего split и удалений скобок не было пустого первого элемента
-    //if (Gl_flBegWord) sTrain = sTrain
 
     //сделаем чтобы всегда начиналось с интервала
     if  (Gl_flBegWord){
@@ -1371,19 +1350,18 @@
     //ИТОГОВЫЙ ОДНОМЕРНЫЙ МАССИВ Gl_aRithmLisp
     //alert ('МАССИВ перед проговариванием \n'+Gl_aRithmLisp)
     //=========================================================
-    return Gl_aRithmLisp.slice(); //#####
-    }  //#####
+    return Gl_aRithmLisp.slice();
+    }
 
     function  finish_Gl_aRithmLisp(){
       for (var i1 = 0; i1 < Gl_aRithmLisp.length; i1++){
           //alert(Gl_aRithmLisp[i1])
           //убираем спецсимволы из речи
           try{
-          //if (Gl_aRithmLisp[i1].trim()=='') Gl_aRithmLisp[i1]='_'
-          Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('><').join(' ');
-          Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('<').join(' ');
-          Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('>').join(' ');
-          Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('>').join(' ');
+              Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('><').join(' ');
+              Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('<').join(' ');
+              Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('>').join(' ');
+              Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('>').join(' ');
           }catch(e){}
       }
 
@@ -1410,7 +1388,7 @@
           document.getElementById('buttonCurrentTr' + k).style.background='yellow'
         } catch(e) {}
      }
-     GlnDelta = 1000;// Number(Gl_aRithmLisp[i-1]);
+     GlnDelta = 3000;// Number(Gl_aRithmLisp[i-1]);
      GlnInd =i
 
 
@@ -1419,10 +1397,18 @@
 
 
   function getText2Print(sTrainName){ //текст для печати
-      var aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim));//Gl_aMetaRithm[value]);//
-      //alert(aRithmLisp)
+      var aRithmLisp=[]
+      var aSimult = []
+      if (sTrainName.indexOf('[ОДНОВРЕМЕННО С]')>=0){
+        arrStr = GltxtSpeek.value.split('[ОДНОВРЕМЕННО С]')
+        for (i=0;i<arrStr.length;i++) {
+          aSimult.push([[],arrStr[i].split(Gl_sDelim)])
+        }
+        aRithmLisp = stus(aSimult,'diff')
+      }else aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim));
       Gl_txtPrint.value=sTrainName+"\n"
       Gl_txtPrint.value+='Тренировка продлится ' +calcTtrainTime()+' минут'+"\n\n"
+
       var str = ""
       var strNext = ""
       var strPrev = ""
@@ -1430,15 +1416,13 @@
       for(var i=1;i<aRithmLisp.length;i+=2){
         str=aRithmLisp[i]+"   :"+aRithmLisp[i+1]+" ms  "+"\n"
         strNext=aRithmLisp[i+2]+"   :"+aRithmLisp[i+1+2]+" ms  "+"\n"
-        if ((str!=strNext)/*&&(str!=strPrev)*/){
+        if ((str!=strNext)){
            Gl_txtPrint.value += aRithmLisp[i]+"   :"+aRithmLisp[i+1]+" ms  "+ ((nRepeat==1)?"":"(повторить "+ nRepeat +" раз)") +"\n"
            nRepeat = 1
         }
         else nRepeat++
-
         strPrev = str
       }
-      //---------------------
     }
 
   //Запускает цикл проговаривания тренировки
@@ -1490,24 +1474,20 @@
         Gl_currentTrainName = ''
         for (var i =0; i<selectAllTrain.options.length; i++)
           if (selectAllTrain.options[i].selected){
-            //Gl_currentTrainName += (Gl_aMetaRithm[i][1][0]).split('=')[0] + ' /nОДНОВРЕМЕННО С/n'
-            Gl_currentTrainName += selectAllTrain.options[i].text + ' /nОДНОВРЕМЕННО С/n'
+            Gl_currentTrainName += selectAllTrain.options[i].text + '  \n[ОДНОВРЕМЕННО С]\n   '  //!в наименовании тоже [ОДНОВРЕМЕННО С] - важно для текста печати
             aSimultTrain.push(Gl_aMetaRithm[i][1][0]) //!!? сделать в цикле по Gl_aMetaRithm[i][1][0].split("[ОДНОВРЕМЕННО С]")
           }
-      }else{ //! в такой реализации нельзя будет использовать [ОДНОВРЕМЕННО С] в текстах трень во множественном режиме( нельзя выбрать треню, в которой есть [ОДНОВРЕМЕННО С] и другую вместе с ней..
+      }else{
           Gl_currentTrainName = (Gl_aMetaRithm[value][1][0]).split('=')[0]
-          var aEv = Gl_aMetaRithm[value][1]
-
           /*
           в случае если треня есть одновременное выполнение других трень (первая строка - перречисление трень через [ОДНОВРЕМЕННО С])
           GltxtSpeek.value должен получиться  в виде "список трени 1 (а не имя трени!) [ОДНОВРЕМЕННО С] список трени 2 (а не имя трени!)..."
-          Т.е. в цикле по aEv.split('[ОДНОВРЕМЕННО С]') (это имена трень) ищем текущую треню currIndex = найти индекс по имени..,
+          Т.е. в цикле по Gl_aMetaRithm[value][1][0].split('[ОДНОВРЕМЕННО С]') (это имена трень) ищем текущую треню currIndex = найти индекс по имени..,
              берем ее список Gl_aMetaRithm[currIndex][1] и добавляем к GltxtSpeek.value,
              если есть трени за ней (смотрим по длине массива цикла) - добавляем еще "[ОДНОВРЕМЕННО С]"
           */
           GltxtSpeek.value=''
-          var sTrain = aEv[0]  //0!
-          aSimultTrain = sTrain.split("[ОДНОВРЕМЕННО С]");
+          aSimultTrain = Gl_aMetaRithm[value][1][0].split("[ОДНОВРЕМЕННО С]");
       }
 
       for(var i=0;i<aSimultTrain.length;i++){
@@ -1524,6 +1504,7 @@
 
       //alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
       btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
+
       getText2Print(Gl_currentTrainName)
       return
     } else if (sMode=="Run"){
@@ -1542,7 +1523,6 @@
           aRet.push(Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[0])])
       Gl_aRithmLisp = stus(aRet, 'diff')
       finish_Gl_aRithmLisp();
-      //return Gl_aRithmLisp.slice()
     } else getArithm(GltxtSpeek.value.split(Gl_sDelim));
 
 
@@ -1612,23 +1592,6 @@
       document.getElementById("idDivStatrPause").style.display ='none'
       //
       document.getElementById("idTextsToSpeek").style.height =(200+document.getElementById("idTextsToSpeek").scrollHeight)+"px"
-
-    /*
-      //
-      alert (Gl_txtPrint.value)
-      var prtContent = Gl_txtPrint;//oPrint;//document.getElementById(strid);
-      var prtCSS = '<link rel="stylesheet" href="/templates/css/template.css" type="text/css" />';
-      var WinPrint = window.open('','','left=50,top=50,width=800,height=640,toolbar=0,scrollbars=1,status=0');
-      //WinPrint.document.write('<div id="print" class="contentpane">');
-      //WinPrint.document.write(prtCSS);
-      WinPrint.document.write(prtContent.value);
-      //WinPrint.document.write('</div>');
-      WinPrint.document.close();
-      WinPrint.focus();
-      WinPrint.print();
-      WinPrint.close();
-     // prtContent.innerHTML=strOldOne;
-    */
    }
 
    function btnPrintOnClick(){
@@ -1642,8 +1605,8 @@
       oscillator.connect(ctx.destination);
       oscillator.start();
       oscillator.stop(d);
-      //alert(1)
     }
+
     function beep2(f, d) {
       var volume = 10000,
         u1 = -volume,
