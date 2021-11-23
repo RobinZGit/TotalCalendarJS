@@ -19,11 +19,12 @@
 <button id="ttt" style="float:right;height:100px;width:25%" onclick="test()">test </button>
 <textarea id="idTestText" style="width:100%;height:400px;" > </textarea>
 -->
-<div id="externalcall" style="height:30px;width:100%;background-color:red;display:none"> ЗАПЛАНИРОВАНА ТРЕНИРОВКА
+<div id="externalcall" style="height:30px;width:100%;background-color:red;display:none"> ЗАПЛАНИРОВАНА ТРЕНИРОВКА. ПЕРЕД ПЕРЕХОДОМ ПО ССЫЛКЕ НЕ ЗАБУДЬТЕ ВКЛЮЧИТЬ STAYALIVE.
 </div>
 <div id = idDivCalendar style="font-weight:bold;height:30px"> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="1"> дней от сегодняшнего </div>
-<div>
-    <button id="btnRecalcCal" style="height:30px;width:100%" onclick='btnRecalcCalOnClick()'> Пересчитать календарь </button>
+<div id = idDivCalendarBtns >
+    <button id="btnRecalcCal" style="height:30px;width:49%" onclick='btnRecalcCalOnClick()'> Пересчитать календарь </button>
+    <button id="btnImportCal" style="height:30px;width:50%" onclick='btnImportCalOnClick()'> Выгрузить календарь в формате ICS </button>
 </div>
 <div id="idDivActionCalendar" style="height:20px;overflow-y:scroll;border:2px solid #a1a1a1;">
     <ul id="actionsInCalendar"></ul>
@@ -112,7 +113,7 @@
  //Календарь тренировок
  var Gl_aMetaMetaCalendar =
        [
-           [[new Date(2021,9,29)], //дата начала действия календаря (нач. условие "интегрирования")
+           [[new Date(2021,9,29,15,30,10)], //дата начала действия календаря (нач. условие "интегрирования")
             [ "<КАЛЕНДАРЬ>=1000<РАСПИСАНИЕ>",
               //"<РАСПИСАНИЕ>=<УПРАЖНЕНИЯ НА ШЕЮ>;<#0#>;<УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ>;<#0#>;<АЭРОБНЫЕ>;<#0#>;<ДЫХАТЕЛЬНАЯ ЛЕСЕНКА>;<#1 [СУТ]#>",
               //"<РАСПИСАНИЕ>=<С АЭРОБНЫМИ>;<#1 [СУТ]#>;<С АЭРОБНЫМИ>;<#1 [СУТ]#>;<БЕЗ АЭРОБНЫХ>;<#1 [СУТ]#>",
@@ -685,6 +686,85 @@
 
   }
 
+  // Function to download data to a file - взято из внешнего источника
+  function download(data, filename, type) {
+        var file = new Blob([data], {type: type});
+        if (window.navigator.msSaveOrOpenBlob) // IE10+
+            window.navigator.msSaveOrOpenBlob(file, filename);
+        else { // Others
+            var a = document.createElement("a"),
+                    url = URL.createObjectURL(file);
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 0);
+        }
+  }
+
+  Date.prototype.yyyymmddhhmmss = function(sBetweenDateandTime='') {
+      var mm = this.getMonth() + 1; // getMonth() is zero-based
+      var dd = this.getDate();
+      var hh = this.getHours();
+      var mmin = this.getMinutes();
+      var ss = this.getSeconds();
+
+      return [this.getFullYear(),
+              (mm>9 ? '' : '0') + mm,
+              (dd>9 ? '' : '0') + dd,
+              sBetweenDateandTime,
+              (hh>9 ? '' : '0') + hh,
+              (mmin>9 ? '' : '0') + mmin,
+              (ss>9 ? '' : '0') + ss
+             ].join('');
+  };
+
+    Date.prototype.yyyymmdd = function() {
+      var mm = this.getMonth() + 1; // getMonth() is zero-based
+      var dd = this.getDate();
+      return [this.getFullYear(),
+              (mm>9 ? '' : '0') + mm,
+              (dd>9 ? '' : '0') + dd,
+             ].join('');
+  };
+
+
+
+  //выгрузить события календаря (для загрузки в Outlook Google и пр. календари)
+  function btnImportCalOnClick(){
+    btnRecalcCalOnClick() // если изменили период и не пересчитали
+    var arrayFromList = [];
+
+    // тянем все теги li из блока с нужным  ID
+    var items = document.getElementById("actionsInCalendar").getElementsByTagName("li");
+    //UID:${''+nGUID+''+i}@default
+    var sICS =
+`BEGIN:VCALENDAR
+PRODID:Calendar
+VERSION:2.0\n`
+    var nGUID = (new Date()).yyyymmddhhmmss()
+    for (var i = 0; i < items.length; ++i) {
+      sICS +=
+`BEGIN:VEVENT
+UID:${''+nGUID+''+i}@default
+CLASS:PUBLIC
+DESCRIPTION:https://robinzgit.github.io/TotalCalendarJS/index.html?startwith=${Gl_aMultiCalendar[2*i+1].trim()}&externalcall=1
+DTSTAMP;VALUE=DATE-TIME:${(new Date()).yyyymmddhhmmss('T')}
+DTSTART:${Gl_aMultiCalendar[2*i].yyyymmddhhmmss('T')}
+DTEND:${Gl_aMultiCalendar[2*i].yyyymmddhhmmss('T')}
+SUMMARY;LANGUAGE=en-ru:${Gl_aMultiCalendar[2*i+1].trim()}
+TRANSP:TRANSPARENT
+END:VEVENT\n`
+    }
+
+    sICS += 'END:VCALENDAR'
+    //GltxtSpeek.value = sICS
+    download(sICS, 'FromTotalCalendarJS.ics', 'text/plain')
+  }
+
 
   //пытаемся вычислить строку как формулу. если не получается оставляем строку как есть
   function ev(s){
@@ -719,8 +799,12 @@
     //GltxtSpeek.value += "\n\n Для изменения тренировки необходимо редактировать запускаемый файл html.\n";
     if (Gl_decodeExternalCallValue.valueOf().length==0)
       alert("Чтобы не было перерыва в тренировке из-за выключения экрана не забудьте запустить программу типа Stay Alive (android)")
-    else
+    else{
       document.getElementById('externalcall').style.display='block'
+      document.getElementById("idDivCalendar").style.display ='none'
+      document.getElementById("idDivCalendarBtns").style.display ='none'
+      document.getElementById("idDivActionCalendar").style.display ='none'
+    }
   }
 
   //изменение размеров элементов при изменении размеров окна
@@ -1441,6 +1525,7 @@
        //скрываем/открываем контролы
        document.getElementById("idDivCalendar").style.display ='none'
        document.getElementById("btnRecalcCal").style.display ='none'
+       document.getElementById("btnImportCal").style.display ='none'
        document.getElementById("idDivActionCalendar").style.display ='none'
        document.getElementById("btnPrint").style.display ='none'
        document.getElementById("idDivAllTrain").style.display ='none'
@@ -1583,6 +1668,7 @@
       GltxtSpeek.value=Gl_txtPrint.value
       document.getElementById("idDivCalendar").style.display ='none'
       document.getElementById("btnRecalcCal").style.display ='none'
+      document.getElementById("btnImportCal").style.display ='none'
       document.getElementById("idDivActionCalendar").style.display ='none'
       document.getElementById("btnPrint").style.display ='none'
       document.getElementById("idDivAllTrain").style.display ='none'
