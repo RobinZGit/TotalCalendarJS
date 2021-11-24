@@ -19,17 +19,27 @@
 <button id="ttt" style="float:right;height:100px;width:25%" onclick="test()">test </button>
 <textarea id="idTestText" style="width:100%;height:400px;" > </textarea>
 -->
+<div id = "checkPage" style="height:40px;width:100%;background-color:gray">
+    Календарь:<input id = "checkCalendarPage" type="checkbox" style="height:10px" onclick="changePageCalendar(this.checked)">
+    Тренировки:<input id = "checkTrainPage" checked= "checked" type="checkbox" style="height:10px" onclick="changePageTrain(this.checked)">
+</div>
+<div id = "delimiter1" style="height:5px;width:100%"></div>
 <div id="externalcall" style="height:30px;width:100%;background-color:red;display:none"> ЗАПЛАНИРОВАНА ТРЕНИРОВКА. ПЕРЕД ПЕРЕХОДОМ ПО ССЫЛКЕ НЕ ЗАБУДЬТЕ ВКЛЮЧИТЬ STAYALIVE.
 </div>
+<div id="calendarPage" style="display:none">
 <div id = idDivCalendar style="font-weight:bold;height:30px"> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="1"> дней от сегодняшнего </div>
 <div id = idDivCalendarBtns >
     <button id="btnRecalcCal" style="height:30px;width:49%" onclick='btnRecalcCalOnClick()'> Пересчитать календарь </button>
     <button id="btnImportCal" style="height:30px;width:50%" onclick='btnImportCalOnClick()'> Выгрузить календарь в формате ICS </button>
 </div>
+    <div id = "delimiter2" style="height:5px;width:100%"></div>
+<div><select id="selectedCalendars" multiple="multiple" style="height:100px;width:100%" onchange="onSelectCalendar(this.selectedIndex);" ></select></div>
 <div id="idDivActionCalendar" style="height:20px;overflow-y:scroll;border:2px solid #a1a1a1;">
     <ul id="actionsInCalendar"></ul>
 </div>
-
+</div>
+<div id = "delimiter3" style="height:5px;width:100%"></div>
+<div id = "trainPage">
 <div id = "idDivAllTrain"  style="font-weight:bold;background:lightgreen"> Выбор тренировки:
     <div>
         <select id="selectAllTrain"  style="height:100px;width:100%" onchange="onSelectTrain(this.selectedIndex);" ></select>
@@ -73,6 +83,7 @@
 </div>
 <div style="font-size:small;color:blue;">Info: Можно в параметр startwith url-ссылки передать имя тренировки, и форма сразу после запуска покажет ее выбранной</div>
 <div style="font-size:small;color:blue;">Например:  http://localhost:63342/TotalCalendarJS/index.html?_ijt=p3hgufvl6ok7084qaistkcbqgu&_ij_reload&startwith=УПРАЖНЕНИЯ НА ШЕЮ </div>
+</div>
 
 <script>
 
@@ -114,7 +125,7 @@
  var Gl_aMetaMetaCalendar =
        [
            [[new Date(2021,9,29,20,0,0)], //дата начала действия календаря (нач. условие "интегрирования")
-            [ "<КАЛЕНДАРЬ>=1000<РАСПИСАНИЕ>",
+            [ "<КАЛЕНДАРЬ ЕЖЕДНЕВНЫЕ>=1000<РАСПИСАНИЕ>",
               //"<РАСПИСАНИЕ>=<УПРАЖНЕНИЯ НА ШЕЮ>;<#0#>;<УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ>;<#0#>;<АЭРОБНЫЕ>;<#0#>;<ДЫХАТЕЛЬНАЯ ЛЕСЕНКА>;<#1 [СУТ]#>",
               //"<РАСПИСАНИЕ>=<С АЭРОБНЫМИ>;<#1 [СУТ]#>;<С АЭРОБНЫМИ>;<#1 [СУТ]#>;<БЕЗ АЭРОБНЫХ>;<#1 [СУТ]#>",
               "<РАСПИСАНИЕ>=<РАСТЯЖКА>;<#1 [СУТ]#>;<БАЗОВАЯ>;<#1 [СУТ]#>",
@@ -126,7 +137,7 @@
            ],
 
            [[new Date(2021,10,1,10,0,0)],
-            [ "<КАЛЕНДАРЬ1>=1000<РАСПИСАНИЕ1>",
+            [ "<КАЛЕНДАРЬ ИМ>=1000<РАСПИСАНИЕ1>",
               "<РАСПИСАНИЕ1>=5(<ИМ>;<#90 [МИН]#>);<ИМ>;<#16.5 [ЧАС]#>",
               "[BEGIN EVAL PARAMETERS]",
               "[END EVAL PARAMETERS]",
@@ -161,7 +172,7 @@
 
         ]
         ;
-
+ var Gl_aMetaMetaCalendarSelected = []
 
  //Массив тренировок
  var Gl_aMetaRithm =
@@ -669,6 +680,18 @@
   var Gl_trainTime
   var Gl_decodeExternalCallValue=""
 
+  function changePageCalendar(isCheck){
+    if (isCheck)
+      document.getElementById("calendarPage").style.display ='block'
+    else
+      document.getElementById("calendarPage").style.display ='none'
+  }
+  function changePageTrain(isCheck){
+    if (isCheck)
+      document.getElementById("trainPage").style.display ='block'
+    else
+      document.getElementById("trainPage").style.display ='none'
+  }
   function changeSelectMode(isChecked){
     if (isChecked) {
       selectAllTrain.setAttribute("multiple","multiple")
@@ -678,6 +701,7 @@
   }
 
   function btnRecalcCalOnClick() {
+    //alert(Gl_aMetaMetaCalendarSelected)
     //? Gl_calendarVisible = !Gl_calendarVisible
     //? if (Gl_calendarVisible){
 
@@ -765,6 +789,11 @@ DTSTART:${Gl_aMultiCalendar[2*i].yyyymmddhhmmss('T')}
 DTEND:${Gl_aMultiCalendar[2*i].yyyymmddhhmmss('T')}
 SUMMARY;LANGUAGE=en-ru:${Gl_aMultiCalendar[2*i+1].trim()}
 TRANSP:TRANSPARENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:This is an event reminder
+TRIGGER:-P0DT0H0M0S
+END:VALARM
 END:VEVENT\n`
     }
 
@@ -783,7 +812,10 @@ END:VEVENT\n`
 
   //Выводим данные на форму при загрузке страницы
   function loadTrainData() {
-
+    if (Gl_aMetaMetaCalendarSelected.length==0){
+      //alert('сброс выбора календарей')
+      for (var i=0;i<Gl_aMetaMetaCalendar.length;i++) Gl_aMetaMetaCalendarSelected.push(true) //первоначально все календари выбраны, учитываются в общем календаре
+    }
     //beep0(1000, 0.5)
     //параметр - с какую треню выбрать по умолчанию
     var startWithValue = location.href
@@ -987,8 +1019,25 @@ END:VEVENT\n`
      execTrain1(nInd,"Act")
   }
 
+  function onSelectCalendar(nInd){
+     if (nInd<0) {
+         document.getElementById("selectedCalendars").options.length = 0
+         for(var i=0; i<Gl_aMetaMetaCalendar.length;i++){
+           var oOption =  new Option(Gl_aMetaMetaCalendar[i][1][0].split('=')[0],i)
+           oOption.selected = Gl_aMetaMetaCalendarSelected[i]
+           document.getElementById("selectedCalendars").options.add( oOption )
+         }
+     } else{
+        for(var i=0; i<document.getElementById("selectedCalendars").options.length;i++)
+          Gl_aMetaMetaCalendarSelected[i]=document.getElementById("selectedCalendars").options[i].selected
+        btnRecalcCalOnClick()
+     }
+
+  }
+
   function addAction (sMode, oListbox, text, value, isDefaultSelected, isSelected,sStyle,fl,btnPrevId,nRepeat)
   {
+    //document.getElementById("checkTrainPage").checked = true
     var retId=""
 
     if (sMode=='currentTShort'){
@@ -1073,10 +1122,13 @@ END:VEVENT\n`
     var  dCurr =  now0
     var  nCurr = 0
     var aCalendar = []
-    for (var i=0; i<aTrains.length; i++){
+    for (var i=0; i<aTrains.length; i++)
+    if((nMode == 'diff')||((nMode == 'paint')&&Gl_aMetaMetaCalendarSelected[i]))
+    {
+    //if((nMode == 'diff')||((nMode == 'paint')&&Gl_aMetaMetaCalendarSelected[i])) alert(Gl_aMetaMetaCalendarSelected[i])
         if (nMode == 'paint') {
           dCurr =  aTrains[i][0][0]
-          aCalendar = getArithm(aTrains[i][1])//.slice()
+          aCalendar = getArithm(aTrains[i][1])
         } else {
           dCurr =  now0
           nCurr = 0
@@ -1152,6 +1204,9 @@ END:VEVENT\n`
     //GlTest+=1;
     calendar.innerHTML = ''
     currentT.innerHTML = ''
+
+    //========НАЧИТКА СПИСКА ВСЕХ КАЛЕНДАРЕЙ===========
+    onSelectCalendar(-1)
 
     //=========НАЧИТКА СПИСКА ВСЕХ ТРЕНИРОВОК===========
     readFilteredListOfTrainings('',loadTrain);
@@ -1557,6 +1612,10 @@ END:VEVENT\n`
       var aEv = Gl_aMetaRithm[getTrainIndexByName("<"+Gl_aMultiCalendar[value].trim()+">")][1]
       GltxtSpeek.value= aEv.join('     '+Gl_sDelim+'\n')
       selectAllTrain.selectedIndex = getTrainIndexByName("<"+Gl_aMultiCalendar[value].trim()+">") //!!!!
+      document.getElementById("trainPage").style.display ='block'
+      document.getElementById("checkTrainPage").checked = true
+      document.getElementById("calendarPage").style.display ='none'
+      document.getElementById("checkCalendarPage").checked = false
       alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
       btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
       getText2Print(Gl_currentTrainName)
