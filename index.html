@@ -113,7 +113,7 @@
  //Календарь тренировок
  var Gl_aMetaMetaCalendar =
        [
-           [[new Date(2021,9,29,15,30,10)], //дата начала действия календаря (нач. условие "интегрирования")
+           [[new Date(2021,9,29,20,0,0)], //дата начала действия календаря (нач. условие "интегрирования")
             [ "<КАЛЕНДАРЬ>=1000<РАСПИСАНИЕ>",
               //"<РАСПИСАНИЕ>=<УПРАЖНЕНИЯ НА ШЕЮ>;<#0#>;<УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ>;<#0#>;<АЭРОБНЫЕ>;<#0#>;<ДЫХАТЕЛЬНАЯ ЛЕСЕНКА>;<#1 [СУТ]#>",
               //"<РАСПИСАНИЕ>=<С АЭРОБНЫМИ>;<#1 [СУТ]#>;<С АЭРОБНЫМИ>;<#1 [СУТ]#>;<БЕЗ АЭРОБНЫХ>;<#1 [СУТ]#>",
@@ -125,6 +125,13 @@
             ]
            ],
 
+           [[new Date(2021,10,1,10,0,0)],
+            [ "<КАЛЕНДАРЬ1>=1000<РАСПИСАНИЕ1>",
+              "<РАСПИСАНИЕ1>=5(<ИМ>;<#90 [МИН]#>);<ИМ>;<#16.5 [ЧАС]#>",
+              "[BEGIN EVAL PARAMETERS]",
+              "[END EVAL PARAMETERS]",
+            ]
+           ],
            /*
            [[new Date(2021,0,1)],
             [ "<КАЛЕНДАРЬ1>=1000<РАСПИСАНИЕ1>",
@@ -352,7 +359,7 @@
               [
                 [],
                 [ "<ХОККЕЙ - РУКИ>=1<ЦИКЛ>",
-                  "<ЦИКЛ>=700(<ДЕЙСТВИЕ ДРИБЛИНГА>;<#400 #>)",
+                  "<ЦИКЛ>=700(<ДЕЙСТВИЕ ДРИБЛИНГА>;<#700 #>)",
                   "<ДЕЙСТВИЕ ДРИБЛИНГА>=[ВЫБОР ИЗ]<Мяч вправо>:<Мяч влево>:<Мяч вперед>:<Мяч назад>[КАК]1:1:1:1",
                   "//",
                   "//Блок параметров тренировки. В нем запрещены умножения на число и выбор",
@@ -366,8 +373,9 @@
               [
                 [],
                 [ "<ХОККЕЙ - НОГИ>=1<ЦИКЛ>",
-                  "<ЦИКЛ>=300(<ДЕЙСТВИЕ>;<#1100 #>)",
-                  "<ДЕЙСТВИЕ>=[ВЫБОР ИЗ]<Шаг вправо>:<Шаг влево>:<Шаг вперед>:<Шаг назад>[КАК]1:1:1:1",
+                  "<ЦИКЛ>=300(<ДЕЙСТВИЕ>;<НАПРАВЛЕНИЕ>;<#1200 #>)",
+                  "<ДЕЙСТВИЕ>=[ВЫБОР ИЗ]<Вираж>:<Улитка>:<Циркуль>[КАК]2:2:1",
+                  "<НАПРАВЛЕНИЕ>=[ВЫБОР ИЗ]<вправо>:<влево>:<вперед>:<назад>[КАК]1:1:1:1",
                   "//",
                   "//Блок параметров тренировки. В нем запрещены умножения на число и выбор",
                   "//Вычисления начинаются с подстновок в данном блоке",
@@ -376,8 +384,7 @@
                 ],
                ],
               //================
-              /*! в такой реализации нельзя будет использовать [ОДНОВРЕМЕННО С] в текстах трень во множественном режиме( нельзя выбрать треню, в которой есть [ОДНОВРЕМЕННО С] и другую вместе с ней..
-                   */
+
               //================  ХОККЕЙ - ОДНОВРЕМЕННО РУКИ И НОГИ
               [
                 [],
@@ -667,6 +674,7 @@
       selectAllTrain.setAttribute("multiple","multiple")
       alert('Вы можете выбрать несколько тренировок для одновременного выполнения, используя клавишу [CTRL].')
     } else selectAllTrain.removeAttribute("multiple")
+    readFilteredListOfTrainings('',null)
   }
 
   function btnRecalcCalOnClick() {
@@ -1043,6 +1051,7 @@ END:VEVENT\n`
           )
       if (flAdd && (selectAllTrain.getAttribute("multiple")=="multiple"))
         flAdd = !(Gl_aMetaRithm[i].join(' ').toUpperCase().indexOf('[ОДНОВРЕМЕННО С]')>=0)
+
       if (flAdd)
         addAction("all",null/*actions*/,Gl_aMetaRithm[i][1][0].split('=')[0],i,false,false,"width:100%",false)
 
@@ -1075,7 +1084,7 @@ END:VEVENT\n`
         }
         for (var j=1; j<aCalendar.length-1; j=j+2){
             if (hasOnlineCalcedParams(aCalendar[j-1])){
-               alert('Слияние тренировок невозможно, поскольку имеются интервалы, расчитываемые во время выполнения ('+aCalendar[j-1]+')');
+               alert('Слияние тренировок невозможно, поскольку имеются интервалы, рассчитываемые во время выполнения ('+aCalendar[j-1]+')');
                return null;
             }
             var sDeltaMs=aCalendar[j-1]
@@ -1094,14 +1103,14 @@ END:VEVENT\n`
     //2. Сортируем пары
     for (var i=0; i<ret_aMultiCalendar.length-1; i=i+2)
         for (var j=i; j<ret_aMultiCalendar.length-1; j=j+2)
-        //if (nMode=='diff'){alert (ret_aMultiCalendar[i]>ret_aMultiCalendar[j]);alert (ret_aMultiCalendar[i]);alert (ret_aMultiCalendar[j])}
+        //if (nMode=='paint'){alert (ret_aMultiCalendar[i]>ret_aMultiCalendar[j]);alert (ret_aMultiCalendar[i]);alert (ret_aMultiCalendar[j])}
             if (ret_aMultiCalendar[i]>ret_aMultiCalendar[j]){
               var d = new Date(ret_aMultiCalendar[j])
               var nd = ret_aMultiCalendar[j]
-              var s=   String(ret_aMultiCalendar[j+1])
-              if(nMode=='diff') ret_aMultiCalendar[j] = ret_aMultiCalendar[i]; else ret_aMultiCalendar[j] = new Date(ret_aMultiCalendar[i]);
+              var s = String(ret_aMultiCalendar[j+1])
+              ret_aMultiCalendar[j] = ret_aMultiCalendar[i]     //??  if(nMode=='diff') ret_aMultiCalendar[j] = ret_aMultiCalendar[i]; else ret_aMultiCalendar[j] = new Date(ret_aMultiCalendar[i]);
               ret_aMultiCalendar[j+1] = String(ret_aMultiCalendar[i+1])
-              if(nMode=='diff') ret_aMultiCalendar[i]=nd; else ret_aMultiCalendar[j] = new Date(d);
+              ret_aMultiCalendar[i]=nd    //??  if(nMode=='diff') ret_aMultiCalendar[i]=nd; else ret_aMultiCalendar[j] = new Date(d);
               ret_aMultiCalendar[i+1] = String(s)
             }
     if (nMode == 'paint') {
@@ -1117,7 +1126,7 @@ END:VEVENT\n`
             if ((dCurr.getFullYear()==now.getFullYear())&&(dCurr.getMonth()==now.getMonth())&&(dCurr.getDate()==now.getDate()))
               sStyle ="width:100%;height:40px;color:red;"
             else sStyle ="width:100%;height:40px";
-             addAction("calendar",calendar,dCurr.toDateString()  //!! преобразовать от даты + ...
+             addAction("calendar",calendar,dCurr.toLocaleString()  //!! преобразовать от даты + ...
                                 +'   :    '+ret_aMultiCalendar[i] ,i,false,false,sStyle,fl);
         }
     } else {
