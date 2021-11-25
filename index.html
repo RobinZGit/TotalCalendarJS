@@ -30,7 +30,7 @@
 <div id = idDivCalendar style="font-weight:bold;height:30px"> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="1"> дней от сегодняшнего </div>
 <div id = idDivCalendarBtns >
     <button id="btnRecalcCal" style="height:30px;width:49%" onclick='btnRecalcCalOnClick()'> Пересчитать календарь </button>
-    <button id="btnImportCal" style="height:30px;width:50%" onclick='btnImportCalOnClick()'> Выгрузить календарь в формате ICS </button>
+    <button id="btnImportCal" style="height:30px;width:50%" onclick='btnImportCalOnClick()'> Импорт календаря в формате ICS </button>
 </div>
     <div id = "delimiter2" style="height:5px;width:100%"></div>
 <div><select id="selectedCalendars" multiple="multiple" style="height:100px;width:100%" onchange="onSelectCalendar(this.selectedIndex);" ></select></div>
@@ -52,8 +52,9 @@
     </div>
 </div>
 <div id="idDivStatrPause" style="font-weight:bold">
-    <button id="btnSelectAllTrain" style="height:100px;width:74%" > Начать тренировку </button>
+    <button id="btnSelectAllTrain" style="height:100px;width:50%" > Начать тренировку </button>
     <button id="btnExit" style="float:right;height:100px;width:25%" onclick="window.close()"> Выход </button>
+    <button id="btnImportTrain" style="height:100px;width:24%" onclick='btnImportTrainOnClick()'> Импорт тренировки (.rtm) </button>
     Без звука:<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else document.getElementById('idTextTrain').style.display='block'; ">
     Темп речи:
     <input id = "inputRate"  style="height:30px;width:5%" value="1.5">
@@ -644,9 +645,10 @@
                   "<par2min>=5",
                   "<par3max>=10+3//!!сделать линейную формулудо 20 за 3 года" ,
                   "<delta31>=(<par2min> + (_номер_итерации_/8-0) * (<par3max>-<par2min>)/((1*<par4T>/(<par3max> + <par2min>))-0) )/8",
-                  "<delta32>=(<par3max> + ( 1*<par4T> / (<par2min> + <par3max>) - _номер_итерации_/8+0) * (<par3max>-<par2min>)/((1*<par4T>/(<par3max> + <par2min>))-1) )/8",
+                  "<delta32>=(<par3max> + ( 1*<par4T> / (<par2min> + <par3max>)     - _номер_итерации_/8+0) * (<par3max>-<par2min>)/((1*<par4T>/(<par3max> + <par2min>))-1) )/8",
                   '<say31>=(((Math.floor((_номер_итерации_-1)/4)%2))?"ы":"о")',
                   '<say32>=(((Math.floor((_номер_итерации_-1)/4)%2))?"ы":"о")',
+                  "<testtt>=_номер_итерации_ ",
                   //"<say32>=ы", // iif(нечетное(целоеделна4(номеритерации1)),ы,о)
                   "[END EVAL PARAMETERS]",
 
@@ -796,10 +798,30 @@ TRIGGER:-P0DT0H0M0S
 END:VALARM
 END:VEVENT\n`
     }
-
     sICS += 'END:VCALENDAR'
-    //GltxtSpeek.value = sICS
     download(sICS, 'FromTotalCalendarJS.ics', 'text/plain')
+  }
+
+  //импорт тренировки (кастомный формат .rtm)
+  function btnImportTrainOnClick(){
+      var aRithmLisp=[]
+      var aSimult = []
+      if (GltxtSpeek.value.indexOf('[ОДНОВРЕМЕННО С]')>=0){
+        var arrStr = GltxtSpeek.value.split('[ОДНОВРЕМЕННО С]')
+        for (i=0;i<arrStr.length;i++) {
+          aSimult.push([[],arrStr[i].split(Gl_sDelim)])
+        }
+        aRithmLisp = stus(aSimult,'diff')
+      }else aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim));
+
+      aRithmLisp[0]=4000
+      aRithmLisp.forEach(v=>v=String(v).replaceAll('\n',''))
+      var sText='1000\n '
+                +Gl_currentTrainName.replaceAll('\n','').replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, '')
+                +'. Тренировка продлится ' +calcTtrainTime()
+                +' минут\n '
+                +aRithmLisp.join('\n')
+      download(sText, Gl_currentTrainName.replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, '')+'.rtm', 'text/plain')
   }
 
 
@@ -873,7 +895,7 @@ END:VEVENT\n`
 
         var d=new Date();
         aCurr = [d,str];
-        _history_.push(aCurr);
+        //!! вычисляется во втрой проход _history_.push(aCurr);
       }
 
   function hasOnlineCalcedParams(str){
@@ -918,7 +940,7 @@ END:VEVENT\n`
 
                     if ((str.indexOf('[eval]')>=0)){//нужно досчитать интервал по онлайн-параметрам
                        //разбиваем строку в массив через $, для четных индексов массива заменяем элемнт на eval(element) и собираем зново в строку уже с пустым разделителем
-
+//alert(str)
                        var aDelta = str.split('[eval]');
                        for(i=1; i< aDelta.length; i+=2){
                          try{
@@ -983,7 +1005,7 @@ END:VEVENT\n`
               txtTextTime.value = "Прошло:   "+Math.floor(dT/(60*1000)) + "  минут  " + (Math.floor(dT/(1000)))%60 + "  секунд из  "+Gl_trainTime+" мин."
               if((dCurr-GldPrev)>=GlnDelta){ //прошел требуемый интервал
                      //----онлайн параметры--------------------------------------
-                     _номер_итерации_+=1;
+                     //!! вычисляется во второй проход _номер_итерации_+=1;
                      //-----------------------------------------------------------
                      try{
                        document.getElementById('buttonCurrentTr' + GlnInd).style.background='green'
@@ -1305,6 +1327,7 @@ END:VEVENT\n`
     var iCurr=0;
     var flContinue = (iCurr< Gl_aGenRithm.length)
     while (flContinue){
+      if(Gl_aGenRithm[iCurr].indexOf('[BEGIN EVAL PARAMETERS]')>0) break //в блоке вычисления формул свои скобки, туда не лезть!
       var posOp = 0;
       var posCl =0;
       while (posOp>=0){
@@ -1513,6 +1536,37 @@ END:VEVENT\n`
           }catch(e){}
       }
 
+      //ВТОРОЙ ПРОХОД - ВЫЧИСЛЕНИЕ "ОНЛАЙН-ПАРАМЕТРОВ" И ПЕРЕВОД ВРЕМЕНИ В МСЕК
+      _номер_итерации_=0
+      _прошло_лет_=0
+      _прошло_месяцев_=0
+      _прошло_недель_=0
+      _прошло_дней_=0
+      _прошло_часов_=0
+      _прошло_минут_=0
+      _прошло_секунд_=0
+      _прошло_милисекунд_=0
+      _history_ = []
+      for (var i = 0; i < Gl_aRithmLisp.length; i++){
+        if (i%2==0){
+          _номер_итерации_+=1;
+          //alert(Gl_aRithmLisp[i+1])
+          Gl_aRithmLisp[i]=calcEval("N",Gl_aRithmLisp[i])
+          Gl_aRithmLisp[i+1]=calcEval("S",Gl_aRithmLisp[i+1])
+          var nDelta = Math.round(Number(Gl_aRithmLisp[i]));
+          var d=new Date();
+          var aCurr = [d,Gl_aRithmLisp[i+1]];
+          _history_.push(aCurr);
+          _прошло_милисекунд_ +=nDelta
+          _прошло_секунд_=Math.floor(_прошло_милисекунд_/1000)
+          _прошло_минут_=Math.floor(_прошло_милисекунд_/(1000*60))
+          _прошло_часов_=Math.floor(_прошло_милисекунд_/(1000*60*60))
+          _прошло_дней_=Math.floor(_прошло_милисекунд_/(1000*60*60*24))
+          _прошло_недель_=Math.floor(_прошло_милисекунд_/(1000*60*60*24*7))
+          _прошло_часов_=Math.floor(_прошло_милисекунд_/(1000*60*60*24*365))
+        }
+      }
+
       //Добавим "тренировка завершена"
       var sDelim1 ="%%%%%%%%"
       if (Gl_aRithmLisp.length%2==1)
@@ -1547,7 +1601,7 @@ END:VEVENT\n`
   function getText2Print(sTrainName){ //текст для печати
       var aRithmLisp=[]
       var aSimult = []
-      if (sTrainName.indexOf('[ОДНОВРЕМЕННО С]')>=0){
+      if (GltxtSpeek.value.indexOf('[ОДНОВРЕМЕННО С]')>=0){
         arrStr = GltxtSpeek.value.split('[ОДНОВРЕМЕННО С]')
         for (i=0;i<arrStr.length;i++) {
           aSimult.push([[],arrStr[i].split(Gl_sDelim)])
