@@ -895,7 +895,8 @@ END:VEVENT\n`
 
         var d=new Date();
         aCurr = [d,str];
-        //!! вычисляется во втрой проход _history_.push(aCurr);
+        //!! вычисляется во второй проход но тут не помешает, тк этой переменной в формуле уже нет
+        _history_.push(aCurr);
       }
 
   function hasOnlineCalcedParams(str){
@@ -1005,7 +1006,8 @@ END:VEVENT\n`
               txtTextTime.value = "Прошло:   "+Math.floor(dT/(60*1000)) + "  минут  " + (Math.floor(dT/(1000)))%60 + "  секунд из  "+Gl_trainTime+" мин."
               if((dCurr-GldPrev)>=GlnDelta){ //прошел требуемый интервал
                      //----онлайн параметры--------------------------------------
-                     //!! вычисляется во второй проход _номер_итерации_+=1;
+                     //!! вычисляется во второй проход но тут не помешает, тк этой переменной в формуле уже нет
+                     _номер_итерации_+=1;
                      //-----------------------------------------------------------
                      try{
                        document.getElementById('buttonCurrentTr' + GlnInd).style.background='green'
@@ -1535,9 +1537,10 @@ END:VEVENT\n`
               Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('>').join(' ');
           }catch(e){}
       }
-
+/*
       //ВТОРОЙ ПРОХОД - ВЫЧИСЛЕНИЕ "ОНЛАЙН-ПАРАМЕТРОВ" И ПЕРЕВОД ВРЕМЕНИ В МСЕК
       _номер_итерации_=0
+
       _прошло_лет_=0
       _прошло_месяцев_=0
       _прошло_недель_=0
@@ -1547,6 +1550,7 @@ END:VEVENT\n`
       _прошло_секунд_=0
       _прошло_милисекунд_=0
       _history_ = []
+
       for (var i = 0; i < Gl_aRithmLisp.length; i++){
         if (i%2==0){
           _номер_итерации_+=1;
@@ -1554,6 +1558,7 @@ END:VEVENT\n`
           Gl_aRithmLisp[i]=calcEval("N",Gl_aRithmLisp[i])
           Gl_aRithmLisp[i+1]=calcEval("S",Gl_aRithmLisp[i+1])
           var nDelta = Math.round(Number(Gl_aRithmLisp[i]));
+
           var d=new Date();
           var aCurr = [d,Gl_aRithmLisp[i+1]];
           _history_.push(aCurr);
@@ -1564,15 +1569,17 @@ END:VEVENT\n`
           _прошло_дней_=Math.floor(_прошло_милисекунд_/(1000*60*60*24))
           _прошло_недель_=Math.floor(_прошло_милисекунд_/(1000*60*60*24*7))
           _прошло_часов_=Math.floor(_прошло_милисекунд_/(1000*60*60*24*365))
+
         }
       }
-
+*/
       //Добавим "тренировка завершена"
       var sDelim1 ="%%%%%%%%"
       if (Gl_aRithmLisp.length%2==1)
         Gl_aRithmLisp = (Gl_aRithmLisp.join(sDelim1)+sDelim1+TXT_BTN_FINISHED).split(sDelim1)
       else
          Gl_aRithmLisp = (Gl_aRithmLisp.join(sDelim1)+sDelim1+"1000"+sDelim1+TXT_BTN_FINISHED).split(sDelim1)
+
   }
 
   function navigate(i){ // для навигации по делам текущей трени
