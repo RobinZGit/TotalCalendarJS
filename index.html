@@ -371,7 +371,7 @@
               [
                 [],
                 [ "<ХОККЕЙ - РУКИ>=1<ЦИКЛ>",
-                  "<ЦИКЛ>=700(<ДЕЙСТВИЕ ДРИБЛИНГА>;<#700 #>)",
+                  "<ЦИКЛ>=400(<ДЕЙСТВИЕ ДРИБЛИНГА>;<#1500 #>)",
                   "<ДЕЙСТВИЕ ДРИБЛИНГА>=[ВЫБОР ИЗ]<Мяч вправо>:<Мяч влево>:<Мяч вперед>:<Мяч назад>[КАК]1:1:1:1",
                   "//",
                   "//Блок параметров тренировки. В нем запрещены умножения на число и выбор",
@@ -385,7 +385,7 @@
               [
                 [],
                 [ "<ХОККЕЙ - НОГИ>=1<ЦИКЛ>",
-                  "<ЦИКЛ>=300(<ДЕЙСТВИЕ>;<НАПРАВЛЕНИЕ>;<#1200 #>)",
+                  "<ЦИКЛ>=300(<ДЕЙСТВИЕ>;<НАПРАВЛЕНИЕ>;<#1900 #>)",
                   "<ДЕЙСТВИЕ>=[ВЫБОР ИЗ]<Вираж>:<Улитка>:<Циркуль>[КАК]2:2:1",
                   "<НАПРАВЛЕНИЕ>=[ВЫБОР ИЗ]<вправо>:<влево>:<вперед>:<назад>[КАК]1:1:1:1",
                   "//",
@@ -590,7 +590,7 @@
               [
                 [],
                 [
-                  "<ИМ>=<#6000 #>;20<ЦИКЛ>;<засыпание>;",
+                  "<ИМ>=<#6000 #>;20<ЦИКЛ>;<#7000 #>;<засыпание>;",
                   "<ЦИКЛ>=8<КОМАНДА1>;10<КОМАНДА2>;",
                   "<КОМАНДА1>=<о>;<#1000 #>",
                   "<КОМАНДА2>=< >;<#1000 #>",
@@ -816,9 +816,12 @@ END:VEVENT\n`
 
       aRithmLisp[0]=4000
       aRithmLisp.forEach(v=>v=String(v).replaceAll('\n',''))
+
+      //Gl_aRithmLisp=aRithmLisp.slice() //!!!!!!!!!!!
+
       var sText='1000\n '
                 +Gl_currentTrainName.replaceAll('\n','').replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, '')
-                +'. Тренировка продлится ' +calcTtrainTime()
+                +'. Тренировка продлится ' +calcTtrainTime(aRithmLisp)
                 +' минут\n '
                 +aRithmLisp.join('\n')
       download(sText, Gl_currentTrainName.replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, '')+'.rtm', 'text/plain')
@@ -876,7 +879,7 @@ END:VEVENT\n`
 
 
   function say(str){
-        //alert(str);
+        //alert(Gl_aRithmLisp);
         if (!docNoSound.checked){
             var utterance0 = new SpeechSynthesisUtterance(str);
             utterance0.rate=document.getElementById("inputRate").value;// 1.5; //скорость речи
@@ -896,7 +899,7 @@ END:VEVENT\n`
         var d=new Date();
         aCurr = [d,str];
         //!! вычисляется во второй проход но тут не помешает, тк этой переменной в формуле уже нет
-        _history_.push(aCurr);
+        //_history_.push(aCurr);
       }
 
   function hasOnlineCalcedParams(str){
@@ -968,16 +971,14 @@ END:VEVENT\n`
                      return sRet;
    }
 
-   function calcTtrainTime(){
+   function calcTtrainTime(aRithmLisp){
    //расчет времени трени
             try{
               var nTime = 0
-              for(var i =-1; i<Gl_aRithmLisp.length-1;i=i+2){
-                if (Gl_flBegWord) nTime+=calcInterval(Gl_aRithmLisp[i+1])
-                else nTime+=calcInterval(Gl_aRithmLisp[i+1]);
-              }
+              for(var i =-1; i<aRithmLisp.length-1;i=i+2)
+                nTime+=calcInterval(String(aRithmLisp[i+1]))
               nTime = Math.round(10*nTime/(1000*60))/10;
-            } catch(e) {nTime = 0}
+            } catch(e) {nTime = -100}
             return nTime
     }
 
@@ -994,7 +995,7 @@ END:VEVENT\n`
         if (!GlflSayIntro){
             GlflSayIntro=true;
             //расчет времени трени
-            Gl_trainTime = calcTtrainTime();
+            Gl_trainTime = calcTtrainTime(Gl_aRithmLisp);
             say('Тренировка продлится ' +Gl_trainTime+' минут');
             GlBegTime = new Date();
 
@@ -1018,7 +1019,7 @@ END:VEVENT\n`
                      if(Gl_aRithmLisp[GlnInd]==TXT_BTN_FINISHED) Gl_IsFinished=true
                      //сбросить начало отсчета отсчет времени, пересчитать текущий интервал и индекс дела
                      GldPrev = new Date();
-                     Gl_aRithmLisp[GlnInd+1]= calcEval("N",Gl_aRithmLisp[GlnInd+1])
+                     Gl_aRithmLisp[GlnInd+1]= calcEval("N",String(Gl_aRithmLisp[GlnInd+1])) //!!!String
                      GlnInd+=2;
               }
             } else {
@@ -1030,7 +1031,7 @@ END:VEVENT\n`
   }
 
   function calcMilliseconds(str){ //расчитывает длительность промежутка типа "1 [СУТ]" в милисекундах
-        if (str.indexOf('[МСЕК]')>=0) deltaMs = Number(deltaMs.split('[МСЕК]')[0])
+        if (str.indexOf('[МСЕК]')>=0) return Number(str.split('[МСЕК]')[0]) //deltaMs = Number(deltaMs.split('[МСЕК]')[0])
         else if ((str.indexOf('[СЕК]')>=0)) return Number(str.split('[СЕК]')[0])*1000
         else if ((str.indexOf('[МИН]')>=0)) return Number(str.split('[МИН]')[0])*1000*60
         else if ((str.indexOf('[ЧАС]')>=0)) return Number(str.split('[ЧАС]')[0])*1000*60*60
@@ -1048,11 +1049,13 @@ END:VEVENT\n`
          document.getElementById("selectedCalendars").options.length = 0
          for(var i=0; i<Gl_aMetaMetaCalendar.length;i++){
            var oOption =  new Option(Gl_aMetaMetaCalendar[i][1][0].split('=')[0],i)
+//???@ OK if calendars are not filtered now if select is filtered !?
            oOption.selected = Gl_aMetaMetaCalendarSelected[i]
            document.getElementById("selectedCalendars").options.add( oOption )
          }
      } else{
         for(var i=0; i<document.getElementById("selectedCalendars").options.length;i++)
+//???@  OK if calendars are not filtered now ???? not i !!!??  Gl_aMetaMetaCalendarSelected[i]
           Gl_aMetaMetaCalendarSelected[i]=document.getElementById("selectedCalendars").options[i].selected
         btnRecalcCalOnClick()
      }
@@ -1130,7 +1133,10 @@ END:VEVENT\n`
 
     }
     if (loadTrain!==null)
-      selectAllTrain.selectedIndex = getTrainIndexByName("<"+loadTrain+">")
+      for(var i=0; i<selectAllTrain.options.length;i++)
+        if (selectAllTrain.options[i].text.trim()==loadTrain.trim())
+          selectAllTrain.selectedIndex = i
+      //selectAllTrain.selectedIndex = getTrainIndexByName("<"+loadTrain+">")
   }
 
   //"стусовка" тренировок из массива (может не работать, если промежутки времени зависят от онлайн-вычисляемых параметров)
@@ -1146,6 +1152,8 @@ END:VEVENT\n`
     var  dCurr =  now0
     var  nCurr = 0
     var aCalendar = []
+    var sDeltaMs=''
+    var deltaMs = 0
     for (var i=0; i<aTrains.length; i++)
     if((nMode == 'diff')||((nMode == 'paint')&&Gl_aMetaMetaCalendarSelected[i]))
     {
@@ -1163,8 +1171,8 @@ END:VEVENT\n`
                alert('Слияние тренировок невозможно, поскольку имеются интервалы, рассчитываемые во время выполнения ('+aCalendar[j-1]+')');
                return null;
             }
-            var sDeltaMs=aCalendar[j-1]
-            var deltaMs = calcMilliseconds(sDeltaMs)
+            sDeltaMs=aCalendar[j-1]
+            deltaMs = calcMilliseconds(sDeltaMs)
             dCurr= new Date(dCurr.setMilliseconds(dCurr.getMilliseconds()+deltaMs));
             nCurr+=deltaMs
             var nFromNow0 = ((dCurr.getTime()- now0.getTime())/(1000*60*60*24))
@@ -1241,8 +1249,15 @@ END:VEVENT\n`
     Gl_aMultiCalendar = stus(Gl_aMetaMetaCalendar, 'paint')
   }
 
-  //поиск тренировки по наименованию (в угловых скобках)
+  //поиск тренировки в глобальном массиве по наименованию (в угловых скобках)
   function getTrainIndexByName(sName){
+    for(var i=0; i<Gl_aMetaRithm.length; i++)
+      for(var j=0; j<Gl_aMetaRithm[i][1].length; j++)
+          if(Gl_aMetaRithm[i][1][j].split('=')[0].trim()==sName.trim()) return i;
+  }
+
+  //поиск тренировки в отфильтрованном списке по наименованию (в угловых скобках)
+  function getTrainIndexInSelectByName(sName){
     for(var i=0; i<Gl_aMetaRithm.length; i++)
       for(var j=0; j<Gl_aMetaRithm[i][1].length; j++)
           if(Gl_aMetaRithm[i][1][j].split('=')[0].trim()==sName.trim()) return i;
@@ -1537,10 +1552,9 @@ END:VEVENT\n`
               Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('>').join(' ');
           }catch(e){}
       }
-/*
+
       //ВТОРОЙ ПРОХОД - ВЫЧИСЛЕНИЕ "ОНЛАЙН-ПАРАМЕТРОВ" И ПЕРЕВОД ВРЕМЕНИ В МСЕК
       _номер_итерации_=0
-
       _прошло_лет_=0
       _прошло_месяцев_=0
       _прошло_недель_=0
@@ -1554,11 +1568,9 @@ END:VEVENT\n`
       for (var i = 0; i < Gl_aRithmLisp.length; i++){
         if (i%2==0){
           _номер_итерации_+=1;
-          //alert(Gl_aRithmLisp[i+1])
-          Gl_aRithmLisp[i]=calcEval("N",Gl_aRithmLisp[i])
-          Gl_aRithmLisp[i+1]=calcEval("S",Gl_aRithmLisp[i+1])
+          Gl_aRithmLisp[i]=calcEval("N",String(Gl_aRithmLisp[i]))
+          Gl_aRithmLisp[i+1]=calcEval("S",String(Gl_aRithmLisp[i+1]))
           var nDelta = Math.round(Number(Gl_aRithmLisp[i]));
-
           var d=new Date();
           var aCurr = [d,Gl_aRithmLisp[i+1]];
           _history_.push(aCurr);
@@ -1569,10 +1581,9 @@ END:VEVENT\n`
           _прошло_дней_=Math.floor(_прошло_милисекунд_/(1000*60*60*24))
           _прошло_недель_=Math.floor(_прошло_милисекунд_/(1000*60*60*24*7))
           _прошло_часов_=Math.floor(_прошло_милисекунд_/(1000*60*60*24*365))
-
         }
       }
-*/
+
       //Добавим "тренировка завершена"
       var sDelim1 ="%%%%%%%%"
       if (Gl_aRithmLisp.length%2==1)
@@ -1599,9 +1610,6 @@ END:VEVENT\n`
      }
      GlnDelta = 3000;// Number(Gl_aRithmLisp[i-1]);
      GlnInd =i
-
-
-
   }
 
 
@@ -1615,8 +1623,11 @@ END:VEVENT\n`
         }
         aRithmLisp = stus(aSimult,'diff')
       }else aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim));
+
+      //Gl_aRithmLisp=aRithmLisp.slice() //!!!!!!!!!!!
+
       Gl_txtPrint.value=sTrainName+"\n"
-      Gl_txtPrint.value+='Тренировка продлится ' +calcTtrainTime()+' минут'+"\n\n"
+      Gl_txtPrint.value+='Тренировка продлится ' +calcTtrainTime(aRithmLisp)+' минут'+"\n\n"
 
       var str = ""
       var strNext = ""
@@ -1657,6 +1668,8 @@ END:VEVENT\n`
        document.getElementById("idTextsToSpeek").style.display ='none'
        document.getElementById("idDivNavigation").style.display ='block'
        document.getElementById("idDivTextTime").style.display ='block'
+       document.getElementById("selectedCalendars").style.display ='none'
+       document.getElementById("checkPage").style.display ='none'
        //document.getElementById("idTextTrain").style.display ='block'
        /*
        document.getElementById("idDivTextTime").style.display ='none'// = document.getElementById("selectAllTrain");
@@ -1670,6 +1683,7 @@ END:VEVENT\n`
 
     if (sMode=="Calendar")  {
       Gl_currentTrainName = Gl_aMultiCalendar[value].trim()
+//???@ OK if calendars are not filtered now (value - from calendars)
       var aEv = Gl_aMetaRithm[getTrainIndexByName("<"+Gl_aMultiCalendar[value].trim()+">")][1]
       GltxtSpeek.value= aEv.join('     '+Gl_sDelim+'\n')
       selectAllTrain.selectedIndex = getTrainIndexByName("<"+Gl_aMultiCalendar[value].trim()+">") //!!!!
@@ -1677,6 +1691,8 @@ END:VEVENT\n`
       document.getElementById("checkTrainPage").checked = true
       document.getElementById("calendarPage").style.display ='none'
       document.getElementById("checkCalendarPage").checked = false
+      document.getElementById("selectedCalendars").style.display ='none'
+      document.getElementById("checkPage").style.display ='none'
       alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
       btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
       getText2Print(Gl_currentTrainName)
@@ -1689,7 +1705,8 @@ END:VEVENT\n`
         for (var i =0; i<selectAllTrain.options.length; i++)
           if (selectAllTrain.options[i].selected){
             Gl_currentTrainName += selectAllTrain.options[i].text + '  \n[ОДНОВРЕМЕННО С]\n   '  //!в наименовании тоже [ОДНОВРЕМЕННО С] - важно для текста печати
-            aSimultTrain.push(Gl_aMetaRithm[i][1][0]) //!!? сделать в цикле по Gl_aMetaRithm[i][1][0].split("[ОДНОВРЕМЕННО С]")
+            aSimultTrain.push(Gl_aMetaRithm[getTrainIndexByName(selectAllTrain.options[i].text)][1][0])
+            //aSimultTrain.push(Gl_aMetaRithm[i][1][0])
           }
       }else{
           Gl_currentTrainName = (Gl_aMetaRithm[value][1][0]).split('=')[0]
@@ -1707,6 +1724,7 @@ END:VEVENT\n`
       for(var i=0;i<aSimultTrain.length;i++){
           if ((i==0)&&(aSimultTrain.length>1))
             try{
+ //ok getTrainIndexByName
               GltxtSpeek.value+=Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[1])][1].join('     '+Gl_sDelim+'\n')
             } catch(e){ //падает в режиме множественного выбора
               GltxtSpeek.value+=Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[0])][1].join('     '+Gl_sDelim+'\n')
@@ -1730,14 +1748,29 @@ END:VEVENT\n`
     иначе в цикле по GltxtSpeek.value.split("[ОДНОВРЕМЕННО С]") начитываем массив для стусовывания aTrain и затем Gl_aRithmLisp =?? stus(aTrain,'diff')
     а в getArithm убираем обработку "[ОДНОВРЕМЕННО С]", тк такой текст теперь не попадает в нее
     */
+    /*OLD ???
     if(GltxtSpeek.value.indexOf("[ОДНОВРЕМЕННО С]")>=0){
-      var aSimultTrain = GltxtSpeek.value.split("[ОДНОВРЕМЕННО С]");
+      var aSimultTrain = GltxtSpeek.value.split("[ОДНОВРЕМЕННО С]"); //arrStr
       var aRet =[]
       for(var i=0;i<aSimultTrain.length;i++)
-          aRet.push(Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[0])])
+          aRet.push(Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[0])])  //OK getTrainIndexByName
+      //alert(aRet[0])
+      //alert(aRet[1])
       Gl_aRithmLisp = stus(aRet, 'diff')
-      finish_Gl_aRithmLisp();
+      //alert(Gl_aRithmLisp)
+      finish_Gl_aRithmLisp();  //?? можно просто закомментить?
+      //alert('finished')
     } else getArithm(GltxtSpeek.value.split(Gl_sDelim));
+    */
+    var aRithmLisp=[]
+    var aSimult = []
+    if (GltxtSpeek.value.indexOf('[ОДНОВРЕМЕННО С]')>=0){
+        var arrStr = GltxtSpeek.value.split('[ОДНОВРЕМЕННО С]')
+        for (i=0;i<arrStr.length;i++) {
+          aSimult.push([[],arrStr[i].split(Gl_sDelim)])
+        }
+        Gl_aRithmLisp = stus(aSimult,'diff')
+    }else aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim));
 
 
     //=========НАЧИТКА СПИСКА ДЕЛ ДЛЯ НАВИГАЦИИ===========
@@ -1805,6 +1838,8 @@ END:VEVENT\n`
       document.getElementById("idDivTextTime").style.display ='none'
       document.getElementById("idNoSound").style.display ='none'
       document.getElementById("idDivStatrPause").style.display ='none'
+      document.getElementById("selectedCalendars").style.display ='none'
+      document.getElementById("checkPage").style.display ='none'
       //
       document.getElementById("idTextsToSpeek").style.height =(200+document.getElementById("idTextsToSpeek").scrollHeight)+"px"
    }
