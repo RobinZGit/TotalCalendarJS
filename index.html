@@ -24,7 +24,7 @@
     Тренировки:<input id = "checkTrainPage" checked= "checked" type="checkbox" style="height:10px" onclick="changePageTrain(this.checked)">
 </div>
 <div id = "delimiter1" style="height:5px;width:100%"></div>
-<div id="externalcall" style="height:30px;width:100%;background-color:red;display:none"> ЗАПЛАНИРОВАНА ТРЕНИРОВКА. ПЕРЕД ПЕРЕХОДОМ ПО ССЫЛКЕ НЕ ЗАБУДЬТЕ ВКЛЮЧИТЬ STAYALIVE.
+<div id="externalcall" style="height:30px;width:100%;background-color:red;display:block"> ПЕРЕД ПЕРЕХОДОМ ПО ССЫЛКЕ НЕ ЗАБУДЬТЕ ВКЛЮЧИТЬ STAYALIVE.
 </div>
 <div id="calendarPage" style="display:none">
 <div id = idDivCalendar style="font-weight:bold;height:30px"> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="1"> дней от сегодняшнего </div>
@@ -837,6 +837,15 @@ END:VEVENT\n`
 
   //Выводим данные на форму при загрузке страницы
   function loadTrainData() {
+    //
+    document.getElementById('externalcall').style.display='none';
+    setTimeout(function () {
+        document.getElementById('externalcall').style.display='block';
+    }, 1500);
+    setTimeout(function () {
+        document.getElementById('externalcall').style.display='none';
+    }, 5500);
+    //
     if (Gl_aMetaMetaCalendarSelected.length==0){
       //alert('сброс выбора календарей')
       for (var i=0;i<Gl_aMetaMetaCalendar.length;i++) Gl_aMetaMetaCalendarSelected.push(true) //первоначально все календари выбраны, учитываются в общем календаре
@@ -862,10 +871,10 @@ END:VEVENT\n`
     fillForm(decodeURIComponent(startWithValue))
 
     //GltxtSpeek.value += "\n\n Для изменения тренировки необходимо редактировать запускаемый файл html.\n";
-    if (Gl_decodeExternalCallValue.valueOf().length==0)
-      alert("Чтобы не было перерыва в тренировке из-за выключения экрана не забудьте запустить программу типа Stay Alive (android)")
-    else{
-      document.getElementById('externalcall').style.display='block'
+    if (Gl_decodeExternalCallValue.valueOf().length==0){
+     //! alert("Чтобы не было перерыва в тренировке из-за выключения экрана не забудьте запустить программу типа Stay Alive (android)")
+    }else{
+      //!      document.getElementById('externalcall').style.display='block'
       document.getElementById("idDivCalendar").style.display ='none'
       document.getElementById("idDivCalendarBtns").style.display ='none'
       document.getElementById("idDivActionCalendar").style.display ='none'
@@ -1134,7 +1143,7 @@ END:VEVENT\n`
     }
     if (loadTrain!==null)
       for(var i=0; i<selectAllTrain.options.length;i++)
-        if (selectAllTrain.options[i].text.trim()==loadTrain.trim())
+        if (selectAllTrain.options[i].text.trim()=="<"+loadTrain.trim()+">")
           selectAllTrain.selectedIndex = i
       //selectAllTrain.selectedIndex = getTrainIndexByName("<"+loadTrain+">")
   }
