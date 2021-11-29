@@ -27,63 +27,63 @@
 <div id="externalcall" style="height:30px;width:100%;background-color:red;display:block"> ПЕРЕД ПЕРЕХОДОМ ПО ССЫЛКЕ НЕ ЗАБУДЬТЕ ВКЛЮЧИТЬ STAYALIVE.
 </div>
 <div id="calendarPage" style="display:none">
-<div id = idDivCalendar style="font-weight:bold;height:30px"> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="1"> дней от сегодняшнего </div>
-<div id = idDivCalendarBtns >
-    <button id="btnRecalcCal" style="height:30px;width:49%" onclick='btnRecalcCalOnClick()'> Пересчитать календарь </button>
-    <button id="btnImportCal" style="height:30px;width:50%" onclick='btnImportCalOnClick()'> Импорт календаря в формате ICS </button>
-</div>
+    <div id = idDivCalendar style="font-weight:bold;height:30px"> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="1"> дней от сегодняшнего </div>
+    <div id = idDivCalendarBtns >
+        <button id="btnRecalcCal" style="height:30px;width:49%" onclick='btnRecalcCalOnClick()'> Пересчитать календарь </button>
+        <button id="btnImportCal" style="height:30px;width:50%" onclick='btnImportCalOnClick()'> Импорт календаря в формате ICS </button>
+    </div>
     <div id = "delimiter2" style="height:5px;width:100%"></div>
-<div><select id="selectedCalendars" multiple="multiple" style="height:100px;width:100%" onchange="onSelectCalendar(this.selectedIndex);" ></select></div>
-<div id="idDivActionCalendar" style="height:20px;overflow-y:scroll;border:2px solid #a1a1a1;">
-    <ul id="actionsInCalendar"></ul>
-</div>
+    <div><select id="selectedCalendars" multiple="multiple" style="height:100px;width:100%" onchange="onSelectCalendar(this.selectedIndex);" ></select></div>
+    <div id="idDivActionCalendar" style="height:20px;overflow-y:scroll;border:2px solid #a1a1a1;">
+        <ul id="actionsInCalendar"></ul>
+    </div>
 </div>
 <div id = "delimiter3" style="height:5px;width:100%"></div>
 <div id = "trainPage">
-<div id = "idDivAllTrain"  style="font-weight:bold;background:lightgreen"> Выбор тренировки:
+    <div id = "idDivAllTrain"  style="font-weight:bold;background:lightgreen"> Выбор тренировки:
+        <div>
+            <select id="selectAllTrain"  style="height:100px;width:100%" onchange="onSelectTrain(this.selectedIndex);" ></select>
+            <div>Тренировка cодержит подстроку (фильтр перед выбором):
+                <input id = "filterStr"  style="height:30px;width:20%" onchange="readFilteredListOfTrainings(value,null)">
+            </div>
+            <div>Выбор нескольких тренировок для одновременного выполнения:
+                <input id = "simultMode" type="checkbox" style="height:30px;width:20%" onclick="changeSelectMode(this.checked)">
+            </div>
+        </div>
+    </div>
+    <div id="idDivStatrPause" style="font-weight:bold">
+        <button id="btnSelectAllTrain" style="height:100px;width:50%" > Начать тренировку </button>
+        <button id="btnExit" style="float:right;height:100px;width:25%" onclick="window.close()"> Выход </button>
+        <button id="btnImportTrain" style="height:100px;width:24%" onclick='btnImportTrainOnClick()'> Импорт тренировки (.rtm) </button>
+        Без звука:<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else document.getElementById('idTextTrain').style.display='block'; ">
+        Темп речи:
+        <input id = "inputRate"  style="height:30px;width:5%" value="1.5">
+
+    </div>
+
     <div>
-        <select id="selectAllTrain"  style="height:100px;width:100%" onchange="onSelectTrain(this.selectedIndex);" ></select>
-        <div>Тренировка cодержит подстроку (фильтр перед выбором):
-            <input id = "filterStr"  style="height:30px;width:20%" onchange="readFilteredListOfTrainings(value,null)">
-        </div>
-        <div>Выбор нескольких тренировок для одновременного выполнения:
-            <input id = "simultMode" type="checkbox" style="height:30px;width:20%" onclick="changeSelectMode(this.checked)">
+        <textarea id="idTextTrain" style="width:100%;height:350px;font-size: 30px;text-align: center;display:none;"> </textarea>
+    </div>
+
+    <div id="idDivTextTime" style="display:none">
+        <textarea id="idTextTime" style="width:100%;height:40px;" > </textarea>
+    </div>
+
+    <div id = "idDivNavigation" style="display:none;font-weight:bold"> Навигация по текущей тренировке
+        <div style="height:100%;overflow-y:scroll;border:2px solid #a1a1a1;">
+            <ul id="currentT"></ul>
         </div>
     </div>
-</div>
-<div id="idDivStatrPause" style="font-weight:bold">
-    <button id="btnSelectAllTrain" style="height:100px;width:50%" > Начать тренировку </button>
-    <button id="btnExit" style="float:right;height:100px;width:25%" onclick="window.close()"> Выход </button>
-    <button id="btnImportTrain" style="height:100px;width:24%" onclick='btnImportTrainOnClick()'> Импорт тренировки (.rtm) </button>
-    Без звука:<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else document.getElementById('idTextTrain').style.display='block'; ">
-    Темп речи:
-    <input id = "inputRate"  style="height:30px;width:5%" value="1.5">
 
-</div>
-
-<div>
-    <textarea id="idTextTrain" style="width:100%;height:350px;font-size: 30px;text-align: center;display:none;"> </textarea>
-</div>
-
-<div id="idDivTextTime" style="display:none">
-    <textarea id="idTextTime" style="width:100%;height:40px;" > </textarea>
-</div>
-
-<div id = "idDivNavigation" style="display:none;font-weight:bold"> Навигация по текущей тренировке
-    <div style="height:100%;overflow-y:scroll;border:2px solid #a1a1a1;">
-        <ul id="currentT"></ul>
+    <div>
+        <textarea id="idTextsToSpeek" style="width:100%;height:400px;" > </textarea>
     </div>
-</div>
 
-<div>
-    <textarea id="idTextsToSpeek" style="width:100%;height:400px;" > </textarea>
-</div>
-
-<div>
-    <button id="btnPrint" style="height:40px;width:100%" onclick='btnPrintOnClick()'> Текст тренировки для печати </button>
-</div>
-<div style="font-size:small;color:blue;">Info: Можно в параметр startwith url-ссылки передать имя тренировки, и форма сразу после запуска покажет ее выбранной</div>
-<div style="font-size:small;color:blue;">Например:  http://localhost:63342/TotalCalendarJS/index.html?_ijt=p3hgufvl6ok7084qaistkcbqgu&_ij_reload&startwith=УПРАЖНЕНИЯ НА ШЕЮ </div>
+    <div>
+        <button id="btnPrint" style="height:40px;width:100%" onclick='btnPrintOnClick()'> Текст тренировки для печати </button>
+    </div>
+    <div style="font-size:small;color:blue;">Info: Можно в параметр startwith url-ссылки передать имя тренировки, и форма сразу после запуска покажет ее выбранной</div>
+    <div style="font-size:small;color:blue;">Например:  http://localhost:63342/TotalCalendarJS/index.html?_ijt=p3hgufvl6ok7084qaistkcbqgu&_ij_reload&startwith=УПРАЖНЕНИЯ НА ШЕЮ </div>
 </div>
 
 <script>
@@ -779,11 +779,12 @@
 `BEGIN:VCALENDAR
 PRODID:Calendar
 VERSION:2.0\n`
-    var nGUID = (new Date()).yyyymmddhhmmss()
+    //var nGUID =  (new Date()).yyyymmddhhmmss()
     for (var i = 0; i < items.length; ++i) {
+      var nGUID = items[i].innerHTML.replaceAll('\n','').replaceAll(' ','')//+i
       sICS +=
 `BEGIN:VEVENT
-UID:${''+nGUID+''+i}@default
+UID:${''+nGUID+''}@default
 CLASS:PUBLIC
 DESCRIPTION:https://robinzgit.github.io/TotalCalendarJS/index.html?startwith=${Gl_aMultiCalendar[2*i+1].trim()}&externalcall=1
 DTSTAMP;VALUE=DATE-TIME:${(new Date()).yyyymmddhhmmss('T')}
