@@ -19,9 +19,15 @@
 <button id="ttt" style="float:right;height:100px;width:25%" onclick="test()">test </button>
 <textarea id="idTestText" style="width:100%;height:400px;" > </textarea>
 -->
-<div id = "checkPage" style="height:40px;width:100%;background-color:gray">
-    Календарь:<input id = "checkCalendarPage" type="checkbox" style="height:10px" onclick="changePageCalendar(this.checked)">
-    Тренировки:<input id = "checkTrainPage" checked= "checked" type="checkbox" style="height:10px" onclick="changePageTrain(this.checked)">
+<div id = "checkPage">
+    <div id = "checkPage1" style="height:40px;width:100%;background-color:gray">
+        Календарь:<input id = "checkCalendarPage" type="checkbox" style="height:10px" onclick="changePageCalendar(this.checked)">
+        Тренировки:<input id = "checkTrainPage" checked= "checked" type="checkbox" style="height:10px" onclick="changePageTrain(this.checked)">
+    </div>
+    <div id = "impExp" style="height:30px;width:100%;background-color:gray">
+        <button  id="btnDownLoad" style="height:24px;background-color:lightgray;float:right" onclick="downloadTrainAndCalFromFile(this)">Выгрузить данные о календарях и тренировках в файл</button>
+        <div style="float:left"> Загрузить данные о календарях и тренировках из файла:<input type="file" id="inpLoad" style="background-color:lightgray;float:right" onchange="loadTrainAndCalFromFile(this)"> </div>
+    </div>
 </div>
 <div id = "delimiter1" style="height:5px;width:100%"></div>
 <div id="externalcall" style="height:30px;width:100%;background-color:red;display:block"> ПЕРЕД ПЕРЕХОДОМ ПО ССЫЛКЕ НЕ ЗАБУДЬТЕ ВКЛЮЧИТЬ STAYALIVE.
@@ -196,13 +202,14 @@
                            "<ВНУТРЕННИЕ БЕДРА>;<#6 [СЕК]#>;"+
                            //"<ВОССТАНОВЛЕНИЕ СТАБИЛИЗАЦИИ КОЛЕНЕЙ>;<#6 [СЕК]#>;"+
                            "<АСИМЕТРИЧНЫЕ>;<#6 [СЕК]#>;"+
+                           "<ОТЛЕТ ПЛЕЧ>;<#6 [СЕК]#>;"+
                            "<ВЕРХ ПЕРИФЕРИЯ>;<#6 [СЕК]#>;"+
                            "<ПРЕСС>;<#6 [СЕК]#>;"+
                            "<СПИНА>;<#6 [СЕК]#>;"+
                            "<ОСАНКА ДЖЕФФ КАВАЛЬЕР>;<#6 [СЕК]#>;"+
                            "<ОСАНКА ДЖЕФФ КАВАЛЬЕР 2>;<#6 [СЕК]#>;"+
                            "<МАССАЖ РАССЛАБЛЕНИЕ>;<#6 [СЕК]#>;"+
-                           "<ВАКУУМ ЖИВОТА>;<#4 [СЕК]#>;"+
+                           //"<ВАКУУМ ЖИВОТА>;<#4 [СЕК]#>;"+
                            "<Комплекс упражнений на расслабление>;<#4 [СЕК]#>;"+
                            "<ГОРЛО>;",
                   "<КОМАНДА>=<РАЗ>;<#800 #>",
@@ -254,6 +261,7 @@
                   "<ВАКУУМ ЖИВОТА> =<Вакуум живота.>;<#5 [СЕК]#>;3<ВАКУУМ ЖИВОТА ЦИКЛ>",
                   "<ВАКУУМ ЖИВОТА ЦИКЛ> =<Три вдоха и выдоха, на третий выдох втянуть живот и держать.>;<#10 [СЕК]#>;20<КОМАНДА ДЕРЖИМ>",
                   "<ГОРЛО> =<И еще почитать, поговорить вслух или поиграть на флейте, или просто понапрягать горло>;<#7 [СЕК]#>;",
+                  "<ОТЛЕТ ПЛЕЧ>=<Декомпрессия плечевого сустава Резинку сверху на плечо сверху бицепса. Плечо под 60 градусов вбок и 30 вверх. Второй рукой взять кисть первой, легкие движения кисти к груди, резинка слегка напряжена и оттягивает плечо>;<#9 [СЕК]#>;15<КОМАНДА>;<сменить руку>;<#2 [СЕК]#>;15<КОМАНДА>;",
                   "<Комплекс упражнений на расслабление>=1<цикл расслабление 1>;",
                   "<цикл расслабление 1>=<рассл 1.1.>;<рассл 1.2.>;<рассл 1.3.>;<рассл 1.4.>;<рассл 1.5.>;<рассл 1.6.>;",
                   //Упражнениями на расслабление решается задача быстрого восстановления функций организма после физической нагрузки, повышения работоспособности детей и перевод их из одного эмоционального состояния (возбужденного) в другое (спокойное).                Целесообразно использовать следующие упражнения на расслабление, причём в определенной последовательности:
@@ -328,6 +336,28 @@
                   "<БОКОВОЕ РАСТЯЖЕНИЕ ШЕИ>=<БОКОВОЕ РАСТЯЖЕНИЕ ШЕИ. Правой рукой взять голову сверху, пальцы до левого уха. Левая рука держит шею сзади. Медленно тянуть голову к правому плечу, левая рука тянет мышцы шеи вниз. >;<#14 [СЕК]#>;10<КОМАНДА2>;<#2 [СЕК]#>;<повторить в ту же сторону>;<#2 [СЕК]#>;10<КОМАНДА2>;<#2 [СЕК]#>;<повторить в другую сторону>;<#2 [СЕК]#>;10<КОМАНДА2>;<#2 [СЕК]#>;<повторить в ту же сторону>;<#2 [СЕК]#>;10<КОМАНДА2>",
                   "<ФРОНТАЛЬНОЕ РАСТЯЖЕНИЕ ШЕИ>=<ФРОНТАЛЬНОЕ РАСТЯЖЕНИЕ ШЕИ.Сесть на стул, выдвигаем голову максимально вперед и тянем.>;<#6 [СЕК]#>;10<КОМАНДА>;<#2 [СЕК]#>;<возвращаем голову и тянем ее назад>;<#5 [СЕК]#>;10<КОМАНДА2>",
                   "<РАСТЯЖЕНИЕ ЛЕСТНИЧНЫХ МЫШЦ>=<РАСТЯЖЕНИЕ ЛЕСТНИЧНЫХ МЫШЦ. Правой рукой взять голову сверху, пальцы до левого уха. Левая рука за спиной. Тянуть голову вправо.>;<#7 [СЕК]#>;10<КОМАНДА2>;<#2 [СЕК]#>;<Повторить в другую сторону>;<#3 [СЕК]#>;10<КОМАНДА2>;",
+                  "//",
+                  "//Блок параметров тренировки. В нем запрещены умножения на число и выбор",
+                  "//Вычисления начинаются с подстновок в данном блоке",
+                  "[BEGIN EVAL PARAMETERS]",
+                  "[END EVAL PARAMETERS]",
+
+                ],
+               ],
+              //================
+              //================  МАССАЖ ШЕИ (МАКСИМ БОНДАРЬ)
+              [
+                [],
+                [ "<МАССАЖ ШЕИ (МАКСИМ БОНДАРЬ)>=<Массаж выполняется сидя, должна быть возможность упереться лбом в кулак или в стол>;<#8 [СЕК]#>;1<ЦИКЛ>",
+                  "<ЦИКЛ>=<ЛЕГКИЙ РАЗОГРЕВ РАЗГИБАТЕЛЕЙ>;<#6 [СЕК]#>;<ГЛУБОКИЙ МАССАЖ РАЗГИБАТЕЛЕЙ>;<#6 [СЕК]#>;<ГЛУБОКИЙ МАССАЖ ПОДЗАТЫЛОЧНЫХ>;<#6 [СЕК]#>;<ГЛУБОКИЙ МАССАЖ ТРАПЕЦИЙ>;<#6 [СЕК]#>;<РАСТЯЖЕНИЕ ЛЕСТНИЧНЫХ>;<#6 [СЕК]#>;<ВРАЩЕНИЯ>",
+                  "<КОМАНДА>=<РАЗ>;<#1000 #>",
+                  "<КОМАНДА2>=<ТЯНЕМ>;<#1000 #>",
+                  "<ЛЕГКИЙ РАЗОГРЕВ РАЗГИБАТЕЛЕЙ>=<Двумя теплыми руками  легкие растирания шеи сзади. Елочкой>;<#8 [СЕК]#>;40<КОМАНДА>",
+                  "<ГЛУБОКИЙ МАССАЖ РАЗГИБАТЕЛЕЙ>=<Те же действия, но медленней и глубже>;<#8 [СЕК]#>;50<КОМАНДА>;",
+                  "<ГЛУБОКИЙ МАССАЖ ПОДЗАТЫЛОЧНЫХ>=<Упереть голову лбом в кулак или о стол. Медленные глубокие проминающие движения подзатылочных мышц - от середины до сосцевидного отростка за ухом, в обе стороны>;<#10 [СЕК]#>;40<КОМАНДА>",
+                  "<ГЛУБОКИЙ МАССАЖ ТРАПЕЦИЙ>=<Сесть прямо. Взять трапеции руками. Медленные глубокие проминания обоих трапеций одновременно. Задерживать давление на триггерных точках у концов ключиц.>;<#10 [СЕК]#>;40<КОМАНДА>",
+                  "<РАСТЯЖЕНИЕ ЛЕСТНИЧНЫХ>=<РАСТЯЖЕНИЕ ЛЕСТНИЧНЫХ МЫШЦ. Правой рукой взять голову сверху, пальцы до левого уха. Левая рука за спиной. Медленно тянуть голову вправо.>;<#7 [СЕК]#>;15<КОМАНДА2>;<#2 [СЕК]#>;<Повторить в другую сторону>;<#3 [СЕК]#>;15<КОМАНДА2>;",
+                  "<ВРАЩЕНИЯ>=<Медленно и осторожно вращать голову влево-назад и обратно>;<#6000 #>;20<КОМАНДА>",
                   "//",
                   "//Блок параметров тренировки. В нем запрещены умножения на число и выбор",
                   "//Вычисления начинаются с подстновок в данном блоке",
@@ -682,6 +712,68 @@
   var Gl_trainTime
   var Gl_decodeExternalCallValue=""
 
+  function loadTrainAndCalFromFile(input){
+      let file = input.files[0];
+      let reader = new FileReader();
+      reader.readAsText(file);
+      reader.onload = function() {
+          try{
+            var str = reader.result
+            eval(str)
+            loadTrainData()
+            alert('Загружен календарь и список тренировок')
+          } catch(e){
+            alert('Не удалось прочитать данные, проверьте формат файла. Должен быть js формат (без var!): "Gl-aMetaMetaCalendar=...;Gl_aMetaRithm=...;')
+          }
+        };
+      reader.onerror = function() {
+          console.log(reader.error);
+        };
+  }
+
+
+  function downloadTrainAndCalFromFile(input){
+    var sDownload= ""
+    sDownload+= "//===== КАЛЕНДАРИ ================================\n"
+    sDownload+= "Gl_aMetaMetaCalendar = \n"
+    sDownload+='[\n'
+    for(var i =0;i<Gl_aMetaMetaCalendar.length;i++){
+      sDownload+='  [' +'[new Date('+Gl_aMetaMetaCalendar[i][0][0].getFullYear()+','
+                                    +Gl_aMetaMetaCalendar[i][0][0].getMonth()+','
+                                    +Gl_aMetaMetaCalendar[i][0][0].getDate()+','
+                                    +Gl_aMetaMetaCalendar[i][0][0].getHours()+','
+                                    +Gl_aMetaMetaCalendar[i][0][0].getMinutes()+','
+                                    +Gl_aMetaMetaCalendar[i][0][0].getSeconds()
+                                    +')],\n'
+      for(var j =1;j<Gl_aMetaMetaCalendar[i].length;j++){
+        sDownload+='    [\n'
+        for(var k =0;k<Gl_aMetaMetaCalendar[i][j].length;k++){
+          sDownload+='    `'+Gl_aMetaMetaCalendar[i][j][k]+'`,\n'
+        }
+        sDownload+='    ],\n'
+      }
+      sDownload+='  ],\n'
+    }
+    sDownload+=']\n\n\n'
+
+    //
+    sDownload+= "//===== ТРЕНИРОВКИ ==============================\n"
+    sDownload+= "Gl_aMetaRithm = \n"
+    sDownload+='[\n'
+    for(var i =0;i<Gl_aMetaRithm.length;i++){
+      sDownload+='[  [],\n'
+      for(var j =1;j<Gl_aMetaRithm[i].length;j++){
+        sDownload+='    [\n'
+        for(var k =0;k<Gl_aMetaRithm[i][j].length;k++){
+          sDownload+='    `'+Gl_aMetaRithm[i][j][k]+'`,\n'
+        }
+        sDownload+='    ],\n'
+      }
+      sDownload+='  ],\n'
+    }
+    sDownload+=']\n'
+    download(sDownload, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+'GenTrainsAndCalendarFromTotalCalendarJS.gen', 'text/plain')
+  }
   function changePageCalendar(isCheck){
     if (isCheck)
       document.getElementById("calendarPage").style.display ='block'
@@ -782,6 +874,7 @@ VERSION:2.0\n`
     //var nGUID =  (new Date()).yyyymmddhhmmss()
     for (var i = 0; i < items.length; ++i) {
       var nGUID = items[i].innerHTML.replaceAll('\n','').replaceAll(' ','')//+i
+      nGUID = nGUID.substr(nGUID.indexOf('>')) // отсечем зависящий от i куок вначале
       sICS +=
 `BEGIN:VEVENT
 UID:${''+nGUID+''}@default
@@ -1326,6 +1419,7 @@ END:VEVENT\n`
 
   //выдает массив тренировки (начинается всегда с интервала, чередуется интервал-команда)
   function getArithm(aGen){
+
     var Gl_aGenRithm00 = aGen
 
   	//======  ГЕНЕРАЦИЯ РИТМА Gl_aRithm ИЗ ГЕНЕРАТОРА Gl_aGenRithm  ======
