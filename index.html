@@ -24,10 +24,11 @@
         Календарь:<input id = "checkCalendarPage" type="checkbox" style="height:10px" onclick="changePageCalendar(this.checked)">
         Тренировки:<input id = "checkTrainPage" checked= "checked" type="checkbox" style="height:10px" onclick="changePageTrain(this.checked)">
     </div>
-    <div id = "impExp" style="height:30px;width:100%;background-color:gray">
-        <button  id="btnDownLoad" style="height:24px;background-color:lightgray;float:right" onclick="downloadTrainAndCalFromFile(this)">Выгрузить данные о календарях и тренировках в файл</button>
-        <div style="float:left"> Загрузить данные о календарях и тренировках из файла:<input type="file" id="inpLoad" style="background-color:lightgray;float:right" onchange="loadTrainAndCalFromFile(this)"> </div>
-    </div>
+
+</div>
+<div>
+  <div  style="width:100%"><button  id="btnDownLoad" style="height:24px;background-color:lightgray" onclick="downloadTrainAndCalFromFile(this)">Выгрузить данные о календарях и тренировках в файл</button></div>
+  <div style="width:100%"> Загрузить данные о календарях и тренировках из файла:<input type="file" id="inpLoad" style="background-color:lightgray" onchange="loadTrainAndCalFromFile(this)"> </div>
 </div>
 <div id = "delimiter1" style="height:5px;width:100%"></div>
 <div id="externalcall" style="height:30px;width:100%;background-color:red;display:block"> ПЕРЕД ПЕРЕХОДОМ ПО ССЫЛКЕ НЕ ЗАБУДЬТЕ ВКЛЮЧИТЬ STAYALIVE.
