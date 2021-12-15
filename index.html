@@ -26,9 +26,9 @@
     </div>
 
 </div>
-<div>
-  <div  style="width:100%"><button  id="btnDownLoad" style="height:24px;background-color:lightgray" onclick="downloadTrainAndCalFromFile(this)">Выгрузить данные о календарях и тренировках в файл</button></div>
-  <div style="width:100%"> Загрузить данные о календарях и тренировках из файла:<input type="file" id="inpLoad" style="background-color:lightgray" onchange="loadTrainAndCalFromFile(this)"> </div>
+<div id="idImpExpAll">
+  <div  style="width:100%"><button  id="btnDownLoad" style="height:24px;background-color:lightgray" onclick="downloadTrainAndCalFromFile(this)">Импорт всех данных о календарях и тренировках в файл .genall</button></div>
+  <div style="width:100%"> Загрузить данные о календарях и тренировках из файла .genall:<input type="file" accept=".genall" id="inpLoad" style="background-color:lightgray" onchange="loadTrainAndCalFromFile(this)"> </div>
 </div>
 <div id = "delimiter1" style="height:5px;width:100%"></div>
 <div id="externalcall" style="height:30px;width:100%;background-color:red;display:block"> ПЕРЕД ПЕРЕХОДОМ ПО ССЫЛКЕ НЕ ЗАБУДЬТЕ ВКЛЮЧИТЬ STAYALIVE.
@@ -59,13 +59,24 @@
         </div>
     </div>
     <div id="idDivStatrPause" style="font-weight:bold">
-        <button id="btnSelectAllTrain" style="height:100px;width:50%" > Начать тренировку </button>
+        <button id="btnSelectAllTrain" style="height:100px;width:74%" > Начать тренировку </button>
         <button id="btnExit" style="float:right;height:100px;width:25%" onclick="window.close()"> Выход </button>
-        <button id="btnImportTrain" style="height:100px;width:24%" onclick='btnImportTrainOnClick()'> Импорт тренировки (.rtm) </button>
+
         Без звука:<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else document.getElementById('idTextTrain').style.display='block'; ">
         Темп речи:
         <input id = "inputRate"  style="height:30px;width:5%" value="1.5">
 
+    </div>
+    <div id = "delimiter4" style="height:5px;width:100%"></div>
+    <div id="idImpExp">
+        <button id="btnImportTrain" style="width:50%" onclick='btnImportTrainOnClick()'> Импорт тренировки в файл .rtm </button>
+        <div id = "delimiter5" style="height:5px;width:100%"></div>
+        <div  id="idRunTrain" style="width:49%"> Запустить тренировку из файла .rtm:<input type="file" accept=".rtm" id="inpRunFromRTM" style="background-color:lightgray" onchange="runFromRTM(this)"> </div>
+        <div id = "delimiter6" style="height:5px;width:100%"></div>
+        <button id="btnImportTrain2Gen" style="width:50%" onclick='btnImportTrainInGenOnClick()'> Импорт тренировки в файл .gen </button>
+        <div id = "delimiter7" style="height:5px;width:100%"></div>
+        <div  id="idRunTrainFromGen" style="width:49%"> Запустить тренировку из файла .gen:<input type="file" accept=".gen" id="inpRunFromGen" style="background-color:lightgray" onchange="loadFromGen(this)"> </div>
+        <div id = "delimiter8" style="height:5px;width:100%"></div>
     </div>
 
     <div>
@@ -246,8 +257,8 @@
                   "<ОТЖИМАНИЯ>=<Трицепсы и грудь. Отжимания.>;<#7 [СЕК]#>;15<КОМАНДА>",
                   "<ПЛЕЧИ>=<Плечи. Встать на резинку, взять ее руками. Поднимать прямые руки до горизонтали .>;<#7 [СЕК]#>;15<КОМАНДА>",
                   "<АРМРЕСТЛИНГ>=<Руки периферия. Имитация армрестлинга. С резиной. Правая >;<#8 [СЕК]#>;10<КОМАНДА>;<#4 [СЕК]#>;<Левая>;<#4 [СЕК]#>;10<КОМАНДА>",
-                  "<ВЫБОР ВЕРХ ПЕРИФЕРИЯ>=[ВЫБОР ИЗ]<АРМРЕСТЛИНГ>:<ОТЖИМАНИЯ>:<ПЛЕЧИ>[КАК]1:1:1",
-                  "<ВЕРХ ПЕРИФЕРИЯ>=<ТЯГИ К ЖИВОТУ>;<#5 [СЕК]#>;<ВЫБОР ВЕРХ ПЕРИФЕРИЯ>;<#3 [СЕК]#>;<ПРЕДПЛЕЧЬЯ>",
+                  "<ВЫБОР ВЕРХ ПЕРИФЕРИЯ>=[ВЫБОР ИЗ]<АРМРЕСТЛИНГ>:<ОТЖИМАНИЯ>[КАК]1:1",
+                  "<ВЕРХ ПЕРИФЕРИЯ>=<ТЯГИ К ЖИВОТУ>;<#5 [СЕК]#>;<ВЫБОР ВЕРХ ПЕРИФЕРИЯ>;<#3 [СЕК]#>;<Подтянуться >;<количество подтягиваний>;< раз>;<#7 [СЕК]#>;<ПРЕДПЛЕЧЬЯ>",
                   "<ПРЕДПЛЕЧЬЯ>=<Предплечья. Сложить ладони перед собой, наклонять их влево вправо  с сопротивлением. Можно положить одну ладонь на на тыльную сторону другой, наклонять вперед назад с сопротивлением. Менять положение по желанию.>;<#10[СЕК]#>;25<КОМАНДА>",
                   "<ПРЕСС> =<Пресс. Повиснуть на турнике, коленик груди, висеть>;<#7 [СЕК]#>;10<КОМАНДА>",
                   "<СПИНА> =<Спина. Гиперэкстензии с грузом 5 килограмм.>;<#10 [СЕК]#>;10<КОМАНДА>",
@@ -278,6 +289,7 @@
                   "//Блок параметров тренировки. В нем запрещены умножения на число и выбор",
                   "//Вычисления начинаются с подстновок в данном блоке",
                   "[BEGIN EVAL PARAMETERS]",
+                  "<количество подтягиваний>=(1+(new Date()).getMonth())%11",
                   "[END EVAL PARAMETERS]",
                 ],
                ],
@@ -713,6 +725,42 @@
   var Gl_trainTime
   var Gl_decodeExternalCallValue=""
 
+
+  function btnImportTrainInGenOnClick(){
+    download(GltxtSpeek.value, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+selectAllTrain.value+'_train.gen', 'text/plain')
+  }
+
+  function loadFromGen(input){
+      let file = input.files[0];
+      let reader = new FileReader();
+      reader.readAsText(file);
+      reader.onload = function() {
+                            var str = reader.result
+                            GltxtSpeek.value = str
+                        };
+      reader.onerror = function() {
+          console.log(reader.error);
+        };
+  }
+  function runFromRTM(input){
+      let file = input.files[0];
+      let reader = new FileReader();
+      reader.readAsText(file);
+      reader.onload = function() {
+          try{
+            var str = reader.result
+            Gl_aRithmLisp = str.split('\n')
+            alert("Будет запущена тренировка из файла ")
+            execTrain1(0,"Run")
+          } catch(e){
+            alert('Не удалось запустить тренировку, проверьте формат файла. (чередование строк - время(в мс), текст, начинается с времени))')
+          }
+        };
+      reader.onerror = function() {
+          console.log(reader.error);
+        };
+  }
+
   function loadTrainAndCalFromFile(input){
       let file = input.files[0];
       let reader = new FileReader();
@@ -773,7 +821,7 @@
       sDownload+='  ],\n'
     }
     sDownload+=']\n'
-    download(sDownload, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+'GenTrainsAndCalendarFromTotalCalendarJS.gen', 'text/plain')
+    download(sDownload, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+'GenTrainsAndCalendarFromTotalCalendarJS.genall', 'text/plain')
   }
   function changePageCalendar(isCheck){
     if (isCheck)
@@ -1775,6 +1823,10 @@ END:VEVENT\n`
        document.getElementById("idDivTextTime").style.display ='block'
        document.getElementById("selectedCalendars").style.display ='none'
        document.getElementById("checkPage").style.display ='none'
+       document.getElementById("idImpExpAll").style.display ='none'
+       document.getElementById("idImpExp").style.display ='none'
+
+
        //document.getElementById("idTextTrain").style.display ='block'
        /*
        document.getElementById("idDivTextTime").style.display ='none'// = document.getElementById("selectAllTrain");
