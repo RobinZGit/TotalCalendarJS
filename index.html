@@ -1037,9 +1037,9 @@ END:VEVENT\n`
   //замена пробелов и пр в имени трени для генерации URL +обратная замена для поиска трени из URL
   function forURL(sTrainName,sMode){
     var sSpace='___space___'
-    if (sMode = 'String->URL')
+    if (sMode == 'String->URL')
       return sTrainName.replaceAll(' ',sSpace)
-    if (sMode = 'URL->String')
+    if (sMode == 'URL->String')
       return sTrainName.replaceAll(sSpace,' ')
   }
 
@@ -1067,7 +1067,7 @@ END:VEVENT\n`
 
     //параметр - для вызова с сервера
     var externalCallValue = location.href
-   // alert(externalCallValue)
+    // alert(externalCallValue)
     try{
       externalCallValue = location.href.split('?')[1].split('&').filter((v)=>{return (v.indexOf('externalcall')>=0)}).join(' ').split('=')[1];
     } catch(e){ externalCallValue= ''};
