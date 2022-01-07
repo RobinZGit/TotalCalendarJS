@@ -114,7 +114,7 @@
  const TXT_BTN_FINISHED = "Тренировка завершена";
  var Gl_State = TXT_BTN_NOTSTARTED;
  var Gl_IsFinished =false
-
+ var Gl_BackSpace = "__BCKSPC__"
  //----------------------------------
  var GlnInd=0;
  var GlnDelta=0;
@@ -431,7 +431,7 @@
                 [],
                 [ "<ХОККЕЙ - НОГИ>=1<ЦИКЛ>",
                   `<ЦИКЛ>=<#7000 #>;<по команде взгляд смотреть примерно на верхнюю часть борта, в направлении команды. Но при этом шайба должна быть в поле периферического зрения>;
-                          <#5000 #>;<без шайбы, клюшка в руках>;<#4000 #>;30(<взгляд>;<НАПРАВЛЕНИЕ ВЗГЛЯДА>;<ДЕЙСТВИЕ>;<НАПРАВЛЕНИЕ>;<#5500 #>)
+                          <#5000 #>;<без шайбы, клюшка в руках>;<#4000 #>;30(<взгляд>;<НАПРАВЛЕНИЕ ВЗГЛЯДА>;<ДЕЙСТВИЕ>;<НАПРАВЛЕНИЕ>;<#5500 #>);
                           <продолжить с шайбой>;<#5000 #>;120(<взгляд>;<НАПРАВЛЕНИЕ ВЗГЛЯДА>;<ДЕЙСТВИЕ>;<НАПРАВЛЕНИЕ>;<#5500 #>);
                           <далее катание на ребрах. змейка на двух ногах, внешние ребра на одной ноге, внутренние ребра на одной ноге. катание на одной ноге с места. затем то же самое спиной вперед.>
                   `,
@@ -984,7 +984,7 @@ VERSION:2.0\n`
 `BEGIN:VEVENT
 UID:${''+nGUID+''}@default
 CLASS:PUBLIC
-DESCRIPTION:https://robinzgit.github.io/TotalCalendarJS/index.html?startwith=${Gl_aMultiCalendar[2*i+1].trim()}&externalcall=1
+DESCRIPTION:https://robinzgit.github.io/TotalCalendarJS/index.html?startwith=${forURL(Gl_aMultiCalendar[2*i+1].trim(),'String->URL')}&externalcall=1
 DTSTAMP;VALUE=DATE-TIME:${(new Date()).yyyymmddhhmmss('T')}
 DTSTART:${Gl_aMultiCalendar[2*i].yyyymmddhhmmss('T')}
 DTEND:${Gl_aMultiCalendar[2*i].yyyymmddhhmmss('T')}
@@ -1034,6 +1034,15 @@ END:VEVENT\n`
   	  else return ""
   }
 
+  //замена пробелов и пр в имени трени для генерации URL +обратная замена для поиска трени из URL
+  function forURL(sTrainName,sMode){
+    var sSpace='___space___'
+    if (sMode = 'String->URL')
+      return sTrainName.replaceAll(' ',sSpace)
+    if (sMode = 'URL->String')
+      return sTrainName.replaceAll(sSpace,' ')
+  }
+
   //Выводим данные на форму при загрузке страницы
   function loadTrainData() {
     //
@@ -1053,7 +1062,7 @@ END:VEVENT\n`
     //параметр - с какую треню выбрать по умолчанию
     var startWithValue = location.href
     try{
-      startWithValue = location.href.split('?')[1].split('&').filter((v)=>{return (v.indexOf('startwith')>=0)}).join(' ').split('=')[1];
+      startWithValue =forURL( location.href.split('?')[1].split('&').filter((v)=>{return (v.indexOf('startwith')>=0)}).join(' ').split('=')[1],'URL->String');
     } catch(e){ startWithValue= ''};
 
     //параметр - для вызова с сервера
