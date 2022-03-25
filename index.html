@@ -94,11 +94,14 @@
     </div>
 
     <div>
-        <textarea id="idTextsToSpeek" style="width:100%;height:400px;" > </textarea>
+        <details id = "idTextToSpeekDetails">
+           <summary>Текст тренировки</summary>
+           <textarea id="idTextsToSpeek" style="width:100%;height:400px;" > </textarea>
+        </details>
     </div>
 
     <div>
-        <button id="btnPrint" style="height:40px;width:100%" onclick='btnPrintOnClick()'> Текст тренировки для печати </button>
+        <button id="btnPrint" style="height:40px;width:100%" onclick='btnPrintOnClick()'> Получить текст тренировки для печати </button>
     </div>
     <div style="font-size:small;color:blue;">Info: Можно в параметр startwith url-ссылки передать имя тренировки, и форма сразу после запуска покажет ее выбранной</div>
     <div style="font-size:small;color:blue;">Например:  http://localhost:63342/TotalCalendarJS/index.html?_ijt=p3hgufvl6ok7084qaistkcbqgu&_ij_reload&startwith=УПРАЖНЕНИЯ НА ШЕЮ </div>
@@ -2151,6 +2154,7 @@ END:VEVENT\n`
    }
 
    function btnPrintOnClick(){
+     document.getElementById("idTextToSpeekDetails").open='open';
      CallPrint()
    }
 
