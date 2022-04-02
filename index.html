@@ -1963,6 +1963,45 @@ END:VEVENT\n`
       }
     }
 
+  function processSimultaneousMode(){
+       var aSimultTrain =[]
+      if (selectAllTrain.getAttribute("multiple")=="multiple"){
+        GltxtSpeek.value =''
+        Gl_currentTrainName = ''
+        for (var i =0; i<selectAllTrain.options.length; i++)
+          if (selectAllTrain.options[i].selected){
+            Gl_currentTrainName += selectAllTrain.options[i].text + '  \n[ОДНОВРЕМЕННО С]\n   '  //!в наименовании тоже [ОДНОВРЕМЕННО С] - важно для текста печати
+            aSimultTrain.push(Gl_aMetaRithm[getTrainIndexByName(selectAllTrain.options[i].text)][1][0])
+            //aSimultTrain.push(Gl_aMetaRithm[i][1][0])
+          }
+      }else{
+          Gl_currentTrainName = (Gl_aMetaRithm[value][1][0]).split('=')[0]
+          /*
+          в случае если треня есть одновременное выполнение других трень (первая строка - перречисление трень через [ОДНОВРЕМЕННО С])
+          GltxtSpeek.value должен получиться  в виде "список трени 1 (а не имя трени!) [ОДНОВРЕМЕННО С] список трени 2 (а не имя трени!)..."
+          Т.е. в цикле по Gl_aMetaRithm[value][1][0].split('[ОДНОВРЕМЕННО С]') (это имена трень) ищем текущую треню currIndex = найти индекс по имени..,
+             берем ее список Gl_aMetaRithm[currIndex][1] и добавляем к GltxtSpeek.value,
+             если есть трени за ней (смотрим по длине массива цикла) - добавляем еще "[ОДНОВРЕМЕННО С]"
+          */
+          GltxtSpeek.value=''
+          aSimultTrain = Gl_aMetaRithm[value][1][0].split("[ОДНОВРЕМЕННО С]");
+      }
+
+      for(var i=0;i<aSimultTrain.length;i++){
+          if ((i==0)&&(aSimultTrain.length>1))
+            try{
+ //ok getTrainIndexByName
+              GltxtSpeek.value+=Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[1])][1].join('     '+Gl_sDelim+'\n')
+            } catch(e){ //падает в режиме множественного выбора
+              GltxtSpeek.value+=Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[0])][1].join('     '+Gl_sDelim+'\n')
+            }
+          else
+            GltxtSpeek.value+=Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[0])][1].join('     '+Gl_sDelim+'\n')
+          if((i<aSimultTrain.length-1)&&(aSimultTrain.length>1)) GltxtSpeek.value+='\n[ОДНОВРЕМЕННО С]\n'
+      }
+
+  }
+
   //Запускает цикл проговаривания тренировки
   function execTrain1(value, sMode){
     //скрываем календарь
@@ -2016,6 +2055,7 @@ END:VEVENT\n`
       document.getElementById("selectedCalendars").style.display ='none'
       document.getElementById("checkPage").style.display ='none'
       alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
+      //!!!! не работает processSimultaneousMode()
       btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
       getText2Print(Gl_currentTrainName)
       return
