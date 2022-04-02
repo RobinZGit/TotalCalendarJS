@@ -150,7 +150,7 @@
             [ "<КАЛЕНДАРЬ ЕЖЕДНЕВНЫЕ>=1000<РАСПИСАНИЕ>",
               //"<РАСПИСАНИЕ>=<УПРАЖНЕНИЯ НА ШЕЮ>;<#0#>;<УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ>;<#0#>;<АЭРОБНЫЕ>;<#0#>;<ДЫХАТЕЛЬНАЯ ЛЕСЕНКА>;<#1 [СУТ]#>",
               //"<РАСПИСАНИЕ>=<С АЭРОБНЫМИ>;<#1 [СУТ]#>;<С АЭРОБНЫМИ>;<#1 [СУТ]#>;<БЕЗ АЭРОБНЫХ>;<#1 [СУТ]#>",
-              "<РАСПИСАНИЕ>=<РАСТЯЖКА>;<#1 [СУТ]#>;<БАЗОВАЯ>;<#1 [СУТ]#>",
+              "<РАСПИСАНИЕ>=<РАСТЯЖКА ОДНОВРЕМЕННО С АНТИСИМПАТИЧЕСКИМИ>;<#1 [СУТ]#>;<БАЗОВАЯ>;<#1 [СУТ]#>",
               //"<С АЭРОБНЫМИ>=<УПРАЖНЕНИЯ НА ШЕЮ>;<#0#>;<УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ ЧАСТЬ 1>;<#0#>;<АЭРОБНЫЕ>",
               //"<БЕЗ АЭРОБНЫХ>=<УПРАЖНЕНИЯ НА ШЕЮ>;<#0#>;<УПРАЖНЕНИЯ НА СЛАБЫЕ ЗВЕНЬЯ ЧАСТЬ 1>;<#0#>;<ДЫХАТЕЛЬНАЯ ЛЕСЕНКА>",
               "[BEGIN EVAL PARAMETERS]",
@@ -1963,7 +1963,7 @@ END:VEVENT\n`
       }
     }
 
-  function processSimultaneousMode(){
+  function processSimultaneousMode(value,sMode){
        var aSimultTrain =[]
       if (selectAllTrain.getAttribute("multiple")=="multiple"){
         GltxtSpeek.value =''
@@ -2045,7 +2045,8 @@ END:VEVENT\n`
     if (sMode=="Calendar")  {
       Gl_currentTrainName = Gl_aMultiCalendar[value].trim()
 //???@ OK if calendars are not filtered now (value - from calendars)
-      var aEv = Gl_aMetaRithm[getTrainIndexByName("<"+Gl_aMultiCalendar[value].trim()+">")][1]
+      var nIndexInMetaRithm = getTrainIndexByName("<"+Gl_aMultiCalendar[value].trim()+">")
+      var aEv = Gl_aMetaRithm[nIndexInMetaRithm][1]
       GltxtSpeek.value= aEv.join('     '+Gl_sDelim+'\n')
       selectAllTrain.selectedIndex = getTrainIndexByName("<"+Gl_aMultiCalendar[value].trim()+">") //!!!!
       document.getElementById("trainPage").style.display ='block'
@@ -2055,46 +2056,12 @@ END:VEVENT\n`
       document.getElementById("selectedCalendars").style.display ='none'
       document.getElementById("checkPage").style.display ='none'
       alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
-      //!!!! не работает processSimultaneousMode()
+      processSimultaneousMode(nIndexInMetaRithm,sMode)
       btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
       getText2Print(Gl_currentTrainName)
       return
     } else if (sMode=="Act")  {
-      var aSimultTrain =[]
-      if (selectAllTrain.getAttribute("multiple")=="multiple"){
-        GltxtSpeek.value =''
-        Gl_currentTrainName = ''
-        for (var i =0; i<selectAllTrain.options.length; i++)
-          if (selectAllTrain.options[i].selected){
-            Gl_currentTrainName += selectAllTrain.options[i].text + '  \n[ОДНОВРЕМЕННО С]\n   '  //!в наименовании тоже [ОДНОВРЕМЕННО С] - важно для текста печати
-            aSimultTrain.push(Gl_aMetaRithm[getTrainIndexByName(selectAllTrain.options[i].text)][1][0])
-            //aSimultTrain.push(Gl_aMetaRithm[i][1][0])
-          }
-      }else{
-          Gl_currentTrainName = (Gl_aMetaRithm[value][1][0]).split('=')[0]
-          /*
-          в случае если треня есть одновременное выполнение других трень (первая строка - перречисление трень через [ОДНОВРЕМЕННО С])
-          GltxtSpeek.value должен получиться  в виде "список трени 1 (а не имя трени!) [ОДНОВРЕМЕННО С] список трени 2 (а не имя трени!)..."
-          Т.е. в цикле по Gl_aMetaRithm[value][1][0].split('[ОДНОВРЕМЕННО С]') (это имена трень) ищем текущую треню currIndex = найти индекс по имени..,
-             берем ее список Gl_aMetaRithm[currIndex][1] и добавляем к GltxtSpeek.value,
-             если есть трени за ней (смотрим по длине массива цикла) - добавляем еще "[ОДНОВРЕМЕННО С]"
-          */
-          GltxtSpeek.value=''
-          aSimultTrain = Gl_aMetaRithm[value][1][0].split("[ОДНОВРЕМЕННО С]");
-      }
-
-      for(var i=0;i<aSimultTrain.length;i++){
-          if ((i==0)&&(aSimultTrain.length>1))
-            try{
- //ok getTrainIndexByName
-              GltxtSpeek.value+=Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[1])][1].join('     '+Gl_sDelim+'\n')
-            } catch(e){ //падает в режиме множественного выбора
-              GltxtSpeek.value+=Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[0])][1].join('     '+Gl_sDelim+'\n')
-            }
-          else
-            GltxtSpeek.value+=Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[0])][1].join('     '+Gl_sDelim+'\n')
-          if((i<aSimultTrain.length-1)&&(aSimultTrain.length>1)) GltxtSpeek.value+='\n[ОДНОВРЕМЕННО С]\n'
-      }
+      processSimultaneousMode(value,sMode)
 
       //alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
       btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
