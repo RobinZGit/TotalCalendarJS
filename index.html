@@ -1869,7 +1869,7 @@ END:VEVENT\n`
     var Gl_aGenRithm = Gl_aGenRithm0; //!! лишнее, осталось от старого
 
     //alert('после удаления комментариев \n'+Gl_aGenRithm)
-    /* ???????????????? убрать?
+    /* не убирать, напр в ИМ появляются дела undefined, сначала разобраться с ними*/
     for(var i=0; i<Gl_aGenRithm.length; i++){ //?ОНО НАДО ВООБЩЕ ?? сначала возьмем слова в кавычках в угловые скобки
        while(Gl_aGenRithm[i].indexOf("'")>=0){
            Gl_aGenRithm[i]=Gl_aGenRithm[i].replace("'","<");
@@ -1879,7 +1879,7 @@ END:VEVENT\n`
            Gl_aGenRithm[i] = Gl_aGenRithm[i].trim().substr(0,Gl_aGenRithm[i].trim().length-1)
        }
     }
-    */
+    /**/
     //alert('после добавления угловых скобок словам в кавычках \n'+Gl_aGenRithm)
 
     //Раскрытие скобок типа <A> = 3(<AA>;5(<A2>;<A3>))
