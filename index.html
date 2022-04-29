@@ -78,9 +78,7 @@
         <div  id="idRunTrainFromGen" style="width:49%"> Запустить тренировку из файла .gen:<input type="file" accept=".gen" id="inpRunFromGen" style="background-color:lightgray" onchange="loadFromGen(this)"> </div>
         <div id = "delimiter8" style="height:5px;width:100%"></div>
     </div>
-    <div id="idImgTrain" style="display:none;">
-        <img src="" alt="">
-    </div>
+
     <div>
         <textarea id="idTextTrain" style="width:100%;height:350px;font-size: 50px;text-align: center;display:none;"> </textarea>
     </div>
@@ -88,7 +86,10 @@
     <div id="idDivTextTime" style="display:none">
         <textarea id="idTextTime" style="width:100%;height:40px;" > </textarea>
     </div>
-
+    <div id="idImgTrain" style="display:none;">
+        <img src="" alt="">
+        <!-- <img src="http://mockva.ru/wp-content/uploads/2020/11/imgonline-com-ua-resize-luueokavhwj9-770x400.jpg"/>-->
+    </div>
     <div id = "idDivNavigation" style="display:none;font-weight:bold"> Навигация по текущей тренировке
         <div style="height:100%;overflow-y:scroll;border:2px solid #a1a1a1;">
             <ul id="currentT"></ul>
@@ -333,7 +334,8 @@
                 [ "<РАСТЯЖКА>=1<ЦИКЛ>",
                   "<ЦИКЛ>=<У0>;<У1>;<У2>;<У3>;<У4>;<У5>;<У6>;<У7>;",
                   //https://mockva.ru/wp-content/uploads/2020/11/imgonline-com-ua-resize-luueokavhwj9-770x400.jpg
-                  `<У0>=<Перед растяжкой необходимо выполнить короткую разминку*img*  src *equals* *qt*mockva.ru/wp-content/uploads/2020/11/imgonline-com-ua-resize-luueokavhwj9-770x400.jpg*qt*  alt *equals* *qt* *qt* *img*, подойдет любой комплекс аэробных упражнений. После чего переходите к стретчингу>;<#7 [СЕК]#>;<для улучшения ощущений и качества тренировки, включите приятную, спокойную музыку.Можно делать одновременно с антисимпатическими>;<#7 [СЕК]#>;<Все упражнения выполняйте без резких движений, оставайтесь в каждой позе несколько минут.>;<#7 [СЕК]#>`,
+                  //*img*  src *equals* *qt**http*mockva.ru/wp-content/uploads/2020/11/imgonline-com-ua-resize-luueokavhwj9-770x400.jpg*qt*  alt *equals* *qt* *qt* *img*
+                  `<У0>=<Перед растяжкой необходимо выполнить короткую разминку, подойдет любой комплекс аэробных упражнений. После чего переходите к стретчингу>;<#7 [СЕК]#>;<для улучшения ощущений и качества тренировки, включите приятную, спокойную музыку.Можно делать одновременно с антисимпатическими>;<#7 [СЕК]#>;<Все упражнения выполняйте без резких движений, оставайтесь в каждой позе несколько минут.>;<#7 [СЕК]#>`,
                   "<У1>=<«Собака мордой вверх». Данная поза хорошо растягивает мышцы пресса. Лежа на животе, поставьте руки под плечи. Поднимите верхнюю часть тела и обопритесь на прямые руки. Старайтесь сохранять плечи опущенными. Как можно глубже прогнитесь в грудном отделе.>;<#16 [СЕК]#>;7(<тянем>;<#10 [СЕК]#>)",
                   "<У2>=<«Поза ребенка». Встаньте на четвереньки, колени подальше друг от друга, чтобы хорошо растянуть мышцы бедер. Отведите ягодицы назад, руками тянитесь по полу вперед. Прогнитесь в пояснице, чтобы лучше размять мышцы спины и груди.>;<#9 [СЕК]#>;10(<тянем>;<#10 [СЕК]#>)",
                   "<У3>=<Скручивание лежа. Растяжка косых мышц живота и ягодиц. Перевернитесь на спину, согните одну ногу в колене и перенесите на противоположную сторону пока не коснетесь пола, при желании, противоположной рукой можно аккуратно надавить на колено. Грудную клетку сохраняйте открытой и прижатой к полу.>;<#14 [СЕК]#>;4(<тянем>;<#10 [СЕК]#>);<Поменяйте ноги.>;<#3 [СЕК]#>;4(<тянем>;<#10 [СЕК]#>)",
@@ -729,7 +731,7 @@
                 [
                   "<ИМ>=<#6000 #>;<лечь грудью на пуфик, шея параллельна полу, лицо вниз. Или опереться затылком в ладони или в подголовник кресла.>;<#4000 #>;20<ЦИКЛ>;<#7000 #>;<антисимпатические упражнения>;",
                   "<ЦИКЛ>=<#1000 #>;8<КОМАНДА1>;10<КОМАНДА2>;",
-                  "<КОМАНДА1>=<о>;<#1000 #>",
+                  "<КОМАНДА1>=<о https://physiotherapist.ru/wp-content/uploads/2021/10/achilles-tendon.jpg>;<#1000 #>",
                   "<КОМАНДА2>=< >;<#1000 #>",
                   "//",
                   "//Блок параметров тренировки. В нем запрещены умножения на число и выбор",
@@ -829,13 +831,18 @@
                ],
     //===================================================================
     //========================== Расслабление всех мышц
+    /*
+    <	Ахиллово сухожилие	https://physiotherapist.ru/wp-content/uploads/2021/10/achilles-tendon.jpg>:
+<	Большая грудная мышца	https://physiotherapist.ru/wp-content/uploads/2021/10/pectoralis-major.jpg>:
+<	Большая задняя прямая мышца головы	https://physiotherapist.ru/wp-content/uploads/2021/09/rectus-capitis-posterior-major.jpg>:
+    */
               [
                 [],
                 [
                   "<РАССЛАБЛЕНИЕ ВСЕХ МЫШЦ>=<#6000 #>;30<ЦИКЛ>;",
                   "<ЦИКЛ>=<Расслабить>;<ДЕЙСТВИЕ>;<#10 [СЕК]#>",
                   `<ДЕЙСТВИЕ>=[ВЫБОР ИЗ]
-<	Ахиллово сухожилие	>:
+<	Ахиллово сухожилие >:
 <	Большая грудная мышца	>:
 <	Большая задняя прямая мышца головы	>:
 <	Большая круглая мышца	>:
@@ -1385,22 +1392,19 @@ END:VEVENT\n`
   function say(str0){
         //alert(Gl_aRithmLisp);
         var str = str0
-        /* todo pictures
         var sImg = '*img*'
-        //alert(str.split(sImg).length)//.split(sImg)[0])
-
         //если в тексте есть ссылка на картинку - показываем картинку
         try{
         document.getElementById("idImgTrain").style.display ='none'
         if (str.split(sImg).length>1){
-          //    alert('<div><img '+str.split(sImg)[1].replaceAll("*qt*",'"').replaceAll("*equals*","=")+' /></div>')
           document.getElementById("idImgTrain").style.display ='block'
           // *img*src="URL" alt="альтернативный текст"*img*
-          document.getElementById("idImgTrain").innerHTML = '<img '+str.split(sImg)[1].replaceAll("*qt*",'"').replaceAll("*equals*","=")+' />'
+          var sURL = '<img src="'+str.trim().split(sImg)[1].replaceAll('*http*','http://').replaceAll('*https*','https://')+'" alt="111" />'
+          //alert(sURL) //<img  src = "http://mockva.ru/wp-content/uploads/2020/11/imgonline-com-ua-resize-luueokavhwj9-770x400.jpg"  alt = " "  />
+          document.getElementById("idImgTrain").innerHTML = sURL
           str = str.split(sImg)[0]
         }
         }catch(e){}
-        */
 
         if (!docNoSound.checked){
             var utterance0 = new SpeechSynthesisUtterance(str);
@@ -1860,11 +1864,35 @@ END:VEVENT\n`
 
   	//======  ГЕНЕРАЦИЯ РИТМА Gl_aRithm ИЗ ГЕНЕРАТОРА Gl_aGenRithm  ======
 
+
+    //поиск http-ссылок для картинок и замена в них спецсимволов * http:/ =
+    for(var i=0; i<Gl_aGenRithm00.length; i++){
+      var aHtt = ['http://','https://']
+      var aHttRepl = ['*http*','*https*']
+      for(var k=0;k<aHtt.length;k++){
+          var sHtt=aHtt[k]
+          var sHttRepl = aHttRepl[k]
+          if ((Gl_aGenRithm00[i].indexOf(sHtt)>=0)) {
+            var posBeg = Gl_aGenRithm00[i].indexOf(sHtt)
+            var posEnd = posBeg
+            for(j=posBeg;j<Gl_aGenRithm00[i].length;j++)
+              if ((Gl_aGenRithm00[i][j]==" ")||(Gl_aGenRithm00[i][j]==">")){ //?????? если урл может содержать > то обрежет урл  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                posEnd = j
+                break
+              }
+              var sURL = Gl_aGenRithm00[i].substr(posBeg,posEnd-posBeg)
+              sURL = '*img*'+sURL.replaceAll(sHtt,sHttRepl)+'*img*'
+              Gl_aGenRithm00[i]=Gl_aGenRithm00[i].substr(0,posBeg)+sURL+Gl_aGenRithm00[i].substr(posEnd)
+          };
+      }
+    }
+
     //Удаление комментариев
     var Gl_aGenRithm0 = [];
     for(var i=0; i<Gl_aGenRithm00.length; i++){
       if (!(Gl_aGenRithm00[i].trim().indexOf('//')==0)) Gl_aGenRithm0.push(Gl_aGenRithm00[i].split("//")[0]);
     }
+
 
     var Gl_aGenRithm = Gl_aGenRithm0; //!! лишнее, осталось от старого
 
