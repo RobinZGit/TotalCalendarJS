@@ -61,6 +61,10 @@
     <div id="idDivStatrPause" style="font-weight:bold">
         <button id="btnSelectAllTrain" style="height:100px;width:74%" > Начать тренировку </button>
         <button id="btnExit" style="float:right;height:100px;width:25%" onclick="window.close()"> Выход </button>
+        <div>
+            <button id="btnPrev" style="height:50px;width:50%" onclick='prev()'> << Previous </button>
+            <button id="btnNext" style="float:right;height:50px;width:49%" onclick='next()'> Next >> </button>
+        </div>
 
         Без звука:<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else {document.getElementById('idTextTrain').style.display='block'; window.speechSynthesis.cancel()}">
         Темп речи:
@@ -2232,6 +2236,18 @@ END:VEVENT\n`
 
   }
 
+  function next(){ // перейти на следующее упражнение
+    var i= GlnInd
+    i+=2
+    while ((i<Gl_aRithmLisp.length-3)&&(Gl_aRithmLisp[i+2]==Gl_aRithmLisp[i]))  i++
+    navigate(i)
+  }
+  function prev(){ // перейти на следующее упражнение
+    var i= GlnInd
+    i-=2
+    while ((i>3)&&(i<Gl_aRithmLisp.length-3)&&(Gl_aRithmLisp[i-2]==Gl_aRithmLisp[i])) i--
+    navigate(i)
+  }
   function navigate(i){ // для навигации по делам текущей трени
      if (Gl_decodeExternalCallValue.length=0)
          alert ("Будет произведен переход на дело '"+Gl_aRithmLisp[i]+"'")
