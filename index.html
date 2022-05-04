@@ -2238,10 +2238,12 @@ END:VEVENT\n`
   }
 
   function next(){ // перейти на следующее упражнение
+    //alert(' ' + GlnInd + ' ' + Gl_aRithmLisp[GlnInd])
     var i= GlnInd
-    if (i%2) i+=2
-    else i++
+    //if (i%2) i+=2
+    //else i++
     //while ((i<Gl_aRithmLisp.length-3)&&(Gl_aRithmLisp[i+2]==Gl_aRithmLisp[i]))  i+=2
+    //alert(' ' + i + ' ' + Gl_aRithmLisp[i] )
     navigate(i)
   }
   function prev(){ // перейти на следующее упражнение
