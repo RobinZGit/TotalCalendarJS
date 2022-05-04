@@ -2238,21 +2238,18 @@ END:VEVENT\n`
   }
 
   function next(){ // перейти на следующее упражнение
-    //alert(' ' + GlnInd + ' ' + Gl_aRithmLisp[GlnInd])
     var i= GlnInd
-    //if (i%2) i+=2
-    //else i++
-    //while ((i<Gl_aRithmLisp.length-3)&&(Gl_aRithmLisp[i+2]==Gl_aRithmLisp[i]))  i+=2
-    //alert(' ' + i + ' ' + Gl_aRithmLisp[i] )
+    while ((i<Gl_aRithmLisp.length-3)&&(Gl_aRithmLisp[i+2]==Gl_aRithmLisp[i]))  i+=2
     navigate(i)
   }
   function prev(){ // перейти на следующее упражнение
     var i= GlnInd
     if (i%2) i-=2
     else i--
-    //while ((i>3)&&(i<Gl_aRithmLisp.length-3)&&(Gl_aRithmLisp[i-2]==Gl_aRithmLisp[i])) i-=2
+    while ((i>3)&&(i<Gl_aRithmLisp.length-3)&&(Gl_aRithmLisp[i-2]==Gl_aRithmLisp[i])) i-=2
     navigate(i)
   }
+
   function navigate(i){ // для навигации по делам текущей трени
      if (Gl_decodeExternalCallValue.length=0)
          alert ("Будет произведен переход на дело '"+Gl_aRithmLisp[i]+"'")

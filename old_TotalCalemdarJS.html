@@ -55,6 +55,7 @@ var Gl_ShortDescription = "";
   
   var Gl_dBegTraining //время начала тренировки
   var Gl_duration = 0 //продолжительность тренировки
+  var GlIsSaying = false
   
   var dNowPrev
   
@@ -232,9 +233,11 @@ function testF(){alert('test')}
     
     
   function say(str){
+        GlIsSaying = true
         //alert(str);
         var utterance0 = new SpeechSynthesisUtterance(str);
         window.speechSynthesis.speak(utterance0);
+        GlIsSaying = false
     }
     
  function hasOnlineCalcedParams(str){
