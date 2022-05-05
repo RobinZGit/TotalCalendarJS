@@ -1082,7 +1082,7 @@ GI-11 убираем с поверхности.
 <#180 [СЕК]#>;
 <затем воздействие на источник ветра – печень: F-3 тай чун седировать (точка-ключ) https://www.eledia.ru/_pu/5/07708569.gif>
 <#180 [СЕК]#>;
-<и V-18 гань-шу седировать (шу) https://www.eledia.ru/_pu/2/s56307684.jpg>;
+<и V-18 гань-шу седировать (шу) https://www.eledia.ru/_pu/2/s56307684.jpg >;
 <#180 [СЕК]#>;
 <затем изгнание ветра из организма – VB-20 фэн-чи (точка энергии ветра)   https://www.eledia.ru/_pu/0/94685355.gif>;
 <#180 [СЕК]#>;
@@ -1465,13 +1465,17 @@ END:VEVENT\n`
         //если в тексте есть ссылка на картинку - показываем картинку
         try{
         document.getElementById("idImgTrain").style.display ='none'
-        if (str.split(sImg).length>1){
+        var aImg = str.trim().split(sImg)
+        if (aImg.length>1){
           document.getElementById("idImgTrain").style.display ='block'
-          // *img*src="URL" alt="альтернативный текст"*img*
-          var sURL = '<img src="'+str.trim().split(sImg)[1].replaceAll('*http*','http://').replaceAll('*https*','https://')+'" alt="" width="100%"/>'
-          //alert(sURL) //<img  src = "http://mockva.ru/wp-content/uploads/2020/11/imgonline-com-ua-resize-luueokavhwj9-770x400.jpg"  alt = " " width="100%" />
-          document.getElementById("idImgTrain").innerHTML = sURL
-          str = str.split(sImg)[0]
+          document.getElementById("idImgTrain").innerHTML = ""
+          str =""
+          for(var i=1;i<aImg.length;i+=2) {  //МОЖНО ДОБАВЛЯТЬ НЕСКОЛЬКО ССЫЛОК НА ИЗОБРАЖЕНИЯ, просто тексты ссылок с http, разделенные хотя бы одним пробелом
+              // *img*src="URL" alt="альтернативный текст"*img*
+              var sURL = '<img src="'+aImg[i].replaceAll('*http*','http://').replaceAll('*https*','https://')+'" alt="" width="100%"/>'
+              document.getElementById("idImgTrain").innerHTML += sURL
+              if(i<aImg.length) str += aImg[i-1]  //ТЕКСТ ДЛЯ ПРОИЗНЕСЕНИЯ СОБИРАЕТСЯ МЕЖДУ ВСЕМИ ССЫЛКАМИ
+          }
         }
         }catch(e){}
 
