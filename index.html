@@ -528,7 +528,7 @@
                           <продолжить с шайбой>;<#5000 #>;120(<взгляд>;<НАПРАВЛЕНИЕ ВЗГЛЯДА>;<ДЕЙСТВИЕ>;<НАПРАВЛЕНИЕ>;<#5500 #>);
                           <далее катание на ребрах. змейка на двух ногах, внешние ребра на одной ноге, внутренние ребра на одной ноге. катание на одной ноге с места. затем то же самое спиной вперед.>
                   `,
-                  "<ДЕЙСТВИЕ>=[ВЫБОР ИЗ]<Вираж>:<Улитка>:<Циркуль>[КАК]2:2:1",
+                  "<ДЕЙСТВИЕ>=[ВЫБОР ИЗ]<Вираж>:<Улитка>:<Циркуль>:<Стоп>[КАК]4:4:2:1",
                   "<НАПРАВЛЕНИЕ>=[ВЫБОР ИЗ]<вправо>:<влево>[КАК]1:1",
                   "<НАПРАВЛЕНИЕ ВЗГЛЯДА>=[ВЫБОР ИЗ]<вперед>:<вправо>:<влево>[КАК]1:1:1",
                   "//",
@@ -1122,7 +1122,13 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   Gl_DaysAfterNowForShow = inputMaxDay.value;
   var inputFilterStr = document.getElementById('filterStr');
   var Gl_currentTrainName =""
+
+  //todo сюда же -зарезервированные символы (можно эти имена сделать числами - индексами одногшо массива зарезервированных слов)
+  //     использовать для проверок текстов на наличие зарезерв слов
   var Gl_sDelim = '/DELIMITER/'
+  var Gl_sSimultTrain='[ОДНОВРЕМЕННО С]'
+  var Gl_sNextTrain='[ДАЛЕЕ ДЕЛАТЬ]'
+
   var Gl_txtPrint = document.createElement('textarea');
   var Gl_calendarVisible = true;//false;
   //длЯ задержки начала тренировки (чтобы закрепить смартфон после нажатия стартовой кнопки)
@@ -1368,13 +1374,22 @@ END:VEVENT\n`
   function btnImportTrainOnClick(){
       var aRithmLisp=[]
       var aSimult = []
-      if (GltxtSpeek.value.indexOf('[ОДНОВРЕМЕННО С]')>=0){
-        var arrStr = GltxtSpeek.value.split('[ОДНОВРЕМЕННО С]')
+      if (GltxtSpeek.value.indexOf(Gl_sSimultTrain)>=0){
+        var arrStr = GltxtSpeek.value.split(Gl_sSimultTrain)
         for (i=0;i<arrStr.length;i++) {
           aSimult.push([[],arrStr[i].split(Gl_sDelim)])
         }
         aRithmLisp = stus(aSimult,'diff')
-      }else aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim));
+      }
+      else
+          if (GltxtSpeek.value.indexOf(Gl_sNextTrain)>=0){
+            var arrStr = GltxtSpeek.value.split(Gl_sNextTrain)
+            for (i=0;i<arrStr.length;i++) {
+              aSimult.push([[],arrStr[i].split(Gl_sDelim)])
+            }
+            aRithmLisp = stus(aSimult,'add')
+          }
+          else aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim));
 
       aRithmLisp[0]=4000
       aRithmLisp.forEach(v=>v=String(v).replaceAll('\n',''))
@@ -1742,7 +1757,7 @@ END:VEVENT\n`
           ||((sFilt.length>0)&&(Gl_aMetaRithm[i].join(' ').toUpperCase().indexOf(sFilt.toUpperCase())>=0))
           )
       if (flAdd && (selectAllTrain.getAttribute("multiple")=="multiple"))
-        flAdd = !(Gl_aMetaRithm[i].join(' ').toUpperCase().indexOf('[ОДНОВРЕМЕННО С]')>=0)
+        flAdd = !(Gl_aMetaRithm[i].join(' ').toUpperCase().indexOf(Gl_sSimultTrain)>=0)
 
       if (flAdd)
         addAction("all",null/*actions*/,Gl_aMetaRithm[i][1][0].split('=')[0],i,false,false,"width:100%",false)
@@ -1758,6 +1773,7 @@ END:VEVENT\n`
   //"стусовка" тренировок из массива (может не работать, если промежутки времени зависят от онлайн-вычисляемых параметров)
   //  nMode == 'paint' - вывод календаря (и входной массив 3-мерный)
   //           'diff' - "дифференцирование", расчет промежутков времени (и входной массив 2-мерный)
+  //           'add' - последовательное добавление ьренировок из массива друг за другом
   function stus(aTrains, nMode){
     //собираем все календари в один:
 
@@ -1771,9 +1787,8 @@ END:VEVENT\n`
     var sDeltaMs=''
     var deltaMs = 0
     for (var i=0; i<aTrains.length; i++)
-    if((nMode == 'diff')||((nMode == 'paint')&&Gl_aMetaMetaCalendarSelected[i]))
-    {
-    //if((nMode == 'diff')||((nMode == 'paint')&&Gl_aMetaMetaCalendarSelected[i])) alert(Gl_aMetaMetaCalendarSelected[i])
+      if((nMode == 'diff')||((nMode == 'paint')&&Gl_aMetaMetaCalendarSelected[i]))
+      {
         if (nMode == 'paint') {
           dCurr =  aTrains[i][0][0]
           aCalendar = getArithm(aTrains[i][1])
@@ -1798,8 +1813,7 @@ END:VEVENT\n`
 
             }
         }
-    }
-//if (nMode=='diff'){alert (ret_aMultiCalendar)}
+      }
     //2. Сортируем пары
     for (var i=0; i<ret_aMultiCalendar.length-1; i=i+2)
         for (var j=i; j<ret_aMultiCalendar.length-1; j=j+2)
@@ -1844,6 +1858,8 @@ END:VEVENT\n`
           }
         }
     }
+    //if (nMode =='add'){
+    //}
     return ret_aMultiCalendar.slice()
   }
 
@@ -2277,8 +2293,8 @@ END:VEVENT\n`
   function getText2Print(sTrainName){ //текст для печати
       var aRithmLisp=[]
       var aSimult = []
-      if (GltxtSpeek.value.indexOf('[ОДНОВРЕМЕННО С]')>=0){
-        arrStr = GltxtSpeek.value.split('[ОДНОВРЕМЕННО С]')
+      if (GltxtSpeek.value.indexOf(Gl_sSimultTrain)>=0){
+        arrStr = GltxtSpeek.value.split(Gl_sSimultTrain)
         for (i=0;i<arrStr.length;i++) {
           aSimult.push([[],arrStr[i].split(Gl_sDelim)])
         }
@@ -2313,7 +2329,7 @@ END:VEVENT\n`
         Gl_currentTrainName = ''
         for (var i =0; i<selectAllTrain.options.length; i++)
           if (selectAllTrain.options[i].selected){
-            Gl_currentTrainName += selectAllTrain.options[i].text + '  \n[ОДНОВРЕМЕННО С]\n   '  //!в наименовании тоже [ОДНОВРЕМЕННО С] - важно для текста печати
+            Gl_currentTrainName += selectAllTrain.options[i].text + '  \n'+Gl_sSimultTrain+'\n   '  //!в наименовании тоже [ОДНОВРЕМЕННО С] - важно для текста печати
             aSimultTrain.push(Gl_aMetaRithm[getTrainIndexByName(selectAllTrain.options[i].text)][1][0])
             //aSimultTrain.push(Gl_aMetaRithm[i][1][0])
           }
@@ -2327,7 +2343,7 @@ END:VEVENT\n`
              если есть трени за ней (смотрим по длине массива цикла) - добавляем еще "[ОДНОВРЕМЕННО С]"
           */
           GltxtSpeek.value=''
-          aSimultTrain = Gl_aMetaRithm[value][1][0].split("[ОДНОВРЕМЕННО С]");
+          aSimultTrain = Gl_aMetaRithm[value][1][0].split(Gl_sSimultTrain);
       }
 
       for(var i=0;i<aSimultTrain.length;i++){
@@ -2340,7 +2356,7 @@ END:VEVENT\n`
             }
           else
             GltxtSpeek.value+=Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[0])][1].join('     '+Gl_sDelim+'\n')
-          if((i<aSimultTrain.length-1)&&(aSimultTrain.length>1)) GltxtSpeek.value+='\n[ОДНОВРЕМЕННО С]\n'
+          if((i<aSimultTrain.length-1)&&(aSimultTrain.length>1)) GltxtSpeek.value+='\n'+Gl_sSimultTrain+'\n'
       }
 
   }
@@ -2415,29 +2431,10 @@ END:VEVENT\n`
       //null..
     }
 
-    /*
-    getArithm(GltxtSpeek.value.split(Gl_sDelim)); - только если (GltxtSpeek.value.indexOf("[ОДНОВРЕМЕННО С]")>=0)
-    иначе в цикле по GltxtSpeek.value.split("[ОДНОВРЕМЕННО С]") начитываем массив для стусовывания aTrain и затем Gl_aRithmLisp =?? stus(aTrain,'diff')
-    а в getArithm убираем обработку "[ОДНОВРЕМЕННО С]", тк такой текст теперь не попадает в нее
-    */
-    /*OLD ???
-    if(GltxtSpeek.value.indexOf("[ОДНОВРЕМЕННО С]")>=0){
-      var aSimultTrain = GltxtSpeek.value.split("[ОДНОВРЕМЕННО С]"); //arrStr
-      var aRet =[]
-      for(var i=0;i<aSimultTrain.length;i++)
-          aRet.push(Gl_aMetaRithm[getTrainIndexByName(aSimultTrain[i].split('=')[0])])  //OK getTrainIndexByName
-      //alert(aRet[0])
-      //alert(aRet[1])
-      Gl_aRithmLisp = stus(aRet, 'diff')
-      //alert(Gl_aRithmLisp)
-      finish_Gl_aRithmLisp();  //?? можно просто закомментить?
-      //alert('finished')
-    } else getArithm(GltxtSpeek.value.split(Gl_sDelim));
-    */
     var aRithmLisp=[]
     var aSimult = []
-    if (GltxtSpeek.value.indexOf('[ОДНОВРЕМЕННО С]')>=0){
-        var arrStr = GltxtSpeek.value.split('[ОДНОВРЕМЕННО С]')
+    if (GltxtSpeek.value.indexOf(Gl_sSimultTrain)>=0){
+        var arrStr = GltxtSpeek.value.split(Gl_sSimultTrain)
         for (i=0;i<arrStr.length;i++) {
           aSimult.push([[],arrStr[i].split(Gl_sDelim)])
         }
