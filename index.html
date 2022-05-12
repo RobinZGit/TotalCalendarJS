@@ -20,28 +20,28 @@
 <textarea id="idTestText" style="width:100%;height:400px;" > </textarea>
 -->
 <div id = "checkPage">
-    <div id = "checkPage1" style="height:40px;width:100%;background-color:gray">
-        Календарь:<input id = "checkCalendarPage" type="checkbox" style="height:10px" onclick="changePageCalendar(this.checked)">
-        Тренировки:<input id = "checkTrainPage" checked= "checked" type="checkbox" style="height:10px" onclick="changePageTrain(this.checked)">
+    <div id = "checkPage1" style="height:100px;width:100%;background-color:gray">
+        Календарь:<input id = "checkCalendarPage" type="checkbox" style="height:80px" onclick="changePageCalendar(this.checked)">
+        Тренировки:<input id = "checkTrainPage" checked= "checked" type="checkbox" style="height:80px" onclick="changePageTrain(this.checked)">
     </div>
 
 </div>
 <div id="idImpExpAll">
-  <div  style="width:100%"><button  id="btnDownLoad" style="height:24px;background-color:lightgray" onclick="downloadTrainAndCalFromFile(this)">Импорт всех данных о календарях и тренировках в файл .genall</button></div>
+  <div  style="width:100%"><button  id="btnDownLoad" style="height:50px;background-color:lightgray" onclick="downloadTrainAndCalFromFile(this)">Импорт всех данных о календарях и тренировках в файл .genall</button></div>
   <div style="width:100%"> Загрузить данные о календарях и тренировках из файла .genall:<input type="file" accept=".genall" id="inpLoad" style="background-color:lightgray" onchange="loadTrainAndCalFromFile(this)"> </div>
 </div>
 <div id = "delimiter1" style="height:5px;width:100%"></div>
-<div id="externalcall" style="height:30px;width:100%;background-color:red;display:block"> ПЕРЕД ПЕРЕХОДОМ ПО ССЫЛКЕ НЕ ЗАБУДЬТЕ ВКЛЮЧИТЬ STAYALIVE.
+<div id="externalcall" style="height:20px;width:100%;background-color:red;display:block"> ПЕРЕД ПЕРЕХОДОМ ПО ССЫЛКЕ НЕ ЗАБУДЬТЕ ВКЛЮЧИТЬ STAYALIVE.
 </div>
 <div id="calendarPage" style="display:none">
-    <div id = idDivCalendar style="font-weight:bold;height:30px"> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="1"> дней от сегодняшнего </div>
+    <div id = idDivCalendar style="font-weight:bold;height:50px"> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="1"> дней от сегодняшнего </div>
     <div id = idDivCalendarBtns >
-        <button id="btnRecalcCal" style="height:30px;width:49%" onclick='btnRecalcCalOnClick()'> Пересчитать календарь </button>
-        <button id="btnImportCal" style="height:30px;width:50%" onclick='btnImportCalOnClick()'> Импорт календаря в формате ICS </button>
+        <button id="btnRecalcCal" style="height:50px;width:49%" onclick='btnRecalcCalOnClick()'> Пересчитать календарь </button>
+        <button id="btnImportCal" style="height:50px;width:50%" onclick='btnImportCalOnClick()'> Импорт календаря в формате ICS </button>
     </div>
     <div id = "delimiter2" style="height:5px;width:100%"></div>
     <div><select id="selectedCalendars" multiple="multiple" style="height:100px;width:100%" onchange="onSelectCalendar(this.selectedIndex);" ></select></div>
-    <div id="idDivActionCalendar" style="height:20px;overflow-y:scroll;border:2px solid #a1a1a1;">
+    <div id="idDivActionCalendar" style="height:40px;overflow-y:scroll;border:2px solid #a1a1a1;">
         <ul id="actionsInCalendar"></ul>
     </div>
 </div>
@@ -51,10 +51,10 @@
         <div>
             <select id="selectAllTrain"  style="height:100px;width:100%" onchange="onSelectTrain(this.selectedIndex);" ></select>
             <div>Тренировка cодержит подстроку (фильтр перед выбором):
-                <input id = "filterStr"  style="height:30px;width:20%" onchange="readFilteredListOfTrainings(value,null)">
+                <input id = "filterStr"  style="height:50px;width:20%" onchange="readFilteredListOfTrainings(value,null)">
             </div>
             <div>Выбор нескольких тренировок для одновременного выполнения:
-                <input id = "simultMode" type="checkbox" style="height:30px;width:20%" onclick="changeSelectMode(this.checked)">
+                <input id = "simultMode" type="checkbox" style="height:50px;width:20%" onclick="changeSelectMode(this.checked)">
             </div>
         </div>
     </div>
@@ -68,18 +68,18 @@
 
         Без звука:<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else {document.getElementById('idTextTrain').style.display='block'; window.speechSynthesis.cancel()}">
         Темп речи:
-        <input id = "inputRate"  style="height:30px;width:5%" value="1.5">
+        <input id = "inputRate"  style="height:50px;width:5%" value="1.5">
 
     </div>
     <div id = "delimiter4" style="height:5px;width:100%"></div>
     <div id="idImpExp">
-        <button id="btnImportTrain" style="width:50%" onclick='btnImportTrainOnClick()'> Импорт тренировки в файл .rtm </button>
+        <button id="btnImportTrain" style="height:40px;width:50%" onclick='btnImportTrainOnClick()'> Импорт тренировки в файл .rtm </button>
         <div id = "delimiter5" style="height:5px;width:100%"></div>
-        <div  id="idRunTrain" style="width:49%"> Запустить тренировку из файла .rtm:<input type="file" accept=".rtm" id="inpRunFromRTM" style="background-color:lightgray" onchange="runFromRTM(this)"> </div>
+        <div  id="idRunTrain" style="height:40px;width:49%"> Запустить тренировку из файла .rtm:<input type="file" accept=".rtm" id="inpRunFromRTM" style="background-color:lightgray" onchange="runFromRTM(this)"> </div>
         <div id = "delimiter6" style="height:5px;width:100%"></div>
-        <button id="btnImportTrain2Gen" style="width:50%" onclick='btnImportTrainInGenOnClick()'> Импорт тренировки в файл .gen </button>
+        <button id="btnImportTrain2Gen" style="height:40px;width:50%" onclick='btnImportTrainInGenOnClick()'> Импорт тренировки в файл .gen </button>
         <div id = "delimiter7" style="height:5px;width:100%"></div>
-        <div  id="idRunTrainFromGen" style="width:49%"> Запустить тренировку из файла .gen:<input type="file" accept=".gen" id="inpRunFromGen" style="background-color:lightgray" onchange="loadFromGen(this)"> </div>
+        <div  id="idRunTrainFromGen" style="height:40px;width:49%"> Запустить тренировку из файла .gen:<input type="file" accept=".gen" id="inpRunFromGen" style="background-color:lightgray" onchange="loadFromGen(this)"> </div>
         <div id = "delimiter8" style="height:5px;width:100%"></div>
     </div>
 
@@ -88,7 +88,7 @@
     </div>
 
     <div id="idDivTextTime" style="display:none">
-        <textarea id="idTextTime" style="width:100%;height:40px;" > </textarea>
+        <textarea id="idTextTime" style="width:100%;height:50px;" > </textarea>
     </div>
     <div id="idImgTrain" style="display:none;">
         <img src="" alt="">
@@ -256,7 +256,7 @@
                   "<КОМАНДА ДЕРЖИМ>=<Держим>;<#1000 #>",
 
                   "<КОМАНДА ВЫДОХ>=<ВЫДОХ ХА>;<#1200 #>",
-                  //"<СТОПА>=<Стопа. Стопу на шарик и катать>;<#10 [СЕК]#>;10<КОМАНДА>;<#4 [СЕК]#>;<Сменить ногу>;<#4 [СЕК]#>;10<КОМАНДА>;<#6 [СЕК]#>;<Сидя, стопы на весу - согнуть пальцы - согнуть стопу - разогнуть пальцы-разогнуть стопу>;<#8 [СЕК]#>;10<КОМАНДА>;<#6 [СЕК]#>;<Сидя, стопы на весу - согнуть пальцы - стопа внутрь - разогнуть пальцы-стопа наружу>;<#8 [СЕК]#>;10<КОМАНДА>",
+                  //"<СТОПА>=<Стопа. Стопу на шарик и катать. Попробовать поднять шарик всеми пальцами стопы>;<#10 [СЕК]#>;10<КОМАНДА>;<#4 [СЕК]#>;<Сменить ногу>;<#4 [СЕК]#>;10<КОМАНДА>;<#6 [СЕК]#>;<Сидя, стопы на весу - согнуть пальцы - согнуть стопу - разогнуть пальцы-разогнуть стопу>;<#8 [СЕК]#>;10<КОМАНДА>;<#6 [СЕК]#>;<Сидя, стопы на весу - согнуть пальцы - стопа внутрь - разогнуть пальцы-стопа наружу>;<#8 [СЕК]#>;10<КОМАНДА>",
                   "<СТОПА>=<Стопа. Стопу на шарик и катать>;<#10 [СЕК]#>;10<КОМАНДА>;<#4 [СЕК]#>;<Сменить ногу>;<#4 [СЕК]#>;10<КОМАНДА>",
                   "<ДЛИННЫЕ РАЗГИБАТЕЛИ ШЕИ>=<Растяжение левых лестничных мышц. Пальцы прижимают мышцы, наклоны головы вперед-вправо и назад-влево>;<#10 [СЕК]#>;25<КОМАНДА>;<#4 [СЕК]#>;<Растяжение правых лестничных мышц. Пальцы прижимают мышцы, наклоны головы вперед-влево и назад-вправо>;<#10 [СЕК]#>;25<КОМАНДА>;<#6 [СЕК]#>;<Длинные разгибатели шеи. Слабую резинку на турник и на затылок, разгибание , макушка тянется при этом вверх>;<#10 [СЕК]#>;25<КОМАНДА>",
                   "<ВНЕШНИЕ ГОЛЕНИ С РЕЗИНОЙ>=<Внешние голени. Сесть на пол с прямыми ногами, среднюю резинку на ножку кровати и на пальцы левой ноги, сгибание стопы к животу>;<#8 [СЕК]#>;20<КОМАНДА>",
@@ -838,8 +838,10 @@
               [
                 [],
                 [
-                  "<РАССЛАБЛЕНИЕ ВСЕХ МЫШЦ>=<#6000 #>;30<ЦИКЛ>;",
-                  "<ЦИКЛ>=<Расслабить>;<ДЕЙСТВИЕ>;<#10 [СЕК]#>",
+                  "<РАССЛАБЛЕНИЕ ВСЕХ МЫШЦ>=<#6000 #>;1<ЦИКЛ>;",
+                  `<ЦИКЛ>=10(<Расслабить>;<ДЕЙСТВИЕ>;<#10 [СЕК]#>);5(<тело холодеет>;<#3 [СЕК]#>);
+                           10(<Расслабить>;<ДЕЙСТВИЕ>;<#10 [СЕК]#>);5(<тело теплеет>;<#3 [СЕК]#>);
+                           10(<Расслабить>;<ДЕЙСТВИЕ>;<#10 [СЕК]#>);5(<тело холодеет>;<#3 [СЕК]#>)`,
                   `<ДЕЙСТВИЕ>=[ВЫБОР ИЗ]
     <	Ахиллово сухожилие	https://physiotherapist.ru/wp-content/uploads/2021/10/achilles-tendon.jpg>:
 <	Большая грудная мышца	https://physiotherapist.ru/wp-content/uploads/2021/10/pectoralis-major.jpg>:
@@ -1712,6 +1714,7 @@ END:VEVENT\n`
 
       btn.appendChild(txt);
       btn.setAttribute('type', 'button');
+      //btn.style.height='100px';
 
       if(sStyle.length>0){
         if(fl) btn.setAttribute('style',sStyle+';background:yellow')
@@ -1734,6 +1737,7 @@ END:VEVENT\n`
       }else if (sMode=='currentT'){
         btn.setAttribute('onclick','navigate('+value+')');
         btn.style.background='yellow';
+        btn.style.height='80px';
         retId = 'buttonCurrentTr' + value
         btn.setAttribute('id', retId);
       }
