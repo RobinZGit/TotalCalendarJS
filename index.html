@@ -794,12 +794,13 @@
                 [
                   "<ТЕСТ>=10<Z>",
                   "//Это комментарий 1",
-                  "<Z>=<CC>;2<A>;2<B> //комментарий",
+                  "<Z>=<BB_CASE>;<CC>;2<A>;2<B> //комментарий",
                   "<A>=3'присесть';<#<interval1> [СЕК]#>;4'наклониться'",   //по умолчанию msec, их можно не указывать
                   "<B>=2<BB>;<#19 [СЕК][%ДИСПЕРС]10#>;2'хлопнуть в ладоши'",//[%ДИСПЕРС]10 - дисперсия 10%, можно
         //"<B>=2<BB>;<#3 [СЕК][%ДИСПЕРС]10#>;2<хлопнуть в ладоши>",//[%ДИСПЕРС]10 - дисперсия 10%, можно этот блок не указывать
                   //"<BB>=<расслабиться>",
                   "<BB>=[ВЫБОР ИЗ]'a10':'a23':'a33':'a40':'a50':'a60':'a70':'a80':'a90'[КАК]1:1:1:1:1:1:1:1:1",
+                  '<BB_CASE>=[ВЫБОР ИЗ]<дело 11>:<дело 12>:<дело 13>[СПРОСИТЬ]"хотите выполнить дело 11?":"хотите выполнить дело 12?":"хотите выполнить дело 13?"',
                   "//Это комментарий 2",
                   //"<CC>=[eval]2+2[eval]", //В знаках доллара формула вычисления (сразу либо в момент исполнения)
                   "//",
@@ -2167,23 +2168,37 @@ END:VEVENT\n`
             var aProb = sNew.split("[ВЫБОР ИЗ]");//выбор вероятностных дел.
             for(var j = i-1; j>=0; j--){
                if (aProb.length>1){
-                  //выбираем случ число от 0 до суммы пропорций, в какой отрезок оно попадет - то дело и выберем
-                  var a2Prob=aProb[1].split("[КАК]");
-                  var aSay =  a2Prob[0].split(":");
-                  var aProportions =  a2Prob[1].split(":");
-                  var nSum = 0;
-                  for(var jj=0; jj<aProportions.length; jj++) nSum+=Number(aProportions[jj]);
-                  while(Gl_aGenRithm[j].indexOf(sOld)>=0){
-                      //!var nRand = Math.floor(fgetRandom()*(nSum+1));
-                      var nRand = (Math.random()*(nSum));
-                      var k =0;
-                      var nSumCurr = 0;
-                      while((nSumCurr<=nRand)&&(k<aProportions.length)){
-                          nSumCurr+=Number(aProportions[k]);
-                          k++;
+
+                  //ВЫБОР ОДНОГО ИЗ ДЕЛ ПО ЗАДАННЫМ ЧИСЛОВЫМ ПРОПОРЦИЯМ
+                  if (aProb[1].indexOf("[КАК]")>0){
+                      //выбираем случ число от 0 до суммы пропорций, в какой отрезок оно попадет - то дело и выберем
+                      var a2Prob=aProb[1].split("[КАК]");
+                      var aSay =  a2Prob[0].split(":");
+                      var aProportions =  a2Prob[1].split(":");
+                      var nSum = 0;
+                      for(var jj=0; jj<aProportions.length; jj++) nSum+=Number(aProportions[jj]);
+                      while(Gl_aGenRithm[j].indexOf(sOld)>=0){
+                          //!var nRand = Math.floor(fgetRandom()*(nSum+1));
+                          var nRand = (Math.random()*(nSum));
+                          var k =0;
+                          var nSumCurr = 0;
+                          while((nSumCurr<=nRand)&&(k<aProportions.length)){
+                              nSumCurr+=Number(aProportions[k]);
+                              k++;
+                          }
+                          var sNewChanged=aSay[k-1];//???
+                          Gl_aGenRithm[j]=Gl_aGenRithm[j].replace(sOld,sNewChanged);//заменим только первое вхождение,т.к. в след. итерации заново вычислить выбор
                       }
-                      var sNewChanged=aSay[k-1];//???
-                      Gl_aGenRithm[j]=Gl_aGenRithm[j].replace(sOld,sNewChanged);//заменим только первое вхождение,т.к. в след. итерации заново вычислить выбор
+                  }
+
+
+                  //ELSE
+                  //ВЫБОР ОДНОГО ИЗ ДЕЛ ПОЛЬЗОВАТЕЛЕМ В МОДАЛЬНОМ ОКНЕ
+                  //например <дело1>=[ВЫБОР ИЗ]<дело 11>:<дело 12>:<дело 13>[СПРОСИТЬ]"хотите выполнить дело 11?":"хотите выполнить дело 12?":"хотите выполнить дело 13?"
+                  if (aProb[1].indexOf("[СПРОСИТЬ]")>0){
+                      var aTrains =  aProb[1].split("[СПРОСИТЬ]")[0].split(":");
+                      var aQuestions =  aProb[1].split("[СПРОСИТЬ]")[1].split(":");
+                      alert(aTrains.join("   ")+ ' ВОПРОСЫ '+aQuestions.join("   ")); //ЗАГЛУШКА. И ПОЧЕМУ ПОВТОРЯЕСЯ МНОГО РАЗ (<ТЕСТ>)??
                   }
                }
             }
@@ -2191,6 +2206,10 @@ END:VEVENT\n`
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //alert('перед проговариванием \n'+Gl_aGenRithm[0])
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    //TODO делать дела с разботором онлайн - например в таких скобках _<...>_ Это позволит реализовать модальные окна выбора во время выполнения тренеировки
+    //...
+    //...
 
     //ИТОГО СТРОКА ТРЕНИРОВКИ - В Gl_aGenRithm[0]
     var  Gl_sTrain = Gl_aGenRithm[0].split("=")[1];  //??? сделать новую копию а не ссылку
