@@ -92,7 +92,6 @@
     </div>
     <div id="idImgTrain" style="display:none;">
         <img src="" alt="">
-        <!-- <img src="http://mockva.ru/wp-content/uploads/2020/11/imgonline-com-ua-resize-luueokavhwj9-770x400.jpg"/>-->
     </div>
     <div id = "idDivNavigation" style="display:none;font-weight:bold"> Навигация по текущей тренировке
         <div style="height:100%;overflow-y:scroll;border:2px solid #a1a1a1;">
@@ -792,9 +791,9 @@
                [
                 [],
                 [
-                  "<ТЕСТ>=10<Z>",
+                  "<ТЕСТ>=<BB_CASE>;10<Z>",
                   "//Это комментарий 1",
-                  "<Z>=<BB_CASE>;<CC>;2<A>;2<B> //комментарий",
+                  "<Z>=<CC>;2<A>;2<B> //комментарий",
                   "<A>=3'присесть';<#<interval1> [СЕК]#>;4'наклониться'",   //по умолчанию msec, их можно не указывать
                   "<B>=2<BB>;<#19 [СЕК][%ДИСПЕРС]10#>;2'хлопнуть в ладоши'",//[%ДИСПЕРС]10 - дисперсия 10%, можно
         //"<B>=2<BB>;<#3 [СЕК][%ДИСПЕРС]10#>;2<хлопнуть в ладоши>",//[%ДИСПЕРС]10 - дисперсия 10%, можно этот блок не указывать
@@ -2198,7 +2197,14 @@ END:VEVENT\n`
                   if (aProb[1].indexOf("[СПРОСИТЬ]")>0){
                       var aTrains =  aProb[1].split("[СПРОСИТЬ]")[0].split(":");
                       var aQuestions =  aProb[1].split("[СПРОСИТЬ]")[1].split(":");
-                      alert(aTrains.join("   ")+ ' ВОПРОСЫ '+aQuestions.join("   ")); //ЗАГЛУШКА. И ПОЧЕМУ ПОВТОРЯЕСЯ МНОГО РАЗ (<ТЕСТ>)??
+
+
+                      //ЗАГЛУШКА  !!!!!   TODO   замнить aTrains[0] на выбор из модальной формы!!!!!
+                      Gl_aGenRithm[j]=Gl_aGenRithm[j].replace(sOld,aTrains[0]);//заменим только первое вхождение
+                      //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
                   }
                }
             }
