@@ -19,6 +19,15 @@
 <button id="ttt" style="float:right;height:100px;width:25%" onclick="test()">test </button>
 <textarea id="idTestText" style="width:100%;height:400px;" > </textarea>
 -->
+
+<!--Модальное окно, всплывает когда нужен выбор пользователя -->
+<div id = "idModalWindow" style="height:100px;width:100%;background-color:pink;display:none">
+    <p>Введите данные:</p>
+    <button id="idModalButtonOk" style="height:50px;width:49%" onclick='btnRecalcCalOnClick()'> OK </button>
+</div>
+
+<!--Основное окно  -->
+<div id = "idMainWindow">
 <div id = "checkPage">
     <div id = "checkPage1" style="height:100px;width:100%;background-color:gray">
         Календарь:<input id = "checkCalendarPage" type="checkbox" style="height:80px" onclick="changePageCalendar(this.checked)">
@@ -112,7 +121,7 @@
     <div style="font-size:small;color:blue;">Info: Можно в параметр startwith url-ссылки передать имя тренировки, и форма сразу после запуска покажет ее выбранной</div>
     <div style="font-size:small;color:blue;">Например:  http://localhost:63342/TotalCalendarJS/index.html?_ijt=p3hgufvl6ok7084qaistkcbqgu&_ij_reload&startwith=УПРАЖНЕНИЯ НА ШЕЮ </div>
 </div>
-
+</div>
 <script>
 
 
@@ -227,7 +236,7 @@
                 [],
                 [
                   "<БАЗОВАЯ>="+
-                           //"<ДЛИННЫЕ РАЗГИБАТЕЛИ ШЕИ>;<#6 [СЕК]#>;"+
+                           "<ДЛИННЫЕ РАЗГИБАТЕЛИ ШЕИ>;<#6 [СЕК]#>;"+
                            "<РАССЛАБЛЕНИЕ ШЕИ ЛАЙТ>;<#6 [СЕК]#>;"+
                            "<СТОПА>;<#3 [СЕК]#>;"+
                            //"<ВНЕШНИЕ ГОЛЕНИ С РЕЗИНОЙ>;<#6 [СЕК]#>;"+
@@ -264,7 +273,9 @@
                   "<КОМАНДА ВЫДОХ>=<ВЫДОХ ХА>;<#1200 #>",
                   //"<СТОПА>=<Стопа. Стопу на шарик и катать. Попробовать поднять шарик всеми пальцами стопы>;<#10 [СЕК]#>;10<КОМАНДА>;<#4 [СЕК]#>;<Сменить ногу>;<#4 [СЕК]#>;10<КОМАНДА>;<#6 [СЕК]#>;<Сидя, стопы на весу - согнуть пальцы - согнуть стопу - разогнуть пальцы-разогнуть стопу>;<#8 [СЕК]#>;10<КОМАНДА>;<#6 [СЕК]#>;<Сидя, стопы на весу - согнуть пальцы - стопа внутрь - разогнуть пальцы-стопа наружу>;<#8 [СЕК]#>;10<КОМАНДА>",
                   "<СТОПА>=<Стопа. Стопу на шарик и катать. Попробовать поднять шарик всеми пальцами стопы>;<#10 [СЕК]#>;10<КОМАНДА Т>;<#4 [СЕК]#>;<Сменить ногу>;<#4 [СЕК]#>;10<КОМАНДА Х>",
-                  "<ДЛИННЫЕ РАЗГИБАТЕЛИ ШЕИ>=<Растяжение левых лестничных мышц. Пальцы прижимают мышцы, наклоны головы вперед-вправо и назад-влево>;<#10 [СЕК]#>;25<КОМАНДА Т>;<#4 [СЕК]#>;<Растяжение правых лестничных мышц. Пальцы прижимают мышцы, наклоны головы вперед-влево и назад-вправо>;<#10 [СЕК]#>;25<КОМАНДА Х>;<#6 [СЕК]#>;<Длинные разгибатели шеи. Слабую резинку на турник и на затылок, разгибание , макушка тянется при этом вверх>;<#10 [СЕК]#>;25<КОМАНДА Т>",
+                  `<ДЛИННЫЕ РАЗГИБАТЕЛИ ШЕИ>= <Длинные разгибатели шеи. Встать на четвереньки, можно грудью на стул. Слабую широкую резинку под руки и на затылок, разгибание головы небольшой амплитудой.>;<#10 [СЕК]#>;25<КОМАНДА Т>;
+                                             <Тракции, движения головы вперед назад.>;<#10 [СЕК]#>;25<КОМАНДА Х>
+                                             `,
                   "<ВНЕШНИЕ ГОЛЕНИ С РЕЗИНОЙ>=<Внешние голени. Сесть на пол с прямыми ногами, среднюю резинку на ножку кровати и на пальцы левой ноги, сгибание стопы к животу>;<#8 [СЕК]#>;20<КОМАНДА Х>",
                   "<РАСТЯЖЕНИЕ ГРУДНЫХ МЫШЦ>=<РАСТЯЖЕНИЕ ГРУДНЫХ МЫШЦ. Стоя, ладони на дверные косяки, локти на уровне ушей. Шаг вперед, тянем.>;<# 8[СЕК]#>;10<КОМАНДА Т>",
                   "<ПОДКЛЮЧИЧНАЯ>=<Подключичная мышца. Соединить ладони рук над головой, подать их немного вперед. Правая ладонь делает движение назад над своим плечом, левая сопротивляется. Повторить в другую сторону>;<#13 [СЕК]#>;20<КОМАНДА Т>",
@@ -1131,6 +1142,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   Gl_DaysAfterNowForShow = inputMaxDay.value;
   var inputFilterStr = document.getElementById('filterStr');
   var Gl_currentTrainName =""
+  var Gl_SelectedIndex= -1
 
   //todo сюда же -зарезервированные символы (можно эти имена сделать числами - индексами одногшо массива зарезервированных слов)
   //     использовать для проверок текстов на наличие зарезерв слов
@@ -1697,7 +1709,7 @@ END:VEVENT\n`
         for(var i=0; i<document.getElementById("selectedCalendars").options.length;i++)
 //???@  OK if calendars are not filtered now ???? not i !!!??  Gl_aMetaMetaCalendarSelected[i]
           Gl_aMetaMetaCalendarSelected[i]=document.getElementById("selectedCalendars").options[i].selected
-        btnRecalcCalOnClick()
+        btnRecalcCalOnClick
      }
 
   }
@@ -2197,14 +2209,16 @@ END:VEVENT\n`
                   if (aProb[1].indexOf("[СПРОСИТЬ]")>0){
                       var aTrains =  aProb[1].split("[СПРОСИТЬ]")[0].split(":");
                       var aQuestions =  aProb[1].split("[СПРОСИТЬ]")[1].split(":");
-
-
-                      //ЗАГЛУШКА  !!!!!   TODO   замнить aTrains[0] на выбор из модальной формы!!!!!
-                      Gl_aGenRithm[j]=Gl_aGenRithm[j].replace(sOld,aTrains[0]);//заменим только первое вхождение
-                      //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
+                      Gl_SelectedIndex=-1 //!
+                      askUserInModalWindow(aQuestions) //результат выбора будет в Gl_SelectedIndex
+                      //Ждем пока пользователь сделает выбор
+                      //fWait=function(){
+                      //  if (Gl_SelectedIndex<0) setTimeout(fWait,100)
+                      //}
+                      //fWait()
+                      //! проблема - как подождать.. без промисов не решить??
+                      Gl_aGenRithm[j]=Gl_aGenRithm[j].replace(sOld,aTrains[Gl_SelectedIndex]);//заменим только первое вхождение
+                      Gl_SelectedIndex=-1 //!
                   }
                }
             }
@@ -2291,6 +2305,18 @@ END:VEVENT\n`
       else
          Gl_aRithmLisp = (Gl_aRithmLisp.join(sDelim1)+sDelim1+"1000"+sDelim1+TXT_BTN_FINISHED).split(sDelim1)
 
+  }
+
+  function askUserInModalWindow(aQueations){
+    //скрываем основное окно, открываем модальное. Рисуем в нем радиокнопки выбора. И кнопку Ок, по которой закрываем модальное и возвращаем выбранную радиокнопку
+    document.getElementById("idMainWindow").style.display ='none'
+    document.getElementById("idModalWindow").style.display ='block'
+    document.getElementById("idModalButtonOk").setAttribute('onclick',`document.getElementById("idMainWindow").style.display ="block"
+                                                                       document.getElementById("idModalWindow").style.display ="none"
+                                                                       Gl_SelectedIndex = 0
+                                                                       `);
+
+    //!!! TODO .........  !!!!!
   }
 
   function next(){ // перейти на следующее упражнение
