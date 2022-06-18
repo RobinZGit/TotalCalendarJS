@@ -695,13 +695,13 @@
                 ],
                ],
               //================
-              /*
+              /**/
               //========================== шаги в ограниченном пространстве 
               [
                 [],
                 [
                   "<ШАГИ В ОГРАНИЧЕННОМ ПРОСТРАНСТВЕ>=30<ЦИКЛ>",
-                  "<ЦИКЛ>=<шаг>;<#<ПРОМЕЖУТОК МЕЖДУ ШАГАМИ МС>#>",
+                  '<ЦИКЛ>=<[eval]111; 3[eval]>;<#<ПРОМЕЖУТОК МЕЖДУ ШАГАМИ МС>#>   ',
                   "//",
                   "//Блок параметров тренировки. В нем запрещены умножения на число и выбор",
                   "//Вычисления начинаются с подстновок в данном блоке",
@@ -713,7 +713,7 @@
                 ],
                ],
               //================
-              */
+             /* */
                //========================== НЕЗАМЕТНЫЕ ДВИЖЕНИЯ
               [
                 [],
@@ -1011,7 +1011,6 @@
 <	Нижняя близнецовая мышца	https://physiotherapist.ru/wp-content/uploads/2021/10/gemellus-inferior-new.jpeg>:
 <	Нижняя косая мышца головы	https://physiotherapist.ru/wp-content/uploads/2021/09/obliquus-capitis-inferior.jpg>:
 <	Носовая мышца	https://physiotherapist.ru/wp-content/uploads/2021/12/nasalis.jpg>:
-
 <	Общий разгибатель пальцев кисти	https://physiotherapist.ru/wp-content/uploads/2021/10/extensor-digitorum-communis-new.jpeg>:
 <	Остистые мышцы https://physiotherapist.ru/wp-content/uploads/2021/12/spinalis-muscles.jpg	>:
 <	Передняя большеберцовая мышца	https://physiotherapist.ru/wp-content/uploads/2021/10/tibialis-anterior.jpg>:
@@ -1610,6 +1609,7 @@ END:VEVENT\n`
                        var aDelta = str.split('[eval]');
                        for(i=1; i< aDelta.length; i+=2){
                          try{
+                           // alert(aDelta[i] )
                            aDelta[i]=eval(aDelta[i]);
                          } catch(e) {aDelta[i]="0" //if(!(nMode=="S")) aDelta[i]="0" else aDelta[i]=""
                                     }
@@ -1683,11 +1683,11 @@ END:VEVENT\n`
                      ХХ - начитка кнопок дел
                      сделать видимым блок с этими кнопками
                      по нажатии кнопки выполнить (прописать в onClick  XX)
-                              -оформить отдельной ф-ей - вызвать что-то типа getARitmm (выбранного дела), но без глобалей и с передаваемым парамеиром имя дела
+                              -оформить отдельной ф-ей - вызвать что-то типа m (выбранного дела), но без глобалей и с передаваемым парамеиром имя дела
                      получившийся массив вставить вместо Gl_aRithmLisp[GlnInd]
                      ---
-                     Начать надо с этого: написать что-то типа getARitmm (выбранного дела), но без глобалей и с передаваемым парамеиром имя дела.
-                                         И использовать ее в getARitmm
+                     Начать надо с этого: написать что-то типа m (выбранного дела), но без глобалей и с передаваемым парамеиром имя дела.
+                                         И использовать ее в m
 
                      */
                      //...
@@ -2002,8 +2002,22 @@ END:VEVENT\n`
     var Gl_aGenRithm00 = aGen
 
   	//======  ГЕНЕРАЦИЯ РИТМА Gl_aRithm ИЗ ГЕНЕРАТОРА Gl_aGenRithm  ======
-
-
+    
+    //замена спецсимволов в блоках [eval]
+    var GlSEqual='__instead_of_equal__'
+    var GlSMore='__instead_of_more__'
+    var GlSLess='__instead_of_less__'
+    var GlSSemicol='__instead_of_semicol__'
+    for(var i=0; i<Gl_aGenRithm00.length; i++){
+      var arr = Gl_aGenRithm00[i].split('[eval]')
+      if(arr.length>1){
+        for(var j=1; j<arr.length; j+=2){
+          arr[j] = arr[j].replaceAll('=',GlSEqual).replaceAll('>',GlSMore).replaceAll('<',GlSLess).replaceAll(';',GlSSemicol)
+        }
+        Gl_aGenRithm00[i] = arr.join('[eval]')
+      }  
+    }
+    
     //поиск http-ссылок для картинок и замена в них спецсимволов * http:/ =
     for(var i=0; i<Gl_aGenRithm00.length; i++){
       var aHtt = ['http://','https://']
@@ -2292,6 +2306,10 @@ END:VEVENT\n`
        Gl_flBegWord = false;
     }
     Gl_aRithmLisp = Gl_sTrain.split("#");
+    
+    //обратная замена спецсимволов (в блоках eval)
+    for(var j=0;j<Gl_aRithmLisp.length;j++)
+      Gl_aRithmLisp[j] = Gl_aRithmLisp[j].replaceAll(GlSEqual,'=').replaceAll(GlSMore,'>').replaceAll(GlSLess,'<').replaceAll(GlSSemicol,';')
 
     finish_Gl_aRithmLisp()
     //ИТОГОВЫЙ ОДНОМЕРНЫЙ МАССИВ Gl_aRithmLisp
@@ -2323,7 +2341,7 @@ END:VEVENT\n`
       _прошло_секунд_=0
       _прошло_милисекунд_=0
       _history_ = []
-
+      //alert(Gl_aRithmLisp)
       for (var i = 0; i < Gl_aRithmLisp.length; i++){
         if (i%2==0){
           _номер_итерации_+=1;
