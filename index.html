@@ -697,12 +697,11 @@
               //================
               /**/
               //========================== шаги в ограниченном пространстве 
-              // !!! В БЛОКАХ [eval] ПОКА НЕ ИСПОЛЬЗОВАТЬ СИМВОЛ > ,ПАДАЕТ!!!
               [
                 [],
                 [
                   "<ШАГИ В ОГРАНИЧЕННОМ ПРОСТРАНСТВЕ>=30<ЦИКЛ>",
-                  '<ЦИКЛ>=<[eval]var n = Math.round(Math.random());if(n==0) n=-1; if(-Math.abs(Gl_aFormulas[0]+n)<-2) n=-n;Gl_aFormulas[0]+=n; var s="назад";if(n==1) s="вперед";s[eval]>;<#<ПРОМЕЖУТОК МЕЖДУ ШАГАМИ МС>#>   ',
+                  '<ЦИКЛ>=<[eval]var n = Math.round(Math.random());if(n==0) n=-1; if(Math.abs(Gl_aFormulas[0]+n)>2) n=-n;Gl_aFormulas[0]+=n; var s="назад";if(n==1) s="вперед";s[eval]>;<#<ПРОМЕЖУТОК МЕЖДУ ШАГАМИ МС>#>   ',
                   "//",
                   "//Блок параметров тренировки. В нем запрещены умножения на число и выбор",
                   "//Вычисления начинаются с подстновок в данном блоке",
@@ -1183,6 +1182,14 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   var glTxtSay="1";
   var Gl_trainTime
   var Gl_decodeExternalCallValue=""
+  
+  //для замены спецсимволов 
+  var GlSEqual='__instead_of_equal__'
+  var GlSMore='__instead_of_more__'
+  var GlSLess='__instead_of_less__'
+  var GlSSemicol='__instead_of_semicol__'
+  //...
+  //
 
 
   function btnImportTrainInGenOnClick(){
@@ -2004,10 +2011,7 @@ END:VEVENT\n`
   	//======  ГЕНЕРАЦИЯ РИТМА Gl_aRithm ИЗ ГЕНЕРАТОРА Gl_aGenRithm  ======
     
     //замена спецсимволов в блоках [eval]
-    var GlSEqual='__instead_of_equal__'
-    var GlSMore='__instead_of_more__'
-    var GlSLess='__instead_of_less__'
-    var GlSSemicol='__instead_of_semicol__'
+    
     for(var i=0; i<Gl_aGenRithm00.length; i++){
       var arr = Gl_aGenRithm00[i].split('[eval]')
       if(arr.length>1){
@@ -2307,9 +2311,6 @@ END:VEVENT\n`
     }
     Gl_aRithmLisp = Gl_sTrain.split("#");
     
-    //обратная замена спецсимволов (в блоках eval)
-    for(var j=0;j<Gl_aRithmLisp.length;j++)
-      Gl_aRithmLisp[j] = Gl_aRithmLisp[j].replaceAll(GlSEqual,'=').replaceAll(GlSMore,'>').replaceAll(GlSLess,'<').replaceAll(GlSSemicol,';')
 
     finish_Gl_aRithmLisp()
     //ИТОГОВЫЙ ОДНОМЕРНЫЙ МАССИВ Gl_aRithmLisp
@@ -2329,6 +2330,10 @@ END:VEVENT\n`
               Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('>').join(' ');
           }catch(e){}
       }
+      
+    //обратная замена спецсимволов (в блоках eval)
+    for(var j=1;j<Gl_aRithmLisp.length;j+=2)
+      Gl_aRithmLisp[j] = Gl_aRithmLisp[j].replaceAll(GlSEqual,'=').replaceAll(GlSMore,'>').replaceAll(GlSLess,'<').replaceAll(GlSSemicol,';')
 
       //ВТОРОЙ ПРОХОД - ВЫЧИСЛЕНИЕ "ОНЛАЙН-ПАРАМЕТРОВ" И ПЕРЕВОД ВРЕМЕНИ В МСЕК
       _номер_итерации_=0
