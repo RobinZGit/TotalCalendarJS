@@ -700,13 +700,14 @@
               [
                 [],
                 [
-                  "<ШАГИ В ОГРАНИЧЕННОМ ПРОСТРАНСТВЕ>=30<ЦИКЛ>",
-                  '<ЦИКЛ>=<[eval]var n = Math.round(Math.random());if(n==0) n=-1; if(Math.abs(Gl_aFormulas[0]+n)>2) n=-n;Gl_aFormulas[0]+=n; var s="назад";if(n==1) s="вперед";s[eval]>;<#<ПРОМЕЖУТОК МЕЖДУ ШАГАМИ МС>#>   ',
+                  "<ШАГИ В ОГРАНИЧЕННОМ ПРОСТРАНСТВЕ>=<INIT>;200<ЦИКЛ>",
+                  "<INIT>=< [eval] Gl_aFormulas[0]=0;'' [eval] >;",
+                  '<ЦИКЛ>=<[eval]var n = Math.round(Math.random());if(n==0) n=-1; if(Math.abs(Gl_aFormulas[0]+n)> 2  ) n=-n;Gl_aFormulas[0]+=n; var s="назад";if(n==1) s="вперед";s[eval]>;<#<ПРОМЕЖУТОК МЕЖДУ ШАГАМИ МС>#>   ',
                   "//",
                   "//Блок параметров тренировки. В нем запрещены умножения на число и выбор",
                   "//Вычисления начинаются с подстновок в данном блоке",
                   "[BEGIN EVAL PARAMETERS]",
-                  "<ПРОМЕЖУТОК МЕЖДУ ШАГАМИ МС>=1000",
+                  "<ПРОМЕЖУТОК МЕЖДУ ШАГАМИ МС>=1500",
                   "[END EVAL PARAMETERS]",
 
                 ],
@@ -1184,10 +1185,12 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   var Gl_decodeExternalCallValue=""
   
   //для замены спецсимволов 
-  var GlSEqual='__instead_of_equal__'
-  var GlSMore='__instead_of_more__'
-  var GlSLess='__instead_of_less__'
-  var GlSSemicol='__instead_of_semicol__'
+  var GlSEqual='__instead_of_equal__' //=
+  var GlSMore='__instead_of_more__' //>
+  var GlSLess='__instead_of_less__' //<
+  var GlSSemicol='__instead_of_semicol__' //;
+  var GlSSquote='__instead_of_squot__' //'
+  var GlSDquote='__instead_of_dquot__' //"
   //...
   //
 
@@ -2011,12 +2014,16 @@ END:VEVENT\n`
   	//======  ГЕНЕРАЦИЯ РИТМА Gl_aRithm ИЗ ГЕНЕРАТОРА Gl_aGenRithm  ======
     
     //замена спецсимволов в блоках [eval]
-    
     for(var i=0; i<Gl_aGenRithm00.length; i++){
       var arr = Gl_aGenRithm00[i].split('[eval]')
       if(arr.length>1){
         for(var j=1; j<arr.length; j+=2){
-          arr[j] = arr[j].replaceAll('=',GlSEqual).replaceAll('>',GlSMore).replaceAll('<',GlSLess).replaceAll(';',GlSSemicol)
+          arr[j] = arr[j].replaceAll('=',GlSEqual)
+                         .replaceAll('>',GlSMore)
+                         .replaceAll('<',GlSLess)
+                         .replaceAll(';',GlSSemicol)
+                         .replaceAll("'",GlSSquote)
+                         .replaceAll('"',GlSDquote)
         }
         Gl_aGenRithm00[i] = arr.join('[eval]')
       }  
@@ -2333,7 +2340,12 @@ END:VEVENT\n`
       
     //обратная замена спецсимволов (в блоках eval)
     for(var j=1;j<Gl_aRithmLisp.length;j+=2)
-      Gl_aRithmLisp[j] = Gl_aRithmLisp[j].replaceAll(GlSEqual,'=').replaceAll(GlSMore,'>').replaceAll(GlSLess,'<').replaceAll(GlSSemicol,';')
+      Gl_aRithmLisp[j] = Gl_aRithmLisp[j].replaceAll(GlSEqual,'=')
+                                         .replaceAll(GlSMore,'>')
+                                         .replaceAll(GlSLess,'<')
+                                         .replaceAll(GlSSemicol,';')
+                                         .replaceAll(GlSSquote,"'")
+                                         .replaceAll(GlSDquote,'"')
 
       //ВТОРОЙ ПРОХОД - ВЫЧИСЛЕНИЕ "ОНЛАЙН-ПАРАМЕТРОВ" И ПЕРЕВОД ВРЕМЕНИ В МСЕК
       _номер_итерации_=0
