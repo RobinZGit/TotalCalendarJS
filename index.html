@@ -23,7 +23,7 @@
 <!--Модальное окно, всплывает когда нужен выбор пользователя -->
 <div id = "idModalWindow" style="height:100px;width:100%;background-color:pink;display:none">
     <p>Введите данные:</p>
-    <button id="idModalButtonOk" style="height:50px;width:49%" onclick="onOkClick()"> OK </button>
+    <button id="idModalButtonOk" style="height:50px;width:49%"> OK </button>
 </div>
 
 <!--Основное окно  -->
@@ -1194,11 +1194,6 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   //...
   //
   var Gl_IsUserAnswered = true  //признак ответа пользователем на вопрос в модальном окне
-  
-  function onOkClick(){ 
-    alert("ответ принят")
-    Gl_IsUserAnswered = true 
-  }
 
   function btnImportTrainInGenOnClick(){
     download(GltxtSpeek.value, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+selectAllTrain.value+'_train.gen', 'text/plain')
@@ -2012,8 +2007,10 @@ END:VEVENT\n`
   //>>
   
   function getArithm(aGen){
-    setTimeout( getArithmOneIteration(aGen),1000 )
+    setTimeout( getArithmOneIteration(aGen),10 )
+    //if (!Gl_IsUserAnswered) setTimeout( getArithm(aGen),100)
   }
+  
   //выдает массив тренировки (начинается всегда с интервала, чередуется интервал-команда)
   function getArithmOneIteration(aGen){
 
@@ -2286,11 +2283,12 @@ END:VEVENT\n`
                   //например <дело1>=[ВЫБОР ИЗ]<дело 11>:<дело 12>:<дело 13>[СПРОСИТЬ]"хотите выполнить дело 11?":"хотите выполнить дело 12?":"хотите выполнить дело 13?"
                   if (aProb[1].indexOf("[СПРОСИТЬ]")>0){
                       Gl_IsUserAnswered = false
+                      document.getElementById("btnSelectAllTrain").disabled = true
                       var aTrains =  aProb[1].split("[СПРОСИТЬ]")[0].split(":");
                       var aQuestions =  aProb[1].split("[СПРОСИТЬ]")[1].split(":");
                       Gl_SelectedIndex=-1 //!
                       askUserInModalWindow(aQuestions) //результат выбора будет в Gl_SelectedIndex
-                      //Ждем пока пользователь сделает выбор
+                      //return //Ждем пока пользователь сделает выбор
                       //fWait=function(){
                       //  if (Gl_SelectedIndex<0) setTimeout(fWait,100)
                       //}
@@ -2403,6 +2401,7 @@ END:VEVENT\n`
     document.getElementById("idModalWindow").style.display ='block'
     document.getElementById("idModalButtonOk").setAttribute('onclick',`document.getElementById("idMainWindow").style.display ="block"
                                                                        document.getElementById("idModalWindow").style.display ="none"
+                                                                       Gl_IsUserAnswered = true 
                                                                        Gl_SelectedIndex = 0
                                                                        `);
 
