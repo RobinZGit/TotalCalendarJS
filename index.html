@@ -1194,7 +1194,8 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   //...
   //
   var Gl_IsUserAnswered = true  //признак ответа пользователем на вопрос в модальном окне
-
+  var Gl_IsGenerated = false    //признак завершения генерации ритма
+  
   function btnImportTrainInGenOnClick(){
     download(GltxtSpeek.value, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+selectAllTrain.value+'_train.gen', 'text/plain')
   }
@@ -2007,12 +2008,14 @@ END:VEVENT\n`
   //>>
   
   function getArithm(aGen){
-    setTimeout( ()=>{getArithmOneIteration(aGen); if (!Gl_IsUserAnswered) setTimeout( getArithm(aGen),100) },10 )
+    setTimeout( ()=>{if (Gl_IsUserAnswered && !Gl_IsGenerated) { /*alert("answered");*/getArithmOneIteration(aGen) ; } else {  alert(Gl_IsUserAnswered); setTimeout( getArithm(aGen),200)}; },0 )
     //if (!Gl_IsUserAnswered) setTimeout( getArithm(aGen),100)
   }
   
   //выдает массив тренировки (начинается всегда с интервала, чередуется интервал-команда)
   function getArithmOneIteration(aGen){
+    document.getElementById("btnSelectAllTrain").disabled = true
+    Gl_IsGenerated = false
 
     var Gl_aGenRithm00 = aGen
 
@@ -2289,7 +2292,7 @@ END:VEVENT\n`
                       var aQuestions =  aProb[1].split("[СПРОСИТЬ]")[1].split(":");
                       Gl_SelectedIndex=-1 //!
                       askUserInModalWindow(aQuestions) //результат выбора будет в Gl_SelectedIndex
-                      //return //Ждем пока пользователь сделает выбор
+                      return //Ждем пока пользователь сделает выбор
                       //fWait=function(){
                       //  if (Gl_SelectedIndex<0) setTimeout(fWait,100)
                       //}
@@ -2331,7 +2334,8 @@ END:VEVENT\n`
     //ИТОГОВЫЙ ОДНОМЕРНЫЙ МАССИВ Gl_aRithmLisp
     //alert ('МАССИВ перед проговариванием \n'+Gl_aRithmLisp)
     //=========================================================
-    
+    document.getElementById("btnSelectAllTrain").disabled = false
+    Gl_IsGenerated = true
     return Gl_aRithmLisp.slice();
     }
 
