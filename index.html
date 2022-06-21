@@ -2008,8 +2008,9 @@ END:VEVENT\n`
   //>>
   
   function getArithm(aGen){
-    setTimeout( ()=>{if (Gl_IsUserAnswered && !Gl_IsGenerated) { /*alert("answered");*/getArithmOneIteration(aGen) ; } else {  alert(Gl_IsUserAnswered); setTimeout( getArithm(aGen),200)}; },0 )
-    //if (!Gl_IsUserAnswered) setTimeout( getArithm(aGen),100)
+    getArithmOneIteration(aGen) 
+   // setTimeout( ()=>{if (Gl_IsUserAnswered && !Gl_IsGenerated) { /*alert("answered");*/getArithmOneIteration(aGen) ; } else {  /*alert(Gl_IsUserAnswered);*/ setTimeout( getArithm(aGen),200)}; },0 )
+
   }
   
   //выдает массив тренировки (начинается всегда с интервала, чередуется интервал-команда)
