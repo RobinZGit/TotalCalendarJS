@@ -829,10 +829,10 @@
                [
                 [],
                 [
-                  "<ТЕСТ>=<BB_CASE>;10<Z>",
+                  "<ТЕСТ>=<BB_CASE>;2<Z>",
                   "//Это комментарий 1",
                   "<Z>=<CC>;2<A>;2<B> //комментарий",
-                  "<A>=3'присесть';<#<interval1> [СЕК]#>;4'наклониться'",   //по умолчанию msec, их можно не указывать
+                  "<A>=3'присесть';<#<interval1> [СЕК]#>;1'наклониться'",   //по умолчанию msec, их можно не указывать
                   "<B>=2<BB>;<#19 [СЕК][%ДИСПЕРС]10#>;2'хлопнуть в ладоши'",//[%ДИСПЕРС]10 - дисперсия 10%, можно
         //"<B>=2<BB>;<#3 [СЕК][%ДИСПЕРС]10#>;2<хлопнуть в ладоши>",//[%ДИСПЕРС]10 - дисперсия 10%, можно этот блок не указывать
                   //"<BB>=<расслабиться>",
@@ -2007,7 +2007,7 @@ END:VEVENT\n`
   //>>
   
   function getArithm(aGen){
-    setTimeout( getArithmOneIteration(aGen),10 )
+    setTimeout( ()=>{getArithmOneIteration(aGen); if (!Gl_IsUserAnswered) setTimeout( getArithm(aGen),100) },10 )
     //if (!Gl_IsUserAnswered) setTimeout( getArithm(aGen),100)
   }
   
@@ -2272,6 +2272,7 @@ END:VEVENT\n`
 
 */
     //выбор пользователем в модальном окне
+    if(Gl_IsUserAnswered)
     for(var i0=0; i0<Gl_aGenRithm.length; i0++)  //повторение цикла N раз
         for(var i=Gl_aGenRithm.length-1; i>=0; i--){
             var sOld = Gl_aGenRithm[i].split("=")[0].trim();//разобрали в массив левую часть после =
