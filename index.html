@@ -1201,6 +1201,9 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   //
   var Gl_IsUserAnswered = true  //признак ответа пользователем на вопрос в модальном окне
   var Gl_IsGenerated = false    //признак завершения генерации ритма
+  varGl_IntervalId
+  //var Gl_CountOfGenTrainRtm = 0
+  //var Gl_CountOfGenCalendarRtm = 0
   
   function btnImportTrainInGenOnClick(){
     download(GltxtSpeek.value, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+selectAllTrain.value+'_train.gen', 'text/plain')
@@ -2015,13 +2018,19 @@ END:VEVENT\n`
   
   function getArithm(aGen){
     Gl_aGenRithm = aGen
+   // Gl_CountOfGenTrainRtm++
+   //  if (Gl_CountOfGenTrainRtm=1) 
     if (Gl_IsUserAnswered) getArithmOneIteration(aGen) 
-
+/*
     if (!Gl_IsGenerated && Gl_IsUserAnswered){
       alert(`5`)
-      setTimeout(getArithm(Gl_aGenRithm) ,100)
+      Gl_IntervalId = setInterval(getArithmOneIteration(Gl_aGenRithm) ,1500)
     }
     
+    if (Gl_IsGenerated) {
+      alert(Gl_IntervalId)
+    }
+    */
    // setTimeout( ()=>{if (Gl_IsUserAnswered && !Gl_IsGenerated) { /*alert("answered");*/getArithmOneIteration(aGen) ; } else {  /*alert(Gl_IsUserAnswered);*/ setTimeout( getArithm(aGen),200)}; },0 )
 
   }
@@ -2423,7 +2432,7 @@ END:VEVENT\n`
                                                                        document.getElementById("idModalWindow").style.display ="none"
                                                                        Gl_IsUserAnswered = true 
                                                                        Gl_SelectedIndex = 0
-                                                                       getArithm(Gl_aGenRithm)
+                                                                     //  getArithm(Gl_aGenRithm)
                                                                        `);
 
     //!!! TODO .........  !!!!!
