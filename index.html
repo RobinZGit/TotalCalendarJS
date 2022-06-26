@@ -2016,7 +2016,7 @@ END:VEVENT\n`
   function getArithm(aGen){
     getArithmOneIteration(aGen) 
 
-    if (!Gl_IsGenerated){
+    if (!Gl_IsGenerated || !Gl_IsUserAnswered){
       alert(`5`)
       setTimeout(getArithm(Gl_aGenRithm) ,100)
     }
