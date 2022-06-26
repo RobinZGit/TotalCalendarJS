@@ -2014,9 +2014,10 @@ END:VEVENT\n`
   //>>
   
   function getArithm(aGen){
-    getArithmOneIteration(aGen) 
+    Gl_aGenRithm = aGen
+    if (Gl_IsUserAnswered) getArithmOneIteration(aGen) 
 
-    if (!Gl_IsGenerated || !Gl_IsUserAnswered){
+    if (!Gl_IsGenerated && Gl_IsUserAnswered){
       alert(`5`)
       setTimeout(getArithm(Gl_aGenRithm) ,100)
     }
