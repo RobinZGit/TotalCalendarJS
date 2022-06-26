@@ -2015,7 +2015,11 @@ END:VEVENT\n`
   
   function getArithm(aGen){
     getArithmOneIteration(aGen) 
-    if (!Gl_IsGenerated) setTimeout(getArithm(Gl_aGenRithm) ,100)
+
+    if (!Gl_IsGenerated){
+      alert(`5`)
+      setTimeout(getArithm(Gl_aGenRithm) ,100)
+    }
     
    // setTimeout( ()=>{if (Gl_IsUserAnswered && !Gl_IsGenerated) { /*alert("answered");*/getArithmOneIteration(aGen) ; } else {  /*alert(Gl_IsUserAnswered);*/ setTimeout( getArithm(aGen),200)}; },0 )
 
@@ -2418,6 +2422,7 @@ END:VEVENT\n`
                                                                        document.getElementById("idModalWindow").style.display ="none"
                                                                        Gl_IsUserAnswered = true 
                                                                        Gl_SelectedIndex = 0
+                                                                       getArithm(Gl_aGenRithm)
                                                                        `);
 
     //!!! TODO .........  !!!!!
