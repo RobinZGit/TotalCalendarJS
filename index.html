@@ -2018,9 +2018,9 @@ END:VEVENT\n`
   
   function getArithm(aGen){
     Gl_aGenRithm = aGen
-   // Gl_CountOfGenTrainRtm++
-   //  if (Gl_CountOfGenTrainRtm=1) 
+
     if (Gl_IsUserAnswered) getArithmOneIteration(aGen) 
+    //Gl_IntervalId = setInterval(getArithmOneIteration(Gl_aGenRithm) ,1500)
 /*
     if (!Gl_IsGenerated && Gl_IsUserAnswered){
       alert(`5`)
@@ -2037,6 +2037,7 @@ END:VEVENT\n`
   
   //выдает массив тренировки (начинается всегда с интервала, чередуется интервал-команда)
   function getArithmOneIteration(aGen){
+    //if (Gl_IsGenerated) clearInterval(Gl_IntervalId)
     if(! Gl_IsUserAnswered ) return
     document.getElementById("btnSelectAllTrain").disabled = true
     Gl_IsGenerated = false
