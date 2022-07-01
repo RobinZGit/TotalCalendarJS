@@ -13,7 +13,7 @@
      
 </head>
  
-<body onload="loadTrainData()" onresize="resizeAll()">
+<body onload="loadTrainData()" >
 
 <!--
 <button id="ttt" style="float:right;height:100px;width:25%" onclick="test()">test </button>
@@ -1201,7 +1201,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   //
   var Gl_IsUserAnswered = true  //признак ответа пользователем на вопрос в модальном окне
   var Gl_IsGenerated = false    //признак завершения генерации ритма
-  varGl_IntervalId
+  var Gl_IntervalId
   //var Gl_CountOfGenTrainRtm = 0
   //var Gl_CountOfGenCalendarRtm = 0
   
@@ -2017,10 +2017,11 @@ END:VEVENT\n`
   //>>
   
   function getArithm(aGen){
-    Gl_aGenRithm = aGen
+  //  Gl_aGenRithm = aGen
 
-    //if (Gl_IsUserAnswered) getArithmOneIteration(aGen) 
-    Gl_IntervalId = setInterval(getArithmOneIteration(Gl_aGenRithm) ,1500)
+    //if (Gl_IsUserAnswered)
+    return getArithmOneIteration(aGen)  //!! return todo - in stus() make Gl_aCalendar analogous Gl_aRitmLisp
+    //Gl_IntervalId = setInterval(getArithmOneIteration(Gl_aGenRithm) ,1500)
 /*
     if (!Gl_IsGenerated && Gl_IsUserAnswered){
       alert(`5`)
@@ -2043,7 +2044,7 @@ END:VEVENT\n`
     if(!Gl_IsUserAnswered ) return
     */
     document.getElementById("btnSelectAllTrain").disabled = true
-    Gl_IsGenerated = false
+    //!Gl_IsGenerated = false
 
     var Gl_aGenRithm00 = aGen
 
@@ -2496,30 +2497,32 @@ END:VEVENT\n`
 
 
   function getText2Print(sTrainName){ //текст для печати
-      var aRithmLisp=[]
+      //var aRithmLisp=[]
       var aSimult = []
       if (GltxtSpeek.value.indexOf(Gl_sSimultTrain)>=0){
         arrStr = GltxtSpeek.value.split(Gl_sSimultTrain)
         for (i=0;i<arrStr.length;i++) {
           aSimult.push([[],arrStr[i].split(Gl_sDelim)])
         }
-        aRithmLisp = stus(aSimult,'diff')
-      }else aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim));
+        //aRithmLisp =
+        stus(aSimult,'diff')
+      }else //aRithmLisp=
+            getArithm(GltxtSpeek.value.split(Gl_sDelim));
 
       //Gl_aRithmLisp=aRithmLisp.slice() //!!!!!!!!!!!
 
       Gl_txtPrint.value=sTrainName+"\n"
-      Gl_txtPrint.value+='Тренировка продлится ' +calcTtrainTime(aRithmLisp)+' минут'+"\n\n"
+      Gl_txtPrint.value+='Тренировка продлится ' +calcTtrainTime(Gl_aRithmLisp)+' минут'+"\n\n"
 
       var str = ""
       var strNext = ""
       var strPrev = ""
       var nRepeat = 1
-      for(var i=1;i<aRithmLisp.length;i+=2){
-        str=aRithmLisp[i]+"   :"+aRithmLisp[i+1]+" ms  "+"\n"
-        strNext=aRithmLisp[i+2]+"   :"+aRithmLisp[i+1+2]+" ms  "+"\n"
+      for(var i=1;i<Gl_aRithmLisp.length;i+=2){
+        str=Gl_aRithmLisp[i]+"   :"+Gl_aRithmLisp[i+1]+" ms  "+"\n"
+        strNext=Gl_aRithmLisp[i+2]+"   :"+Gl_aRithmLisp[i+1+2]+" ms  "+"\n"
         if ((str!=strNext)){
-           Gl_txtPrint.value += aRithmLisp[i]+"   :"+aRithmLisp[i+1]+" ms  "+ ((nRepeat==1)?"":"(повторить "+ nRepeat +" раз)") +"\n"
+           Gl_txtPrint.value += Gl_aRithmLisp[i]+"   :"+Gl_aRithmLisp[i+1]+" ms  "+ ((nRepeat==1)?"":"(повторить "+ nRepeat +" раз)") +"\n"
            nRepeat = 1
         }
         else nRepeat++
