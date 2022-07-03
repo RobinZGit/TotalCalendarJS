@@ -2018,11 +2018,16 @@ END:VEVENT\n`
   //>>
   
   function getArithm(aGen){
-  //  Gl_aGenRithm = aGen
+    Gl_IsGenerated = false
+    Gl_aGenRithm = aGen
 
-    //if (Gl_IsUserAnswered)
-    return getArithmOneIteration(aGen)  //!! return todo - in stus() make Gl_aCalendar analogous Gl_aRitmLisp
-    //Gl_IntervalId = setInterval(getArithmOneIteration(Gl_aGenRithm) ,1500)
+    if (Gl_IsUserAnswered)
+      return getArithmOneIteration(aGen)  //!! return todo - in stus() make Gl_aCalendar analogous Gl_aRitmLisp
+    else{
+        Gl_IntervalId = setInterval(getArithmOneIteration(Gl_aGenRithm),1500)
+        alert("setInterval "+  Gl_IntervalId)
+    }
+    
 /*
     if (!Gl_IsGenerated && Gl_IsUserAnswered){
       alert(`5`)
@@ -2039,11 +2044,14 @@ END:VEVENT\n`
   
   //выдает массив тренировки (начинается всегда с интервала, чередуется интервал-команда)
   function getArithmOneIteration(aGen){
-    /*
-    if (Gl_IsGenerated) clearInterval(Gl_IntervalId)
+    
+    if (Gl_IsGenerated) { 
+      clearInterval(Gl_IntervalId)
+      alert('clearInterval(Gl_IntervalId) '+ Gl_IntervalId)
+    }
     if (Gl_IsGenerated) return
     if(!Gl_IsUserAnswered ) return
-    */
+    
     document.getElementById("btnSelectAllTrain").disabled = true
     //!Gl_IsGenerated = false
 
@@ -2438,6 +2446,7 @@ END:VEVENT\n`
                                                                        document.getElementById("idModalWindow").style.display ="none"
                                                                        Gl_IsUserAnswered = true 
                                                                        Gl_SelectedIndex = 0
+                                               Gl_IntervalId = setInterval(getArithm(Gl_aGenRithm),1500)
                                                                      //  getArithm(Gl_aGenRithm)
                                                                        `);
 
