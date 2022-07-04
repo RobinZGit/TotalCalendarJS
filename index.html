@@ -2336,7 +2336,7 @@ END:VEVENT\n`
                       //}
                       //fWait()
                       //! проблема - как подождать.. без промисов не решить??
-                      Gl_aGenRithm[j]=Gl_aGenRithm[j].replace(sOld,aTrains[Gl_SelectedIndex]);//заменим только первое вхождение
+                      //Gl_aGenRithm[j]=Gl_aGenRithm[j].replace(sOld,aTrains[Gl_SelectedIndex]);//заменим только первое вхождение
                       Gl_SelectedIndex=-1 //!
                   }
                }
@@ -2438,14 +2438,15 @@ END:VEVENT\n`
 
   }
 
-  function askUserInModalWindow(aQueations){
+  function askUserInModalWindow(aQueations, j){
     //скрываем основное окно, открываем модальное. Рисуем в нем радиокнопки выбора. И кнопку Ок, по которой закрываем модальное и возвращаем выбранную радиокнопку
     document.getElementById("idMainWindow").style.display ='none'
     document.getElementById("idModalWindow").style.display ='block'
     document.getElementById("idModalButtonOk").setAttribute('onclick',`document.getElementById("idMainWindow").style.display ="block"
                                                                        document.getElementById("idModalWindow").style.display ="none"
                                                                        Gl_IsUserAnswered = true 
-                                                                       Gl_SelectedIndex = 0
+                                                                      //? Gl_SelectedIndex = 0
+                                               Gl_aGenRithm[j]=Gl_aGenRithm[j].replace(sOld,"aTrains[Gl_SelectedIndex]")
                                                Gl_IntervalId = setInterval(getArithm(Gl_aGenRithm),1500)
                                                                      //  getArithm(Gl_aGenRithm)
                                                                        `);
