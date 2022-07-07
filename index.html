@@ -1176,6 +1176,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   var inputFilterStr = document.getElementById('filterStr');
   var Gl_currentTrainName =""
   var Gl_SelectedIndex= -1
+  var Gl_sNameExToReplaceByUserAnswer = ""
 
   //todo сюда же -зарезервированные символы (можно эти имена сделать числами - индексами одногшо массива зарезервированных слов)
   //     использовать для проверок текстов на наличие зарезерв слов
@@ -2438,22 +2439,27 @@ END:VEVENT\n`
 
   }
 
-  function askUserInModalWindow(aQueations, i, sOld,loc_aGenRithm){
-    fnOkClick = function(){
+  fnModalOkClick = function(){
       document.getElementById("idMainWindow").style.display ="block"
       document.getElementById("idModalWindow").style.display ="none"
       Gl_IsUserAnswered = true
-      //? Gl_SelectedIndex = 0
       //Gl_aGenRithm[j]=Gl_aGenRithm[j].replace(sOld,"aTrains[Gl_SelectedIndex]")
-      loc_aGenRithm[i] = sOld+'='+'<Ответ получен>'
-      Gl_aGenRithm = loc_aGenRithm
-      Gl_IntervalId = setInterval(getArithm(loc_aGenRithm),1500)
+
+      //!Gl_aGenRithm = loc_aGenRithm
+      Gl_aGenRithm[Gl_SelectedIndex] = Gl_sNameExToReplaceByUserAnswer+'='+'<Ответ получен>'
+      Gl_IntervalId = setInterval(getArithm(Gl_aGenRithm),1500)
       //  getArithm(Gl_aGenRithm)
-    }
+  }
+
+  function askUserInModalWindow(aQueations, i, sOld,loc_aGenRithm){
+
     //скрываем основное окно, открываем модальное. Рисуем в нем радиокнопки выбора. И кнопку Ок, по которой закрываем модальное и возвращаем выбранную радиокнопку
     document.getElementById("idMainWindow").style.display ='none'
     document.getElementById("idModalWindow").style.display ='block'
-    document.getElementById("idModalButtonOk").setAttribute('onclick','fnOkClick()');
+    Gl_aGenRithm = loc_aGenRithm
+    Gl_SelectedIndex = i
+    Gl_sNameExToReplaceByUserAnswer = sOld
+    document.getElementById("idModalButtonOk").setAttribute('onclick','fnModalOkClick()');
 
     //!!! TODO .........  !!!!!
   }
@@ -2664,6 +2670,7 @@ END:VEVENT\n`
         Gl_aRithmLisp = stus(aSimult,'diff')
     }else aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim));
 
+    if (!Gl_IsGenerated) return
 
     //=========НАЧИТКА СПИСКА ДЕЛ ДЛЯ НАВИГАЦИИ===========
     currentT.innerHTML = '';
