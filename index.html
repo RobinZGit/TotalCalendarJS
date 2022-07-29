@@ -2219,7 +2219,7 @@ END:VEVENT\n`
         for(var j=0; j<nBeg; j++)
             Gl_aGenRithm[j]=Gl_aGenRithm[j].split("=")[0]+"="+Gl_aGenRithm[j].split("=")[1].split(sOld).join(sNew);
     }
-
+/*TEST !!!!!!!!!!!!!!!!!
     for(var i=0; i<nBeg; i++){//вычищаем угловые скобки внутри блоков интервала (внутри #..#)
        var aRr = Gl_aGenRithm[i].split("#")
        for (var j = 1; j < aRr.length; j+=2){
@@ -2227,6 +2227,7 @@ END:VEVENT\n`
            Gl_aGenRithm[i]=aRr.join("#")
        }
     }
+   TEST !!!!!!!!!!!!!!!!! */
     //alert('перед удалением угловых скобок из умножений \n'+Gl_aGenRithm)
 /*TEST !!!!!!!!!!!!!!!!!!!!!!!!!!!!  мешает повторному вызову после выбора пользователем НО ломает дыхательную лесенку
     for(var i=0; i<nBeg; i++){//вычищаем угловые скобки вокруг умножений (признак - наличие >< без разделителя)
