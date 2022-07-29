@@ -2200,9 +2200,9 @@ END:VEVENT\n`
                 Gl_aGenRithm[i] = Gl_aGenRithm[i].split('=')[0]+'=[eval]'+Gl_aGenRithm[i].split('=')[1]+'[eval]'
             else{
                 try{
-                  Gl_aGenRithm[i]=Gl_aGenRithm[i].split("=")[0]+"=<"+eval(Gl_aGenRithm[i].split("=")[1])+">"
+                  Gl_aGenRithm[i]=Gl_aGenRithm[i].split("=")[0]+"="+eval(Gl_aGenRithm[i].split("=")[1])+""
                 }catch(e){
-                  Gl_aGenRithm[i]=Gl_aGenRithm[i].split("=")[0]+"=<"+Gl_aGenRithm[i].split("=")[1]+">"
+                  Gl_aGenRithm[i]=Gl_aGenRithm[i].split("=")[0]+"="+Gl_aGenRithm[i].split("=")[1]+""
                 }
             }
         }
@@ -2228,7 +2228,7 @@ END:VEVENT\n`
        }
     }
     //alert('перед удалением угловых скобок из умножений \n'+Gl_aGenRithm)
-/*TEST !!!!!!!!!!!!!!!!!!!!!!!!!!!!  мешает повторному вызову после выбора пользователем НО ломает дыхательную лесенку*/
+/*TEST !!!!!!!!!!!!!!!!!!!!!!!!!!!!  мешает повторному вызову после выбора пользователем НО ломает дыхательную лесенку
     for(var i=0; i<nBeg; i++){//вычищаем угловые скобки вокруг умножений (признак - наличие >< без разделителя)
        var sClear = ""
        var flIsTmsDetected= false
@@ -2242,7 +2242,7 @@ END:VEVENT\n`
        }
        Gl_aGenRithm[i]=sClear
     }
- /*TEST*/
+ TEST*/
    // alert('после подстановки из блока параметов в основной блок \n'+Gl_aGenRithm)
 
 
