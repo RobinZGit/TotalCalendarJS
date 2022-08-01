@@ -122,6 +122,10 @@
     <div style="font-size:small;color:blue;">Например:  http://localhost:63342/TotalCalendarJS/index.html?_ijt=p3hgufvl6ok7084qaistkcbqgu&_ij_reload&startwith=УПРАЖНЕНИЯ НА ШЕЮ </div>
 </div>
 </div>
+
+
+ <button id="btnImportTrain" style="height:80px;width:50%" onclick='alert(fGetRandomSelected( "[ВЫБОР]4[ДЕЛ БЕЗ ПОВТОРЕНИЙ ИЗ]<дело1>:<дело2>:<дело3>:<дело4>:<дело5>:<дело1>[КАК]1:4:7:5:2" ,2))'> fGetRandomSelected </button>
+
 <script>
 
 
@@ -2473,38 +2477,36 @@ END:VEVENT\n`
   //выбор nCountToChange дел без повторений по строке sTrainAndPropportions вида "[ВЫБОР]4[ДЕЛ БЕЗ ПОВТОРЕНИЙ ИЗ]<дело1>:<дело2>:<дело3>:<дело4>:<дело5>:<дело1>[КАК]1:4:7:5:2"
   //после [КАК] - вероятности (пропорции) появления дела
   function fGetRandomSelected(/*from*/sTrainAndPropportions,nCountToSelect ){
-            var sRet = ""
-            //var sOld = Gl_aGenRithm[i].split("=")[0].trim();//разобрали в массив левую часть после =
-            //var sNew = Gl_aGenRithm[i].split("=")[1];//разобрали в массив правую часть после =
-            //var aProb = sNew.split("[ВЫБОР ИЗ]");//выбор вероятностных дел.
-            //for(var j = i-1; j>=0; j--){
-            //   if (aProb.length>1){
-
-                  //ВЫБОР ОДНОГО ИЗ ДЕЛ ПО ЗАДАННЫМ ЧИСЛОВЫМ ПРОПОРЦИЯМ
+                   var sRet = ""
+                   var indSelected = -1
                   if (sTrainAndPropportions.indexOf("[КАК]")>0){
                       //выбираем случ число от 0 до суммы пропорций, в какой отрезок оно попадет - то дело и выберем
                       var a2Prob=sTrainAndPropportions.split("[КАК]");
                       var aSay =  a2Prob[0].split(":");
                       var aProportions =  a2Prob[1].split(":");
                       var nSum = 0;
+                      //привести пропорции к вероятностям
                       for(var jj=0; jj<aProportions.length; jj++) nSum+=Number(aProportions[jj]);
-                      //while(Gl_aGenRithm[j].indexOf(sOld)>=0){
-                          //!var nRand = Math.floor(fgetRandom()*(nSum+1));
-                          var nRand = (Math.random()*(nSum));
-                          var k =0;
-                          var nSumCurr = 0;
-                          while((nSumCurr<=nRand)&&(k<aProportions.length)){
-                              nSumCurr+=Number(aProportions[k]);
-                              k++;
-                          }
-                          var sNewChanged=aSay[k-1];
-                          sRet = sNewChanged
-                      //    Gl_aGenRithm[j]=Gl_aGenRithm[j].replace(sOld,sNewChanged);//заменим только первое вхождение,т.к. в след. итерации заново вычислить выбор
-                      //}
+                      for (var ii=0; ii < CountToSelect ;ii++){
+                        try{
+                          for(var jj=0; jj<aProportions.length; jj++) aProportions[jj]=aProportions[jj]/nSum
+                        } catch(e) {"ошибка при расчете выбора из: "+ sTrainAndPropportions +alert(e.toString())} //тут будет деление на 0 скорее всего
+                        var nRand = (Math.random()*(1));
+                        var k =0;
+                        var nSumCurr = 0;
+                        while((nSumCurr<=nRand)&&(k<aProportions.length)){
+                            nSumCurr+=Number(aProportions[k]);
+                            k++;
+                        }
+                        indSelected = k-1
+                        sRet+=aSay[ indSelected ] + ((ii ==  CountToSelect - 1 ))?"":";"
+                        
+                        //после выбора очередного дела выкинем его из списка выбора
+                        //а вероятности оставшихся делим на (1-вероятность выкинутого), чтобы их сумма осталась =1
+                        for(var jj=0; jj<aProportions.length; jj++) aProportions[jj] = aProportions[jj]/(1-  aProportions[  indSelected  ] )
+                        aProportions.splice(indSelected,1)
+                      }   
                   }
-                  //
-              // }
-            //}
             return sRet
   }
 
