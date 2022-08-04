@@ -2261,7 +2261,7 @@ END:VEVENT\n`
 
     //Замена умножений N<A>
     for(var i=0; i<Gl_aGenRithm.length/*-nBeg ??*/; i++){
-        if (!(Gl_aGenRithm[i].indexOf("[ВЫБОР ИЗ]")>=0)){
+        if (!(Gl_aGenRithm[i].indexOf("[КАК]")>=0)){
             var sI="";
             var sHead = Gl_aGenRithm[i].split("=")[0];
             var aI = Gl_aGenRithm[i].split("=")[1].split(";");//разобрали в массив правую часть после =
@@ -2299,7 +2299,8 @@ END:VEVENT\n`
         for(var i=Gl_aGenRithm.length-1; i>=0; i--){
             var sOld = Gl_aGenRithm[i].split("=")[0].trim();//разобрали в массив правую часть после =
             var sNew = Gl_aGenRithm[i].split("=")[1];//разобрали в массив правую часть после =
-            var aProb = sNew.split("[ВЫБОР ИЗ]");//выбор вероятностных дел.
+            //var aProb = sNew.split("[ВЫБОР ИЗ]");//выбор вероятностных дел.
+            var aProb = sNew.split("[КАК]");//выбор вероятностных дел.
             for(var j = Gl_aGenRithm.length-1/*!!i-1*/; j>=0; j--){
                if (aProb.length>1){
     //...
@@ -2351,6 +2352,7 @@ END:VEVENT\n`
                   }
                }
             }
+             //
 
         }
 /* 1. askUserInModalWindow -> async asyncAskUserInModalWindow возвращает промис, в котором
@@ -2516,7 +2518,7 @@ END:VEVENT\n`
                             k++;
                         }
                         indSelected = k-1
-                        sRet+=aSay[ indSelected ] + ";"    // ((ii ==  nCountToSelect - 1 ))?"":";"
+                        sRet+=aSay[ indSelected ] + " "//";"    // ((ii ==  nCountToSelect - 1 ))?"":";"
                         
                         //после выбора очередного дела выкинем его из списка выбора
                         //а вероятности оставшихся делим на (1-вероятность выкинутого), чтобы их сумма осталась =1
