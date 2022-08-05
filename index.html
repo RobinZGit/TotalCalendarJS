@@ -2147,8 +2147,8 @@ END:VEVENT\n`
     //alert('после удаления комментариев \n'+Gl_aGenRithm)
 
     //Для обратной совместимости формата [ВЫБОР]4[ДЕЛ БЕЗ ПОВТОРЕНИЙ ИЗ]
-    //for(var i=0; i<Gl_aGenRithm.length; i++)
-    //  Gl_aGenRithm[i]=Gl_aGenRithm[i].replace("[ВЫБОР ИЗ]","[ВЫБОР]1[ДЕЛ БЕЗ ПОВТОРЕНИЙ ИЗ]");
+    for(var i=0; i<Gl_aGenRithm.length; i++)
+      Gl_aGenRithm[i]=Gl_aGenRithm[i].replace("[ВЫБОР ИЗ]","[ВЫБОР]1[ДЕЛ БЕЗ ПОВТОРЕНИЙ ИЗ]");
 
 
     /* не убирать, напр в ИМ появляются дела undefined, сначала разобраться с ними*/
@@ -2315,14 +2315,16 @@ END:VEVENT\n`
     //В самом конце подстановка дел с выбором
     for(var i0=0; i0<Gl_aGenRithm.length; i0++)  //повторение цикла N раз
         for(var i=Gl_aGenRithm.length-1; i>=0; i--){
-        /*
+        //
           if(Gl_aGenRithm[i].indexOf("[КАК]")>0)
               for(var j = i-1; j>=0; j--){
                 var sOld = Gl_aGenRithm[i].split("=")[0].trim();//разобрали в массив левую часть после =
-                var sNewChanged = fGetRandomSelected(Gl_aGenRithm[i].split("=")[1] )
-                Gl_aGenRithm[j]=Gl_aGenRithm[j].replace(sOld,sNewChanged);//заменим только первое вхождение,т.к. в след. итерации заново вычислить выбор
+                while(Gl_aGenRithm[j].indexOf(sOld)>=0){
+                  var sNewChanged = fGetRandomSelected(Gl_aGenRithm[i].split("=")[1] )
+                  Gl_aGenRithm[j]=Gl_aGenRithm[j].replace(sOld,sNewChanged);//заменим только первое вхождение,т.к. в след. итерации заново вычислить выбор
+                }
               }
-        */
+        /*
             var sOld = Gl_aGenRithm[i].split("=")[0].trim();//разобрали в массив левую часть после =
             var sNew = Gl_aGenRithm[i].split("=")[1];//разобрали в массив правую часть после =
             var aProb = sNew.split("[ВЫБОР ИЗ]");//выбор вероятностных дел.
@@ -2352,7 +2354,7 @@ END:VEVENT\n`
                   }
                }
             }
-             //
+             */
 
         }
 /* 1. askUserInModalWindow -> async asyncAskUserInModalWindow возвращает промис, в котором
