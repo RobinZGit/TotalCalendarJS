@@ -123,8 +123,9 @@
 </div>
 </div>
 
-
+<!--
  <button id="btnImportTrain" style="height:80px;width:50%" onclick='alert(fGetRandomSelected( "[ВЫБОР]2[ДЕЛ БЕЗ ПОВТОРЕНИЙ ИЗ]<дело1>:<дело2>:<дело3>:<дело4>:<дело5>[КАК]1:4:7:5:2" ))'> fGetRandomSelected </button>
+-->
 
 <script>
 
@@ -2272,7 +2273,7 @@ END:VEVENT\n`
 
     //Замена умножений N<A>
     for(var i=0; i<Gl_aGenRithm.length/*-nBeg ??*/; i++){
-        if (!(Gl_aGenRithm[i].indexOf("[КАК]")>=0)){
+        if (!(Gl_aGenRithm[i].indexOf("[КАК]")>=0) &&!(Gl_aGenRithm[i].indexOf("[СПРОСИТЬ]")>=0)){
             var sI="";
             var sHead = Gl_aGenRithm[i].split("=")[0];
             var aI = Gl_aGenRithm[i].split("=")[1].split(";");//разобрали в массив правую часть после =
@@ -2327,7 +2328,7 @@ END:VEVENT\n`
     for(var i0=0; i0<Gl_aGenRithm.length; i0++)  //повторение цикла N раз
         for(var i=Gl_aGenRithm.length-1; i>=0; i--){
         //
-          if(Gl_aGenRithm[i].indexOf("[КАК]")>0)
+          if((Gl_aGenRithm[i].indexOf("[КАК]")>0)&&(Gl_aGenRithm[i].indexOf("[СПРОСИТЬ]")<0))
               for(var j = i-1; j>=0; j--){
                 var sOld = Gl_aGenRithm[i].split("=")[0].trim();//разобрали в массив левую часть после =
                 while(Gl_aGenRithm[j].indexOf(sOld)>=0){
@@ -2335,38 +2336,6 @@ END:VEVENT\n`
                   Gl_aGenRithm[j]=Gl_aGenRithm[j].replace(sOld,sNewChanged);//заменим только первое вхождение,т.к. в след. итерации заново вычислить выбор
                 }
               }
-        /*
-            var sOld = Gl_aGenRithm[i].split("=")[0].trim();//разобрали в массив левую часть после =
-            var sNew = Gl_aGenRithm[i].split("=")[1];//разобрали в массив правую часть после =
-            var aProb = sNew.split("[ВЫБОР ИЗ]");//выбор вероятностных дел.
-            for(var j = i-1; j>=0; j--){
-               if (aProb.length>1){
-
-                  //ВЫБОР ОДНОГО ИЗ ДЕЛ ПО ЗАДАННЫМ ЧИСЛОВЫМ ПРОПОРЦИЯМ
-                  if (aProb[1].indexOf("[КАК]")>0){
-                      //выбираем случ число от 0 до суммы пропорций, в какой отрезок оно попадет - то дело и выберем
-                      var a2Prob=aProb[1].split("[КАК]");
-                      var aSay =  a2Prob[0].split(":");
-                      var aProportions =  a2Prob[1].split(":");
-                      var nSum = 0;
-                      for(var jj=0; jj<aProportions.length; jj++) nSum+=Number(aProportions[jj]);
-                      while(Gl_aGenRithm[j].indexOf(sOld)>=0){
-                          //!var nRand = Math.floor(fgetRandom()*(nSum+1));
-                          var nRand = (Math.random()*(nSum));
-                          var k =0;
-                          var nSumCurr = 0;
-                          while((nSumCurr<=nRand)&&(k<aProportions.length)){
-                              nSumCurr+=Number(aProportions[k]);
-                              k++;
-                          }
-                          var sNewChanged=aSay[k-1];//???
-                          Gl_aGenRithm[j]=Gl_aGenRithm[j].replace(sOld,sNewChanged);//заменим только первое вхождение,т.к. в след. итерации заново вычислить выбор
-                      }
-                  }
-               }
-            }
-             */
-
         }
 /* 1. askUserInModalWindow -> async asyncAskUserInModalWindow возвращает промис, в котором
 - отрисовка модальной фомы,
@@ -2384,7 +2353,7 @@ END:VEVENT\n`
         for(var i=Gl_aGenRithm.length-1; i>=0; i--){
             var sOld = Gl_aGenRithm[i].split("=")[0].trim();//разобрали в массив левую часть после =
             var sNew = Gl_aGenRithm[i].split("=")[1];//разобрали в массив правую часть после =
-            var aProb = sNew.split("[ВЫБОР ИЗ]");//выбор вероятностных  дел.
+            var aProb = sNew.split("[ДЕЛ БЕЗ ПОВТОРЕНИЙ ИЗ]");//выбор вероятностных  дел.
             for(var j = i-1; j>=0; j--){
                if (aProb.length>1){
                   //ВЫБОР ОДНОГО ИЗ ДЕЛ ПОЛЬЗОВАТЕЛЕМ В МОДАЛЬНОМ ОКНЕ
