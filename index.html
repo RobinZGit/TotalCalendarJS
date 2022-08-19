@@ -2243,33 +2243,7 @@ END:VEVENT\n`
         for(var j=0; j<nBeg; j++)
             Gl_aGenRithm[j]=Gl_aGenRithm[j].split("=")[0]+"="+Gl_aGenRithm[j].split("=")[1].split(sOld).join(sNew);
     }
-/*TEST !!!!!!!!!!!!!!!!!
-    for(var i=0; i<nBeg; i++){//вычищаем угловые скобки внутри блоков интервала (внутри #..#)
-       var aRr = Gl_aGenRithm[i].split("#")
-       for (var j = 1; j < aRr.length; j+=2){
-           aRr[j] = aRr[j].split("<").join("").split(">").join("")
-           Gl_aGenRithm[i]=aRr.join("#")
-       }
-    }
-   TEST !!!!!!!!!!!!!!!!! */
-    //alert('перед удалением угловых скобок из умножений \n'+Gl_aGenRithm)
-/*TEST !!!!!!!!!!!!!!!!!!!!!!!!!!!!  мешает повторному вызову после выбора пользователем НО ломает дыхательную лесенку
-    for(var i=0; i<nBeg; i++){//вычищаем угловые скобки вокруг умножений (признак - наличие >< без разделителя)
-       var sClear = ""
-       var flIsTmsDetected= false
-
-       for(var j=Gl_aGenRithm[i].length-0; j>=1 ; j--){
-          if((""+Gl_aGenRithm[i][j-1]+Gl_aGenRithm[i][j]).valueOf()==("><").valueOf()){
-             flIsTmsDetected = true
-          }
-          else if (flIsTmsDetected &&(Gl_aGenRithm[i][j-1]===("<") )) flIsTmsDetected= false
-               else sClear=""+Gl_aGenRithm[i][j-1]+""+sClear
-       }
-       Gl_aGenRithm[i]=sClear
-    }
- TEST*/
-   // alert('после подстановки из блока параметов в основной блок \n'+Gl_aGenRithm)
-
+    // alert('после подстановки из блока параметов в основной блок \n'+Gl_aGenRithm)
 
     //Замена умножений N<A>
     for(var i=0; i<Gl_aGenRithm.length/*-nBeg ??*/; i++){
@@ -2311,10 +2285,8 @@ END:VEVENT\n`
         for(var i=Gl_aGenRithm.length-1; i>=0; i--){
             var sOld = Gl_aGenRithm[i].split("=")[0].trim();//разобрали в массив правую часть после =
             var sNew = Gl_aGenRithm[i].split("=")[1];//разобрали в массив правую часть после =
-            //var aProb = sNew.split("[ВЫБОР ИЗ]");//выбор вероятностных дел.
-            var aProb = sNew.split("[КАК]");//выбор вероятностных дел.
             for(var j = Gl_aGenRithm.length-1/*!!i-1*/; j>=0; j--){
-               if (aProb.length>1){
+               if ((sNew.indexOf('[КАК]')>=0) || (sNew.indexOf('[СПРОСИТЬ]')>=0) ){
     //...
                }else
                    Gl_aGenRithm[j]=Gl_aGenRithm[j].split("=")[0]+"="+Gl_aGenRithm[j].split("=")[1].split(sOld).join(sNew); //replace заменит только первое вхождение..
@@ -2537,24 +2509,6 @@ END:VEVENT\n`
     //!!! TODO .........  !!!!!
   }
 
-
-  async  function asyncAskUserInModalWindow(aQueations){
-    return new Promise(
-
-             function(resolve,reject){
-
-                //скрываем основное окно, открываем модальное. Рисуем в нем радиокнопки выбора. И кнопку Ок, по которой закрываем модальное и возвращаем выбранную радиокнопку
-                document.getElementById("idMainWindow").style.display ='none'
-                document.getElementById("idModalWindow").style.display ='block'
-                document.getElementById("idModalButtonOk").setAttribute('onclick',`document.getElementById("idMainWindow").style.display ="block"
-                                                                                   document.getElementById("idModalWindow").style.display ="none"
-                                                                                   Gl_SelectedIndex = 0
-                                                                                   `);
-                if (Gl_SelectedIndex>=0) resolve(Gl_SelectedIndex) //!обойтись без глобали Gl_SelectedIndex
-                //!!! TODO .........  !!!!!
-             }
-    )
-  }
 
 
   function next(){ // перейти на следующее упражнение
