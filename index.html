@@ -1600,6 +1600,13 @@ END:VEVENT\n`
     setTimeout(function () {
         document.getElementById('externalcall').style.display='none';
     }, 5500);
+    //добавим в общий календарь календари из массива тренировок
+    /*try{
+    for(var i=0;i<Gl_aMetaRithm.length;i++)
+      try {Gl_aMetaMetaCalendar.push(Gl_aMetaRithm[i][2])} catch(e) {}
+    }
+      catch (e) {alert(1)}//JSON.stringfy(e))
+      */
     //
     if (Gl_aMetaMetaCalendarSelected.length==0){
       //alert('сброс выбора календарей')
