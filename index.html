@@ -58,7 +58,7 @@
 <div id = "trainPage">
     <div id = "idDivAllTrain"  style="font-weight:bold;background:lightgreen"> Выбор тренировки:
         <div>
-            <select id="selectAllTrain"  style="height:100px;width:100%" onchange="onSelectTrain(this.selectedIndex);" ></select>
+            <select id="selectAllTrain"  style="height:100px;width:100%" onchange="onSelectTrain(this.selectedIndex,this.options[this.selectedIndex].text);" ></select>
             <div>Тренировка cодержит подстроку (фильтр перед выбором):
                 <input id = "filterStr"  style="height:50px;width:20%" onchange="readFilteredListOfTrainings(value,null)">
             </div>
@@ -1907,8 +1907,9 @@ END:VEVENT\n`
         else return Number(str)
   }
 
-  function onSelectTrain(nInd){
-     execTrain1(nInd,"Act")
+  function onSelectTrain(nInd, sName){
+     var nGlInd = getTrainIndexByName(sName)
+     execTrain1(nGlInd,"Act")
   }
 
   function onSelectCalendar(nInd){
