@@ -2122,9 +2122,10 @@ END:VEVENT\n`
 
   //поиск тренировки в глобальном массиве по наименованию (в угловых скобках)
   function getTrainIndexByName(sName){
+    if (sName==undefined) return 0;
     for(var i=0; i<Gl_aMetaRithm.length; i++)
       for(var j=0; j<Gl_aMetaRithm[i][1].length; j++)
-          if(Gl_aMetaRithm[i][1][j].split('=')[0].trim()==sName.trim()) return i;
+            if(Gl_aMetaRithm[i][1][j].split('=')[0].trim()==sName.trim()) return i;
   }
 
   //поиск тренировки в отфильтрованном списке по наименованию (в угловых скобках)
