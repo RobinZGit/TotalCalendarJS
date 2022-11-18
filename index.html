@@ -1908,7 +1908,9 @@ END:VEVENT\n`
   }
 
   function onSelectTrain(nInd, sName){
-     var nGlInd = getTrainIndexByName(sName)
+     var nGlInd = nInd
+     if (sName!=undefined)
+       nGlInd = getTrainIndexByName(sName)
      execTrain1(nGlInd,"Act")
   }
 
@@ -2114,7 +2116,7 @@ END:VEVENT\n`
     //=========НАЧИТКА СПИСКА ВСЕХ ТРЕНИРОВОК===========
     readFilteredListOfTrainings('',loadTrain);
 
-    onSelectTrain(selectAllTrain.value);
+    onSelectTrain(selectAllTrain.value); //onSelectTrain(this.selectedIndex,this.options[this.selectedIndex].text)
 
     //собираем все календари в один:
     Gl_aMultiCalendar = stus(Gl_aMetaMetaCalendar, 'paint')
