@@ -2370,6 +2370,14 @@ END:VEVENT\n`
 
   }
   
+  function replaceSpecSymb(str){
+    return str.replaceAll('=',GlSEqual)
+                         .replaceAll('>',GlSMore)
+                         .replaceAll('<',GlSLess)
+                         .replaceAll(';',GlSSemicol)
+                         .replaceAll("'",GlSSquote)
+                         .replaceAll('"',GlSDquote)
+  }
   //выдает массив тренировки (начинается всегда с интервала, чередуется интервал-команда)
   function getArithmOneIteration(aGen){
     
@@ -2391,17 +2399,27 @@ END:VEVENT\n`
     for(var i=0; i<Gl_aGenRithm00.length; i++){
       var arr = Gl_aGenRithm00[i].split('[eval]')
       if(arr.length>1){
-        for(var j=1; j<arr.length; j+=2){
-          arr[j] = arr[j].replaceAll('=',GlSEqual)
-                         .replaceAll('>',GlSMore)
-                         .replaceAll('<',GlSLess)
-                         .replaceAll(';',GlSSemicol)
-                         .replaceAll("'",GlSSquote)
-                         .replaceAll('"',GlSDquote)
-        }
+        for(var j=1; j<arr.length; j+=2)
+          arr[j] =replaceSpecSymb(arr[j])
         Gl_aGenRithm00[i] = arr.join('[eval]')
       }  
     }
+    
+    /*
+    //замена спецсимволов внутри <>
+    for(var i=0; i<Gl_aGenRithm00.length; i++){
+      var arr = Gl_aGenRithm00[i].split('<')
+      var sItog = ""
+      if(arr.length>1){
+        for(var j=0; j<arr.length; j+=1){
+           var arr2 =arr[j].split('<')
+           for(var j2=0; j2<arr2.length; j2+=1)
+             sItog +=replaceSpecSymb(arr2[j2])
+        }
+        Gl_aGenRithm00[i] = sItog
+      }  
+    }
+    */
     
     //поиск http-ссылок для картинок и замена в них спецсимволов * http:/ =
     for(var i=0; i<Gl_aGenRithm00.length; i++){
