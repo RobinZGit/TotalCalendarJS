@@ -2179,7 +2179,7 @@ END:VEVENT\n`
               var nTime = 0
               for(var i =-1; i<aRithmLisp.length-1;i=i+2)
                 nTime+=calcInterval(String(aRithmLisp[i+1]))
-              nTime = Math.round(10*nTime/(1000*60))/10;
+              nTime = Math.round(1*nTime/(1000*60))/1; //10->1
             } catch(e) {nTime = -100}
             return nTime
     }
