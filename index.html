@@ -1977,8 +1977,7 @@ PRODID:Calendar
 VERSION:2.0\n`
     //var nGUID =  (new Date()).yyyymmddhhmmss()
     for (var i = 0; i < items.length; ++i) {
-      try{ sAddName = Gl_aMetaRithm[getTrainIndexByName(Gl_aMultiCalendar[2*i+1].trim())][2][2]()} catch(e) {sAddName=""}
-      //if (sAddName!="") alert(sAddName)
+      try{ sAddName = " " + Gl_aMetaRithm[getTrainIndexByName('<'+Gl_aMultiCalendar[2*i+1].trim()+'>')][2][2]()} catch(e) {sAddName=""}
       var nGUID = items[i].innerHTML.replaceAll('\n','').replaceAll(' ','')//+i
       nGUID = nGUID.substr(nGUID.indexOf('>')) // отсечем зависящий от i куок вначале
       sICS +=
@@ -1989,7 +1988,7 @@ DESCRIPTION:https://robinzgit.github.io/TotalCalendarJS/index.html?startwith=${f
 DTSTAMP;VALUE=DATE-TIME:${(new Date()).yyyymmddhhmmss('T')}
 DTSTART:${Gl_aMultiCalendar[2*i].yyyymmddhhmmss('T')}
 DTEND:${Gl_aMultiCalendar[2*i].yyyymmddhhmmss('T')}
-SUMMARY;LANGUAGE=en-ru:${Gl_aMultiCalendar[2*i+1].trim()}
+SUMMARY;LANGUAGE=en-ru:${Gl_aMultiCalendar[2*i+1].trim()+sAddName}
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY
