@@ -144,8 +144,8 @@
  var Gl_BackSpace = "__BCKSPC__"
  
  var Gl_aFormulas = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]//глобаль для использования в формулах трень
- function fn_place(){
-   switch ((new Date).getDate()%8){
+ function fn_place(date){
+   switch ((date).getDate()%8){
      case 0: return  'большая комната';
      case 1: return 'ванная';
      case 2: return  'туалет';
@@ -156,7 +156,7 @@
      case 7: return 'мастерская';
    }
  }
- var Gl_place = fn_place()
+ var Gl_place = fn_place(new Date)
  
  //----------------------------------
  var GlnInd=0;
@@ -450,7 +450,7 @@
                     "[END EVAL PARAMETERS]",
                   ],
                   //для вычисления дополнения к названия дела для календаря
-                  ()=>{return Gl_place +" (подмести, протереть, ремонтировать, выбросить лишнее)"}
+                  (date)=>{return fn_place(date) +" (подмести, протереть, ремонтировать, выбросить лишнее)"}
                 ],
                 //>>
                ],
@@ -1977,7 +1977,8 @@ PRODID:Calendar
 VERSION:2.0\n`
     //var nGUID =  (new Date()).yyyymmddhhmmss()
     for (var i = 0; i < items.length; ++i) {
-      try{ sAddName = " " + Gl_aMetaRithm[getTrainIndexByName('<'+Gl_aMultiCalendar[2*i+1].trim()+'>')][2][2]()} catch(e) {sAddName=""}
+      try{ sAddName = " " + Gl_aMetaRithm[getTrainIndexByName('<'+Gl_aMultiCalendar[2*i+1].trim()+'>')][2][2](Gl_aMultiCalendar[2*i])
+      } catch(e) {sAddName=""}
       var nGUID = items[i].innerHTML.replaceAll('\n','').replaceAll(' ','')//+i
       nGUID = nGUID.substr(nGUID.indexOf('>')) // отсечем зависящий от i куок вначале
       sICS +=
