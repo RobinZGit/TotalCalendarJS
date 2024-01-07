@@ -448,7 +448,9 @@
                     "<РАСПИСАНИЕ>=<БЫТ>;<#1 [СУТ]#>",
                     "[BEGIN EVAL PARAMETERS]",
                     "[END EVAL PARAMETERS]",
-                  ]
+                  ],
+                  //для вычисления дополнения к названия дела для календаря
+                  ()=>{return Gl_place +" (подмести, протереть, ремонтировать, выбросить лишнее)"}
                 ],
                 //>>
                ],
@@ -1968,12 +1970,15 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
     // тянем все теги li из блока с нужным  ID
     var items = document.getElementById("actionsInCalendar").getElementsByTagName("li");
     //UID:${''+nGUID+''+i}@default
+    var sAddName = ""
     var sICS =
 `BEGIN:VCALENDAR
 PRODID:Calendar
 VERSION:2.0\n`
     //var nGUID =  (new Date()).yyyymmddhhmmss()
     for (var i = 0; i < items.length; ++i) {
+      try{ sAddName = Gl_aMetaRithm[getTrainIndexByName(Gl_aMultiCalendar[2*i+1].trim())][2][2]()} catch(e) {sAddName=""}
+      //if (sAddName!="") alert(sAddName)
       var nGUID = items[i].innerHTML.replaceAll('\n','').replaceAll(' ','')//+i
       nGUID = nGUID.substr(nGUID.indexOf('>')) // отсечем зависящий от i куок вначале
       sICS +=
