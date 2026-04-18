@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Озвучка текста</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Озвучка текста голосом</h1>
+    
+    <div class="input-group">
+        <label for="textInput">Текст для озвучки:</label>
+        <textarea id="textInput" rows="4" placeholder="Введите текст, который нужно озвучить..." style="width: 100%; box-sizing: border-box;"></textarea>
+    </div>
+    
+    <div class="input-group">
+        <label for="voiceSelect">Голос:</label>
+        <select id="voiceSelect"></select>
+    </div>
+    
+    <div class="input-group">
+        <label>Скорость: <span id="rateValue">1.0</span></label>
+        <input type="range" id="rateControl" min="0.5" max="2" step="0.1" value="1">
+    </div>
+    
+    <button onclick="speakText()">Озвучить текст</button>
+    <button onclick="stopSpeech()">Остановить озвучку</button>
+    
+    <div id="status"></div>
+
+    <script>
+        let voices = [];
+        const statusEl = document.getElementById('status');
+        
+        // Инициализация синтезатора речи
+        function initSpeech() {
+            if ('speechSynthesis' in window) {
+                loadVoices();
+                window.speechSynthesis.onvoiceschanged = loadVoices;
+            } else {
+                showStatus('Ваш браузер не поддерживает синтез речи.', 'error');
+            }
+        }
+        
+        // Загрузка доступных голосов
+        function loadVoices() {
+            voices = window.speechSynthesis.getVoices();
+            const voiceSelect = document.getElementById('voiceSelect');
+            voiceSelect.innerHTML = '';
+            
+            voices.forEach((voice, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${voice.name} (${voice.lang})`;
+                voiceSelect.appendChild(option);
+            });
+            
+            // Выбираем русский голос по умолчанию, если есть
+            const russianVoiceIndex = voices.findIndex(v => v.lang.includes('ru'));
+            if (russianVoiceIndex !== -1) {
+                voiceSelect.value = russianVoiceIndex;
+            }
+        }
+        
+        // Озвучивание текста
+        function speakText() {
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) {
+                showStatus('Введите текст для озвучки!', 'error');
+                return;
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            const selectedVoiceIndex = parseInt(document.getElementById('voiceSelect').value, 10);
+            utterance.voice = voices[selectedVoiceIndex];
+            utterance.rate = parseFloat(document.getElementById('rateControl').value);
+            
+            utterance.onstart = () => {
+                showStatus('Озвучивание начато...', 'success');
+            };
+            
+            utterance.onend = () => {
+                showStatus('Озвучивание завершено.', 'success');
+            };
+            
+            utterance.onerror = (e) => {
+                showStatus(`Ошибка озвучивания: ${e.error}`, 'error');
+            };
+            
+            window.speechSynthesis.speak(utterance);
+        }
+        
+        // Остановка озвучки
+        function stopSpeech() {
+            window.speechSynthesis.cancel();
+            showStatus('Озвучивание остановлено.', 'success');
+        }
+        
+        // Обновление отображения скорости
+        document.getElementById('rateControl').addEventListener('input', function() {
+            document.getElementById('rateValue').textContent = this.value;
+        });
+        
+        // Показ статуса
+        function showStatus(message, type) {
+            statusEl.textContent = message;
+            statusEl.className = type;
+        }
+        
+        // Инициализация при загрузке страницы
+        window.addEventListener('load', initSpeech);
+    </script>
+</body>
+</html>
