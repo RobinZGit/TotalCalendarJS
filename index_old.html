@@ -1,581 +1,130 @@
-<!DOCTYPE html>
-<html lang="ru">
+
+
+<html>
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
     <title>КАЛЕНДАРЬ</title>
-    <style>
-        :root {
-            --bg: #f4f7fb;
-            --surface: #ffffff;
-            --surface-soft: #f8fafc;
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --success: #16a34a;
-            --success-dark: #15803d;
-            --warning: #fee2e2;
-            --warning-text: #991b1b;
-            --text: #172033;
-            --muted: #64748b;
-            --border: #dbe3ef;
-            --shadow: 0 20px 45px rgba(15, 23, 42, 0.10);
-            --radius: 20px;
-        }
+    <script>
 
-        * {
-            box-sizing: border-box;
-        }
+    </script>
 
-        body {
-            margin: 0;
-            min-height: 100vh;
-            color: var(--text);
-            font-family: Arial, Helvetica, sans-serif;
-            background:
-                radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 32rem),
-                linear-gradient(135deg, #eef5ff 0%, var(--bg) 45%, #f7fbf8 100%);
-        }
 
-        button,
-        input,
-        select,
-        textarea {
-            font: inherit;
-        }
+     
 
-        button {
-            border: 0;
-            border-radius: 14px;
-            cursor: pointer;
-            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-        }
-
-        button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14);
-        }
-
-        select,
-        textarea,
-        input[type="text"],
-        input[type="number"],
-        input:not([type]) {
-            width: 100%;
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            color: var(--text);
-            background: #fff;
-            outline: none;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        select:focus,
-        textarea:focus,
-        input[type="text"]:focus,
-        input[type="number"]:focus,
-        input:not([type]):focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
-        }
-
-        input[type="checkbox"] {
-            width: 22px;
-            height: 22px;
-            accent-color: var(--primary);
-        }
-
-        input[type="file"] {
-            width: 100%;
-            max-width: 360px;
-            padding: 10px;
-            border: 1px dashed var(--border);
-            border-radius: 12px;
-            background: var(--surface-soft);
-        }
-
-        .app-shell {
-            width: min(1180px, calc(100% - 32px));
-            margin: 0 auto;
-            padding: 28px 0 48px;
-        }
-
-        .hero {
-            display: grid;
-            gap: 18px;
-            margin-bottom: 22px;
-            padding: 28px;
-            border-radius: 28px;
-            color: #fff;
-            background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 48%, #22c55e 100%);
-            box-shadow: var(--shadow);
-        }
-
-        .hero h1 {
-            margin: 0;
-            font-size: clamp(30px, 5vw, 56px);
-            line-height: 1;
-            letter-spacing: -0.04em;
-        }
-
-        .hero p {
-            max-width: 760px;
-            margin: 0;
-            color: rgba(255, 255, 255, 0.84);
-            font-size: 18px;
-            line-height: 1.55;
-        }
-
-        .modal-card {
-            width: min(520px, calc(100% - 32px));
-            margin: 24px auto;
-            padding: 24px;
-            border: 1px solid rgba(153, 27, 27, 0.22);
-            border-radius: var(--radius);
-            background: #fff1f2;
-            box-shadow: var(--shadow);
-            text-align: center;
-        }
-
-        .section-card {
-            margin-bottom: 18px;
-            padding: 22px;
-            border: 1px solid rgba(219, 227, 239, 0.9);
-            border-radius: var(--radius);
-            background: rgba(255, 255, 255, 0.92);
-            box-shadow: var(--shadow);
-            backdrop-filter: blur(10px);
-        }
-
-        .section-title {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 0 0 16px;
-            font-size: 24px;
-        }
-
-        .section-title span {
-            display: inline-grid;
-            width: 40px;
-            height: 40px;
-            place-items: center;
-            border-radius: 12px;
-            color: #fff;
-            background: var(--primary);
-        }
-
-        .toolbar,
-        .form-grid,
-        .button-row,
-        .option-grid,
-        .file-grid {
-            display: grid;
-            gap: 14px;
-        }
-
-        .toolbar {
-            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-            align-items: stretch;
-        }
-
-        .form-grid {
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        }
-
-        .button-row {
-            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-        }
-
-        .option-grid {
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            margin-top: 14px;
-        }
-
-        .file-grid {
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        }
-
-        .field,
-        .option-card,
-        .file-card {
-            display: grid;
-            gap: 8px;
-            padding: 14px;
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            background: var(--surface-soft);
-        }
-
-        .field label,
-        .option-card label,
-        .file-card label {
-            color: var(--muted);
-            font-size: 14px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-
-        .checkbox-line {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-        }
-
-        .checkbox-line strong {
-            display: block;
-            margin-bottom: 4px;
-        }
-
-        .checkbox-line span {
-            color: var(--muted);
-            font-size: 14px;
-        }
-
-        .primary-btn,
-        .secondary-btn,
-        .success-btn,
-        .danger-btn {
-            min-height: 52px;
-            padding: 14px 18px;
-            color: #fff;
-            font-weight: 700;
-        }
-
-        .primary-btn {
-            background: var(--primary);
-        }
-
-        .primary-btn:hover {
-            background: var(--primary-dark);
-        }
-
-        .secondary-btn {
-            color: var(--text);
-            border: 1px solid var(--border);
-            background: #fff;
-        }
-
-        .success-btn {
-            background: var(--success);
-        }
-
-        .success-btn:hover {
-            background: var(--success-dark);
-        }
-
-        .danger-btn {
-            background: #dc2626;
-        }
-
-        .warning-banner {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 18px;
-            padding: 14px 16px;
-            border: 1px solid rgba(153, 27, 27, 0.18);
-            border-radius: 16px;
-            color: var(--warning-text);
-            background: var(--warning);
-            font-weight: 700;
-        }
-
-        .select-large {
-            min-height: 140px;
-            padding: 12px;
-        }
-
-        .calendar-range {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 12px;
-            align-items: end;
-        }
-
-        .calendar-range input {
-            min-height: 48px;
-            padding: 10px 12px;
-        }
-
-        .actions-panel {
-            margin-top: 14px;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            background: var(--surface-soft);
-        }
-
-        .actions-panel ul,
-        .navigation-panel ul {
-            margin: 0;
-            padding-left: 20px;
-        }
-
-        .training-display {
-            margin-top: 18px;
-        }
-
-        .training-display textarea {
-            min-height: 240px;
-            padding: 20px;
-            font-size: clamp(28px, 5vw, 50px);
-            text-align: center;
-            resize: vertical;
-        }
-
-        #idTextTime {
-            min-height: 64px;
-            padding: 14px;
-            font-size: 22px;
-            text-align: center;
-        }
-
-        #idImgTrain img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 16px;
-            box-shadow: var(--shadow);
-        }
-
-        .navigation-panel {
-            max-height: 420px;
-            overflow-y: auto;
-            padding: 14px;
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            background: var(--surface-soft);
-        }
-
-        details {
-            margin-top: 18px;
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            background: var(--surface-soft);
-        }
-
-        summary {
-            padding: 16px 18px;
-            cursor: pointer;
-            font-weight: 700;
-        }
-
-        details textarea {
-            min-height: 400px;
-            padding: 16px;
-            border: 0;
-            border-top: 1px solid var(--border);
-            border-radius: 0 0 16px 16px;
-            resize: vertical;
-        }
-
-        .info-note {
-            margin-top: 12px;
-            padding: 12px 14px;
-            border-left: 4px solid var(--primary);
-            border-radius: 12px;
-            color: var(--primary-dark);
-            background: rgba(37, 99, 235, 0.08);
-            font-size: 14px;
-            line-height: 1.45;
-        }
-
-        .delimiter {
-            height: 10px;
-        }
-
-        @media (max-width: 640px) {
-            .app-shell {
-                width: min(100% - 20px, 1180px);
-                padding-top: 14px;
-            }
-
-            .hero,
-            .section-card {
-                padding: 18px;
-                border-radius: 18px;
-            }
-
-            .button-row,
-            .toolbar,
-            .form-grid,
-            .file-grid,
-            .option-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
 </head>
+ 
+<body  onload="loadTrainData()" >
 
-<body onload="loadTrainData()">
 <!--
 <button id="ttt" style="float:right;height:100px;width:25%" onclick="test()">test </button>
 <textarea id="idTestText" style="width:100%;height:400px;" > </textarea>
 -->
 
-<div id="idModalWindow" class="modal-card" style="display:none">
+<!--Модальное окно, всплывает когда нужен выбор пользователя -->
+<div id = "idModalWindow" style="height:100px;width:100%;background-color:pink;display:none">
     <p>Введите данные:</p>
-    <button id="idModalButtonOk" class="primary-btn" type="button">OK</button>
+    <button id="idModalButtonOk" style="height:50px;width:49%"> OK </button>
 </div>
 
-<div id="idMainWindow" class="app-shell">
-    <section id="checkPage" class="section-card">
-        <div id="checkPage1" class="toolbar">
-            <label class="option-card checkbox-line" for="checkCalendarPage">
-                <span><strong>Календарь:</strong></span>
-                <input id="checkCalendarPage" type="checkbox" onclick="changePageCalendar(this.checked)">
-            </label>
-            <label class="option-card checkbox-line" for="checkTrainPage">
-                <span><strong>Тренировки:</strong></span>
-                <input id="checkTrainPage" checked="checked" type="checkbox" onclick="changePageTrain(this.checked)">
-            </label>
-        </div>
-    </section>
-
-    <section id="idImpExpAll" class="section-card">
-        <div class="file-grid">
-            <div class="file-card">
-                <button id="btnDownLoad" class="secondary-btn" type="button" onclick="downloadTrainAndCalFromFile(this)">Импорт всех данных о календарях и тренировках в файл .genall</button>
-            </div>
-            <div class="file-card">
-                <label for="inpLoad">Загрузить данные о календарях и тренировках из файла .genall:</label>
-                <input type="file" accept=".genall" id="inpLoad" onchange="loadTrainAndCalFromFile(this)">
-            </div>
-        </div>
-    </section>
-
-    <div id="delimiter1" class="delimiter"></div>
-
-    <div id="externalcall" class="warning-banner" style="display:block">
-        ПЕРЕД ПЕРЕХОДОМ ПО ССЫЛКЕ НЕ ЗАБУДЬТЕ ВКЛЮЧИТЬ STAYALIVE.
+<!--Основное окно  -->
+<div id = "idMainWindow">
+<div id = "checkPage">
+    <div id = "checkPage1" style="height:100px;width:100%;background-color:gray">
+        Календарь:<input id = "checkCalendarPage" type="checkbox" style="height:80px" onclick="changePageCalendar(this.checked)">
+        Тренировки:<input id = "checkTrainPage" checked= "checked" type="checkbox" style="height:80px" onclick="changePageTrain(this.checked)">
     </div>
 
-    <section id="calendarPage" class="section-card" style="display:none">
-        <div id="idDivCalendar" class="field">
-            <label>Календарь тренировок c</label>
-            <div class="calendar-range">
-                <input id="inputMinDay" type="number" size="5" value="0">
-                <label>по
-                    <input id="inputMaxDay" type="number" size="5" value="1">
-                </label>
-                <span>дней от сегодняшнего</span>
+</div>
+<div id="idImpExpAll">
+  <div  style="width:100%"><button  id="btnDownLoad" style="height:50px;background-color:lightgray" onclick="downloadTrainAndCalFromFile(this)">Импорт всех данных о календарях и тренировках в файл .genall</button></div>
+  <div style="width:100%"> Загрузить данные о календарях и тренировках из файла .genall:<input type="file" accept=".genall" id="inpLoad" style="background-color:lightgray" onchange="loadTrainAndCalFromFile(this)"> </div>
+</div>
+<div id = "delimiter1" style="height:5px;width:100%"></div>
+<div id="externalcall" style="height:20px;width:100%;background-color:red;display:block"> ПЕРЕД ПЕРЕХОДОМ ПО ССЫЛКЕ НЕ ЗАБУДЬТЕ ВКЛЮЧИТЬ STAYALIVE.
+</div>
+<div id="calendarPage" style="display:none">
+    <div id = idDivCalendar style="font-weight:bold;height:50px"> Календарь тренировок c <input id="inputMinDay" type="number" size="5" value ="0"> по <input id="inputMaxDay" type="number" size="5" value ="1"> дней от сегодняшнего </div>
+    <div id = idDivCalendarBtns >
+        <button id="btnRecalcCal" style="height:50px;width:49%" onclick='btnRecalcCalOnClick()'> Пересчитать календарь </button>
+        <button id="btnImportCal" style="height:50px;width:50%" onclick='btnImportCalOnClick()'> Импорт календаря в формате ICS </button>
+    </div>
+    <div id = "delimiter2" style="height:5px;width:100%"></div>
+    <div><select id="selectedCalendars" multiple="multiple" style="height:100px;width:100%" onchange="onSelectCalendar(this.selectedIndex);" ></select></div>
+    <div id="idDivActionCalendar" style="height:40px;overflow-y:scroll;border:2px solid #a1a1a1;">
+        <ul id="actionsInCalendar"></ul>
+    </div>
+</div>
+<div id = "delimiter3" style="height:5px;width:100%"></div>
+<div id = "trainPage">
+    <div id = "idDivAllTrain"  style="font-weight:bold;background:lightgreen"> Выбор тренировки:
+        <div>
+            <select id="selectAllTrain"  style="height:100px;width:100%" onchange="onSelectTrain(this.selectedIndex,this.options[this.selectedIndex].text);" ></select>
+            <div>Тренировка cодержит подстроку (фильтр перед выбором):
+                <input id = "filterStr"  style="height:50px;width:20%" onchange="readFilteredListOfTrainings(value,null)">
+            </div>
+            <div>Выбор нескольких тренировок для одновременного выполнения:
+                <input id = "simultMode" type="checkbox" style="height:50px;width:20%" onclick="changeSelectMode(this.checked)">
             </div>
         </div>
-        <div id="idDivCalendarBtns" class="button-row" style="margin-top:14px">
-            <button id="btnRecalcCal" class="primary-btn" type="button" onclick="btnRecalcCalOnClick()">Пересчитать календарь</button>
-            <button id="btnImportCal" class="secondary-btn" type="button" onclick="btnImportCalOnClick()">Импорт календаря в формате ICS</button>
-        </div>
-        <div id="delimiter2" class="delimiter"></div>
-        <div class="field">
-            <select id="selectedCalendars" class="select-large" multiple="multiple" onchange="onSelectCalendar(this.selectedIndex);"></select>
-        </div>
-        <div id="idDivActionCalendar" class="actions-panel" style="height:96px;overflow-y:auto;">
-            <ul id="actionsInCalendar"></ul>
-        </div>
-    </section>
-
-    <div id="delimiter3" class="delimiter"></div>
-
-    <section id="trainPage" class="section-card">
-        <div id="idDivAllTrain">
-            <div class="field">
-                <label for="selectAllTrain">Выбор тренировки:</label>
-                <select id="selectAllTrain" class="select-large" onchange="onSelectTrain(this.selectedIndex,this.options[this.selectedIndex].text);"></select>
-            </div>
-            <div class="option-grid">
-                <div class="field">
-                    <label for="filterStr">Тренировка cодержит подстроку (фильтр перед выбором):</label>
-                    <input id="filterStr" onchange="readFilteredListOfTrainings(value,null)">
-                </div>
-                <label class="option-card checkbox-line" for="simultMode">
-                    <span><strong>Выбор нескольких тренировок для одновременного выполнения:</strong></span>
-                    <input id="simultMode" type="checkbox" onclick="changeSelectMode(this.checked)">
-                </label>
-            </div>
+    </div>
+    <div id="idDivStatrPause" style="font-weight:bold">
+        <button id="btnSelectAllTrain" style="height:100px;width:74%" > Начать тренировку </button>
+        <button id="btnExit" style="float:right;height:100px;width:25%" onclick="window.close()"> Выход </button>
+        <div>
+            <button id="btnPrev" style="height:100px;width:50%" onclick='prev()'> << Previous </button>
+            <button id="btnNext" style="float:right;height:100px;width:49%" onclick='next()'> Next >> </button>
         </div>
 
-        <div id="idDivStatrPause" class="section-card" style="margin-top:18px;box-shadow:none;">
-            <div class="button-row">
-                <button id="btnSelectAllTrain" class="success-btn" type="button">Начать тренировку</button>
-                <button id="btnExit" class="danger-btn" type="button" onclick="window.close()">Выход</button>
-            </div>
-            <div class="button-row" style="margin-top:14px">
-                <button id="btnPrev" class="secondary-btn" type="button" onclick="prev()">&lt;&lt; Previous</button>
-                <button id="btnNext" class="secondary-btn" type="button" onclick="next()">Next &gt;&gt;</button>
-            </div>
-            <div class="option-grid">
-                <label class="option-card checkbox-line" for="idNoSound">
-                    <span><strong>Без звука:</strong></span>
-                    <input id="idNoSound" type="checkbox" onclick="if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else {document.getElementById('idTextTrain').style.display='block'; window.speechSynthesis.cancel()}">
-                </label>
-                <label class="option-card checkbox-line" for="idStopSpeakIfNext">
-                    <span><strong>Прерывать текст упражнения сразу при наступлении времени следующего:</strong></span>
-                    <input id="idStopSpeakIfNext" type="checkbox" onclick="Gl_StopSpeakIfNext=this.checked">
-                </label>
-                <div class="field">
-                    <label for="inputRate">Темп речи:</label>
-                    <input id="inputRate" value="1.5">
-                </div>
-            </div>
+        <div>Без звука:<input id = "idNoSound" type="checkbox" onclick = "if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else {document.getElementById('idTextTrain').style.display='block'; window.speechSynthesis.cancel()}"></div>
+        <div>Прерывать текст упражнения сразу при наступлении времени следующего:<input id = "idStopSpeakIfNext" type="checkbox" onclick = "Gl_StopSpeakIfNext=this.checked"></div>
+        <div>
+            Темп речи:
+        <input id = "inputRate"  style="height:50px;width:5%" value="1.5">
         </div>
 
-        <div id="delimiter4" class="delimiter"></div>
+    </div>
+    <div id = "delimiter4" style="height:5px;width:100%"></div>
+    <div id="idImpExp">
+        <button id="btnImportTrain" style="height:40px;width:50%" onclick='btnImportTrainOnClick()'> Импорт тренировки в файл .rtm </button>
+        <div id = "delimiter5" style="height:5px;width:100%"></div>
+        <div  id="idRunTrain" style="height:40px;width:49%"> Запустить тренировку из файла .rtm:<input type="file" accept=".rtm" id="inpRunFromRTM" style="background-color:lightgray" onchange="runFromRTM(this)"> </div>
+        <div id = "delimiter6" style="height:5px;width:100%"></div>
+        <button id="btnImportTrain2Gen" style="height:40px;width:50%" onclick='btnImportTrainInGenOnClick()'> Импорт тренировки в файл .gen </button>
+        <div id = "delimiter7" style="height:5px;width:100%"></div>
+        <div  id="idRunTrainFromGen" style="height:40px;width:49%"> Запустить тренировку из файла .gen:<input type="file" accept=".gen" id="inpRunFromGen" style="background-color:lightgray" onchange="loadFromGen(this)"> </div>
+        <div id = "delimiter8" style="height:5px;width:100%"></div>
+    </div>
 
-        <section id="idImpExp" class="section-card" style="box-shadow:none;">
-            <div class="file-grid">
-                <div class="file-card">
-                    <button id="btnImportTrain" class="secondary-btn" type="button" onclick="btnImportTrainOnClick()">Импорт тренировки в файл .rtm</button>
-                </div>
-                <div id="delimiter5" class="delimiter"></div>
-                <div id="idRunTrain" class="file-card">
-                    <label for="inpRunFromRTM">Запустить тренировку из файла .rtm:</label>
-                    <input type="file" accept=".rtm" id="inpRunFromRTM" onchange="runFromRTM(this)">
-                </div>
-                <div id="delimiter6" class="delimiter"></div>
-                <div class="file-card">
-                    <button id="btnImportTrain2Gen" class="secondary-btn" type="button" onclick="btnImportTrainInGenOnClick()">Импорт тренировки в файл .gen</button>
-                </div>
-                <div id="delimiter7" class="delimiter"></div>
-                <div id="idRunTrainFromGen" class="file-card">
-                    <label for="inpRunFromGen">Запустить тренировку из файла .gen:</label>
-                    <input type="file" accept=".gen" id="inpRunFromGen" onchange="loadFromGen(this)">
-                </div>
-                <div id="delimiter8" class="delimiter"></div>
-            </div>
-        </section>
+    <div>
+        <textarea id="idTextTrain" style="width:100%;height:350px;font-size: 50px;text-align: center;display:none;"> </textarea>
+    </div>
 
-        <div class="training-display">
-            <textarea id="idTextTrain" style="display:none;"> </textarea>
+    <div id="idDivTextTime" style="display:none">
+        <textarea id="idTextTime" style="width:100%;height:50px;" > </textarea>
+    </div>
+    <div id="idImgTrain" style="display:none;">
+        <img src="" alt="">
+    </div>
+    <div id = "idDivNavigation" style="display:none;font-weight:bold"> Навигация по текущей тренировке
+        <div style="height:100%;overflow-y:scroll;border:2px solid #a1a1a1;">
+            <ul id="currentT"></ul>
         </div>
+    </div>
 
-        <div id="idDivTextTime" class="training-display" style="display:none">
-            <textarea id="idTextTime"> </textarea>
-        </div>
-
-        <div id="idImgTrain" class="training-display" style="display:none;">
-            <img src="" alt="">
-        </div>
-
-        <div id="idDivNavigation" class="section-card" style="display:none;box-shadow:none;">
-            <strong>Навигация по текущей тренировке</strong>
-            <div class="navigation-panel">
-                <ul id="currentT"></ul>
-            </div>
-        </div>
-
-        <details id="idTextToSpeekDetails">
-            <summary>Текст тренировки</summary>
-            <textarea id="idTextsToSpeek" style="height:400px;"> </textarea>
+    <div>
+        <details id = "idTextToSpeekDetails">
+           <summary>Текст тренировки</summary>
+           <textarea id="idTextsToSpeek" style="width:100%;height:400px;" > </textarea>
         </details>
+    </div>
 
-        <div style="margin-top:18px">
-            <button id="btnPrint" class="primary-btn" type="button" style="width:100%" onclick="btnPrintOnClick()">Получить текст тренировки для печати</button>
-        </div>
-
-        <div class="info-note">Info: Можно в параметр startwith url-ссылки передать имя тренировки, и форма сразу после запуска покажет ее выбранной</div>
-        <div class="info-note">Например: http://localhost:63342/TotalCalendarJS/index.html?_ijt=p3hgufvl6ok7084qaistkcbqgu&_ij_reload&amp;startwith=УПРАЖНЕНИЯ НА ШЕЮ</div>
-    </section>
+    <div>
+        <button id="btnPrint" style="height:40px;width:100%" onclick='btnPrintOnClick()'> Получить текст тренировки для печати </button>
+    </div>
+    <div style="font-size:small;color:blue;">Info: Можно в параметр startwith url-ссылки передать имя тренировки, и форма сразу после запуска покажет ее выбранной</div>
+    <div style="font-size:small;color:blue;">Например:  http://localhost:63342/TotalCalendarJS/index.html?_ijt=p3hgufvl6ok7084qaistkcbqgu&_ij_reload&startwith=УПРАЖНЕНИЯ НА ШЕЮ </div>
+</div>
 </div>
 
 <!--
@@ -629,250 +178,6 @@
 
  var GlBegTime = new Date()
  var Gl_StopSpeakIfNext = false //прерывать проговаривание сразу при наступлении следующего упра
-var Gl_WakeLock = null
-var Gl_WakeLockWanted = false
-var Gl_AudioGuardContext = null
-var Gl_AudioGuardOscillator = null
-var Gl_AudioGuardGain = null
-var Gl_AudioGuardTimer = null
-var Gl_AudioGuardStopTimer = null
-var Gl_BackgroundAudio = null
-var Gl_BackgroundAudioUrl = null
-var Gl_SayInterval = null
-
-function createTrainingBackgroundAudioUrl(){
-  var sampleRate = 8000
-  var seconds = 20
-  var samples = sampleRate * seconds
-  var dataSize = samples * 2
-  var buffer = new ArrayBuffer(44 + dataSize)
-  var view = new DataView(buffer)
-
-  function writeString(offset, value){
-    for (var i = 0; i < value.length; i++)
-      view.setUint8(offset + i, value.charCodeAt(i))
-  }
-
-  writeString(0, "RIFF")
-  view.setUint32(4, 36 + dataSize, true)
-  writeString(8, "WAVE")
-  writeString(12, "fmt ")
-  view.setUint32(16, 16, true)
-  view.setUint16(20, 1, true)
-  view.setUint16(22, 1, true)
-  view.setUint32(24, sampleRate, true)
-  view.setUint32(28, sampleRate * 2, true)
-  view.setUint16(32, 2, true)
-  view.setUint16(34, 16, true)
-  writeString(36, "data")
-  view.setUint32(40, dataSize, true)
-
-  for (var i = 0; i < samples; i++){
-    var sample = Math.round(Math.sin(2 * Math.PI * 440 * i / sampleRate) * 12)
-    view.setInt16(44 + i * 2, sample, true)
-  }
-
-  return URL.createObjectURL(new Blob([buffer], { type: "audio/wav" }))
-}
-
-function ensureTrainingBackgroundAudio(){
-  if (Gl_BackgroundAudio)
-    return Gl_BackgroundAudio
-
-  Gl_BackgroundAudioUrl = createTrainingBackgroundAudioUrl()
-  Gl_BackgroundAudio = new Audio()
-  Gl_BackgroundAudio.src = Gl_BackgroundAudioUrl
-  Gl_BackgroundAudio.loop = true
-  Gl_BackgroundAudio.preload = "auto"
-  Gl_BackgroundAudio.volume = 0.03
-  Gl_BackgroundAudio.setAttribute("playsinline", "playsinline")
-  Gl_BackgroundAudio.style.display = "none"
-  document.body.appendChild(Gl_BackgroundAudio)
-
-  return Gl_BackgroundAudio
-}
-
-function startTrainingBackgroundAudio(){
-  try{
-    var audio = ensureTrainingBackgroundAudio()
-    var playResult = audio.play()
-    if (playResult && playResult.catch)
-      playResult.catch(function(e){
-        console.log("Background audio guard could not start:", e)
-      })
-  }catch(e){
-    console.log("Background audio guard is unavailable:", e)
-  }
-
-  try{
-    if ("mediaSession" in navigator){
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: "Тренировка",
-        artist: "TotalCalendarJS",
-        album: "Фоновый звук для тренировки"
-      })
-      navigator.mediaSession.playbackState = "playing"
-      navigator.mediaSession.setActionHandler("play", function(){
-        startTrainingBackgroundAudio()
-        resumeTrainingAudio()
-      })
-      navigator.mediaSession.setActionHandler("pause", function(){
-        startTrainingBackgroundAudio()
-        resumeTrainingAudio()
-      })
-    }
-  }catch(e){}
-}
-
-function resumeTrainingAudio(){
-  try{
-    if (window.speechSynthesis && window.speechSynthesis.paused)
-      window.speechSynthesis.resume()
-  }catch(e){}
-
-  try{
-    if (Gl_BackgroundAudio && Gl_BackgroundAudio.paused){
-      var playResult = Gl_BackgroundAudio.play()
-      if (playResult && playResult.catch)
-        playResult.catch(function(e){
-          console.log("Background audio guard could not resume:", e)
-        })
-    }
-  }catch(e){}
-
-  try{
-    if (Gl_AudioGuardContext && Gl_AudioGuardContext.state === "suspended")
-      Gl_AudioGuardContext.resume()
-  }catch(e){}
-}
-
-function startTrainingAudioGuard(){
-  Gl_WakeLockWanted = true
-  clearTimeout(Gl_AudioGuardStopTimer)
-  Gl_AudioGuardStopTimer = null
-  requestTrainingWakeLock()
-  startTrainingBackgroundAudio()
-
-  try{
-    var AudioContextClass = window.AudioContext || window.webkitAudioContext
-    if (AudioContextClass && !Gl_AudioGuardContext){
-      Gl_AudioGuardContext = new AudioContextClass()
-      Gl_AudioGuardGain = Gl_AudioGuardContext.createGain()
-      Gl_AudioGuardGain.gain.value = 0.0001
-      Gl_AudioGuardOscillator = Gl_AudioGuardContext.createOscillator()
-      Gl_AudioGuardOscillator.frequency.value = 1
-      Gl_AudioGuardOscillator.connect(Gl_AudioGuardGain)
-      Gl_AudioGuardGain.connect(Gl_AudioGuardContext.destination)
-      Gl_AudioGuardOscillator.start()
-    }
-  }catch(e){}
-
-  resumeTrainingAudio()
-
-  if (!Gl_AudioGuardTimer)
-    Gl_AudioGuardTimer = setInterval(resumeTrainingAudio, 15000)
-}
-
-function scheduleStopTrainingAudioGuard(){
-  if (Gl_AudioGuardStopTimer)
-    return
-
-  Gl_AudioGuardStopTimer = setTimeout(function(){
-    Gl_AudioGuardStopTimer = null
-    stopTrainingAudioGuard()
-  }, 5000)
-}
-
-function finishTrainingPlayback(){
-  Gl_IsFinished = true
-  GlIsRunning = false
-
-  try{
-    btnSelectAllTrain.innerHTML = TXT_BTN_FINISHED
-  }catch(e){}
-
-  scheduleStopTrainingAudioGuard()
-}
-
-function stopTrainingAudioGuard(){
-  Gl_WakeLockWanted = false
-
-  clearTimeout(Gl_AudioGuardStopTimer)
-  Gl_AudioGuardStopTimer = null
-
-  if (Gl_SayInterval){
-    clearInterval(Gl_SayInterval)
-    Gl_SayInterval = null
-  }
-
-  if (Gl_AudioGuardTimer){
-    clearInterval(Gl_AudioGuardTimer)
-    Gl_AudioGuardTimer = null
-  }
-
-  try{
-    if (Gl_BackgroundAudio){
-      Gl_BackgroundAudio.pause()
-      Gl_BackgroundAudio.removeAttribute("src")
-      Gl_BackgroundAudio.load()
-      Gl_BackgroundAudio.remove()
-    }
-    if (Gl_BackgroundAudioUrl) URL.revokeObjectURL(Gl_BackgroundAudioUrl)
-  }catch(e){}
-
-  Gl_BackgroundAudio = null
-  Gl_BackgroundAudioUrl = null
-
-  try{
-    if ("mediaSession" in navigator)
-      navigator.mediaSession.playbackState = "none"
-  }catch(e){}
-
-  try{
-    if (Gl_WakeLock){
-      Gl_WakeLock.release()
-      Gl_WakeLock = null
-    }
-  }catch(e){}
-
-  try{
-    if (Gl_AudioGuardOscillator){
-      Gl_AudioGuardOscillator.stop()
-      Gl_AudioGuardOscillator.disconnect()
-    }
-    if (Gl_AudioGuardGain) Gl_AudioGuardGain.disconnect()
-    if (Gl_AudioGuardContext) Gl_AudioGuardContext.close()
-  }catch(e){}
-
-  Gl_AudioGuardOscillator = null
-  Gl_AudioGuardGain = null
-  Gl_AudioGuardContext = null
-}
-
-async function requestTrainingWakeLock(){
-  if (!Gl_WakeLockWanted || !("wakeLock" in navigator) || document.visibilityState !== "visible")
-    return
-
-  try{
-    if (!Gl_WakeLock){
-      Gl_WakeLock = await navigator.wakeLock.request("screen")
-      Gl_WakeLock.addEventListener("release", function(){
-        Gl_WakeLock = null
-        if (Gl_WakeLockWanted && document.visibilityState === "visible")
-          setTimeout(requestTrainingWakeLock, 1000)
-      }, { once: true })
-    }
-  }catch(e){
-    console.log("Screen Wake Lock is unavailable:", e)
-  }
-}
-
-document.addEventListener("visibilitychange", function(){
-  if (document.visibilityState === "visible"){
-    requestTrainingWakeLock()
-    resumeTrainingAudio()
-  }
-})
 
  /*Проверки (д.б) и формат
  заглавные буквы - не листья , строчные - листья
@@ -3014,7 +2319,6 @@ END:VEVENT\n`
             var utterance0 = new SpeechSynthesisUtterance(str);
             utterance0.rate=document.getElementById("inputRate").value;// 1.5; //скорость речи
             if (Gl_StopSpeakIfNext) window.speechSynthesis.cancel()
-            resumeTrainingAudio()
             window.speechSynthesis.speak(utterance0);
             //
         } else{
@@ -3116,10 +2420,7 @@ END:VEVENT\n`
 
    function fSayInTime(){
         //alert(Gl_aRithmLisp)
-        if(Gl_IsFinished) {
-          scheduleStopTrainingAudioGuard()
-          return
-        }
+        if(Gl_IsFinished) return
 
         var dCurr = new Date();
         if(!GlflSayIntro2)
@@ -3168,8 +2469,7 @@ END:VEVENT\n`
                      //сказать текст текущего дела
                      Gl_aRithmLisp[GlnInd]= calcEval("S",Gl_aRithmLisp[GlnInd])
                      say(Gl_aRithmLisp[GlnInd]);
-                     if(Gl_aRithmLisp[GlnInd]==TXT_BTN_FINISHED)
-                       finishTrainingPlayback()
+                     if(Gl_aRithmLisp[GlnInd]==TXT_BTN_FINISHED) Gl_IsFinished=true
                      //сбросить начало отсчета отсчет времени, пересчитать текущий интервал и индекс дела
                      GldPrev = new Date();
                      Gl_aRithmLisp[GlnInd+1]= calcEval("N",String(Gl_aRithmLisp[GlnInd+1])) //!!!String
@@ -3178,7 +2478,6 @@ END:VEVENT\n`
             } else {
                 GlnInd+=2;
                 say("Тренировка завершена")
-                finishTrainingPlayback()
             }
         }
 
@@ -4070,8 +3369,6 @@ END:VEVENT\n`
     }
     if (!GlIsRunning && sMode=="Run"){
        GlIsRunning =true;
-       Gl_IsFinished=false
-       startTrainingAudioGuard()
        btnSelectAllTrain.innerHTML = 'Пауза'
 
        //скрываем/открываем контролы
@@ -4185,8 +3482,7 @@ END:VEVENT\n`
       //  (button.firstChild.data == TXT_BTN_STARTED)     ||
       //  (button.firstChild.data == TXT_BTN_PAUSED))
         {
-            if (!Gl_SayInterval)
-              Gl_SayInterval = setInterval(fSayInTime,10);  //цикл с задержками по 10 мс
+            setInterval(fSayInTime,10);  //цикл с задержками по 10 мс
         }
     //##################################################################################
 
