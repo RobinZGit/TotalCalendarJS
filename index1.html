@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Календарь тренировок</title>
+    <title>КАЛЕНДАРЬ</title>
     <style>
         :root {
             --bg: #f4f7fb;
@@ -415,40 +415,31 @@
 -->
 
 <div id="idModalWindow" class="modal-card" style="display:none">
-    <h2>Введите данные</h2>
-    <p>Подтвердите действие, чтобы продолжить.</p>
+    <p>Введите данные:</p>
     <button id="idModalButtonOk" class="primary-btn" type="button">OK</button>
 </div>
 
 <div id="idMainWindow" class="app-shell">
-    <header class="hero">
-        <h1>Календарь тренировок</h1>
-        <p>Удобная панель для выбора тренировки, запуска расписания, импорта файлов и печати плана занятий.</p>
-    </header>
-
     <section id="checkPage" class="section-card">
-        <h2 class="section-title"><span>1</span>Разделы</h2>
         <div id="checkPage1" class="toolbar">
             <label class="option-card checkbox-line" for="checkCalendarPage">
-                <span><strong>Календарь</strong><span>Показывать календарь тренировок</span></span>
+                <span><strong>Календарь:</strong></span>
                 <input id="checkCalendarPage" type="checkbox" onclick="changePageCalendar(this.checked)">
             </label>
             <label class="option-card checkbox-line" for="checkTrainPage">
-                <span><strong>Тренировки</strong><span>Показывать список тренировок</span></span>
+                <span><strong>Тренировки:</strong></span>
                 <input id="checkTrainPage" checked="checked" type="checkbox" onclick="changePageTrain(this.checked)">
             </label>
         </div>
     </section>
 
     <section id="idImpExpAll" class="section-card">
-        <h2 class="section-title"><span>2</span>Данные</h2>
         <div class="file-grid">
             <div class="file-card">
-                <label>Экспорт всех данных</label>
-                <button id="btnDownLoad" class="secondary-btn" type="button" onclick="downloadTrainAndCalFromFile(this)">Сохранить календарь и тренировки в .genall</button>
+                <button id="btnDownLoad" class="secondary-btn" type="button" onclick="downloadTrainAndCalFromFile(this)">Импорт всех данных о календарях и тренировках в файл .genall</button>
             </div>
             <div class="file-card">
-                <label for="inpLoad">Импорт всех данных из .genall</label>
+                <label for="inpLoad">Загрузить данные о календарях и тренировках из файла .genall:</label>
                 <input type="file" accept=".genall" id="inpLoad" onchange="loadTrainAndCalFromFile(this)">
             </div>
         </div>
@@ -457,29 +448,26 @@
     <div id="delimiter1" class="delimiter"></div>
 
     <div id="externalcall" class="warning-banner" style="display:block">
-        Во время тренировки страница включает фоновый аудио-режим, чтобы звук продолжал работать после выключения экрана телефона.
+        ПЕРЕД ПЕРЕХОДОМ ПО ССЫЛКЕ НЕ ЗАБУДЬТЕ ВКЛЮЧИТЬ STAYALIVE.
     </div>
 
     <section id="calendarPage" class="section-card" style="display:none">
-        <h2 class="section-title"><span>3</span>Календарь</h2>
         <div id="idDivCalendar" class="field">
-            <label>Период отображения</label>
+            <label>Календарь тренировок c</label>
             <div class="calendar-range">
-                <label>С дней от сегодняшнего
-                    <input id="inputMinDay" type="number" size="5" value="0">
-                </label>
-                <label>По дней от сегодняшнего
+                <input id="inputMinDay" type="number" size="5" value="0">
+                <label>по
                     <input id="inputMaxDay" type="number" size="5" value="1">
                 </label>
+                <span>дней от сегодняшнего</span>
             </div>
         </div>
         <div id="idDivCalendarBtns" class="button-row" style="margin-top:14px">
             <button id="btnRecalcCal" class="primary-btn" type="button" onclick="btnRecalcCalOnClick()">Пересчитать календарь</button>
-            <button id="btnImportCal" class="secondary-btn" type="button" onclick="btnImportCalOnClick()">Импорт календаря ICS</button>
+            <button id="btnImportCal" class="secondary-btn" type="button" onclick="btnImportCalOnClick()">Импорт календаря в формате ICS</button>
         </div>
         <div id="delimiter2" class="delimiter"></div>
         <div class="field">
-            <label for="selectedCalendars">Выберите календарь</label>
             <select id="selectedCalendars" class="select-large" multiple="multiple" onchange="onSelectCalendar(this.selectedIndex);"></select>
         </div>
         <div id="idDivActionCalendar" class="actions-panel" style="height:96px;overflow-y:auto;">
@@ -491,25 +479,23 @@
 
     <section id="trainPage" class="section-card">
         <div id="idDivAllTrain">
-            <h2 class="section-title"><span>4</span>Выбор тренировки</h2>
             <div class="field">
-                <label for="selectAllTrain">Тренировки</label>
+                <label for="selectAllTrain">Выбор тренировки:</label>
                 <select id="selectAllTrain" class="select-large" onchange="onSelectTrain(this.selectedIndex,this.options[this.selectedIndex].text);"></select>
             </div>
             <div class="option-grid">
                 <div class="field">
-                    <label for="filterStr">Фильтр по названию</label>
-                    <input id="filterStr" onchange="readFilteredListOfTrainings(value,null)" placeholder="Введите часть названия">
+                    <label for="filterStr">Тренировка cодержит подстроку (фильтр перед выбором):</label>
+                    <input id="filterStr" onchange="readFilteredListOfTrainings(value,null)">
                 </div>
                 <label class="option-card checkbox-line" for="simultMode">
-                    <span><strong>Несколько тренировок</strong><span>Выбирать несколько тренировок для одновременного выполнения</span></span>
+                    <span><strong>Выбор нескольких тренировок для одновременного выполнения:</strong></span>
                     <input id="simultMode" type="checkbox" onclick="changeSelectMode(this.checked)">
                 </label>
             </div>
         </div>
 
         <div id="idDivStatrPause" class="section-card" style="margin-top:18px;box-shadow:none;">
-            <h2 class="section-title"><span>5</span>Управление</h2>
             <div class="button-row">
                 <button id="btnSelectAllTrain" class="success-btn" type="button">Начать тренировку</button>
                 <button id="btnExit" class="danger-btn" type="button" onclick="window.close()">Выход</button>
@@ -520,15 +506,15 @@
             </div>
             <div class="option-grid">
                 <label class="option-card checkbox-line" for="idNoSound">
-                    <span><strong>Без звука</strong><span>Показать текст упражнения и остановить синтез речи</span></span>
+                    <span><strong>Без звука:</strong></span>
                     <input id="idNoSound" type="checkbox" onclick="if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else {document.getElementById('idTextTrain').style.display='block'; window.speechSynthesis.cancel()}">
                 </label>
                 <label class="option-card checkbox-line" for="idStopSpeakIfNext">
-                    <span><strong>Прерывать речь</strong><span>Останавливать текст при наступлении времени следующего упражнения</span></span>
+                    <span><strong>Прерывать текст упражнения сразу при наступлении времени следующего:</strong></span>
                     <input id="idStopSpeakIfNext" type="checkbox" onclick="Gl_StopSpeakIfNext=this.checked">
                 </label>
                 <div class="field">
-                    <label for="inputRate">Темп речи</label>
+                    <label for="inputRate">Темп речи:</label>
                     <input id="inputRate" value="1.5">
                 </div>
             </div>
@@ -537,25 +523,22 @@
         <div id="delimiter4" class="delimiter"></div>
 
         <section id="idImpExp" class="section-card" style="box-shadow:none;">
-            <h2 class="section-title"><span>6</span>Импорт и экспорт тренировок</h2>
             <div class="file-grid">
                 <div class="file-card">
-                    <label>Экспорт тренировки .rtm</label>
-                    <button id="btnImportTrain" class="secondary-btn" type="button" onclick="btnImportTrainOnClick()">Сохранить тренировку в .rtm</button>
+                    <button id="btnImportTrain" class="secondary-btn" type="button" onclick="btnImportTrainOnClick()">Импорт тренировки в файл .rtm</button>
                 </div>
                 <div id="delimiter5" class="delimiter"></div>
                 <div id="idRunTrain" class="file-card">
-                    <label for="inpRunFromRTM">Запустить тренировку из .rtm</label>
+                    <label for="inpRunFromRTM">Запустить тренировку из файла .rtm:</label>
                     <input type="file" accept=".rtm" id="inpRunFromRTM" onchange="runFromRTM(this)">
                 </div>
                 <div id="delimiter6" class="delimiter"></div>
                 <div class="file-card">
-                    <label>Экспорт тренировки .gen</label>
-                    <button id="btnImportTrain2Gen" class="secondary-btn" type="button" onclick="btnImportTrainInGenOnClick()">Сохранить тренировку в .gen</button>
+                    <button id="btnImportTrain2Gen" class="secondary-btn" type="button" onclick="btnImportTrainInGenOnClick()">Импорт тренировки в файл .gen</button>
                 </div>
                 <div id="delimiter7" class="delimiter"></div>
                 <div id="idRunTrainFromGen" class="file-card">
-                    <label for="inpRunFromGen">Запустить тренировку из .gen</label>
+                    <label for="inpRunFromGen">Запустить тренировку из файла .gen:</label>
                     <input type="file" accept=".gen" id="inpRunFromGen" onchange="loadFromGen(this)">
                 </div>
                 <div id="delimiter8" class="delimiter"></div>
@@ -563,11 +546,11 @@
         </section>
 
         <div class="training-display">
-            <textarea id="idTextTrain" style="display:none;" aria-label="Текст текущего упражнения"> </textarea>
+            <textarea id="idTextTrain" style="display:none;"> </textarea>
         </div>
 
         <div id="idDivTextTime" class="training-display" style="display:none">
-            <textarea id="idTextTime" aria-label="Время тренировки"> </textarea>
+            <textarea id="idTextTime"> </textarea>
         </div>
 
         <div id="idImgTrain" class="training-display" style="display:none;">
@@ -575,7 +558,7 @@
         </div>
 
         <div id="idDivNavigation" class="section-card" style="display:none;box-shadow:none;">
-            <h2 class="section-title"><span>7</span>Навигация по текущей тренировке</h2>
+            <strong>Навигация по текущей тренировке</strong>
             <div class="navigation-panel">
                 <ul id="currentT"></ul>
             </div>
@@ -590,7 +573,7 @@
             <button id="btnPrint" class="primary-btn" type="button" style="width:100%" onclick="btnPrintOnClick()">Получить текст тренировки для печати</button>
         </div>
 
-        <div class="info-note">Info: Можно в параметр startwith url-ссылки передать имя тренировки, и форма сразу после запуска покажет ее выбранной.</div>
+        <div class="info-note">Info: Можно в параметр startwith url-ссылки передать имя тренировки, и форма сразу после запуска покажет ее выбранной</div>
         <div class="info-note">Например: http://localhost:63342/TotalCalendarJS/index.html?_ijt=p3hgufvl6ok7084qaistkcbqgu&_ij_reload&amp;startwith=УПРАЖНЕНИЯ НА ШЕЮ</div>
     </section>
 </div>
