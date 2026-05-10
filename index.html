@@ -381,6 +381,23 @@
             line-height: 1.45;
         }
 
+        .field-help {
+            color: var(--muted);
+            display: block;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .openai-status {
+            min-height: 20px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .openai-status.error {
+            color: var(--warning-text);
+        }
+
         .delimiter {
             height: 10px;
         }
@@ -507,7 +524,7 @@
             <div class="option-grid">
                 <label class="option-card checkbox-line" for="idNoSound">
                     <span><strong>Без звука:</strong></span>
-                    <input id="idNoSound" type="checkbox" onclick="if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else {document.getElementById('idTextTrain').style.display='block'; window.speechSynthesis.cancel()}">
+                    <input id="idNoSound" type="checkbox" onclick="if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else {document.getElementById('idTextTrain').style.display='block'; window.speechSynthesis.cancel(); Gl_OpenAITtsRequestId++; stopOpenAITtsPlayback()}">
                 </label>
                 <label class="option-card checkbox-line" for="idStopSpeakIfNext">
                     <span><strong>Прерывать текст упражнения сразу при наступлении времени следующего:</strong></span>
@@ -516,6 +533,39 @@
                 <div class="field">
                     <label for="inputRate">Темп речи:</label>
                     <input id="inputRate" value="1.5">
+                </div>
+                <label class="option-card checkbox-line" for="idUseOpenAITts">
+                    <span><strong>Озвучка через OpenAI API:</strong><span class="field-help">Если API недоступен, будет использована обычная озвучка браузера.</span></span>
+                    <input id="idUseOpenAITts" type="checkbox">
+                </label>
+                <div class="field">
+                    <label for="openAiApiKey">OpenAI API key:</label>
+                    <input id="openAiApiKey" type="password" placeholder="sk-..." autocomplete="off">
+                    <span class="field-help">Ключ используется только в этом браузере и не сохраняется в коде.</span>
+                </div>
+                <div class="field">
+                    <label for="openAiVoice">Голос OpenAI:</label>
+                    <select id="openAiVoice">
+                        <option value="alloy">alloy</option>
+                        <option value="ash">ash</option>
+                        <option value="ballad">ballad</option>
+                        <option value="coral">coral</option>
+                        <option value="echo">echo</option>
+                        <option value="fable">fable</option>
+                        <option value="nova" selected>nova</option>
+                        <option value="onyx">onyx</option>
+                        <option value="sage">sage</option>
+                        <option value="shimmer">shimmer</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="openAiModel">Модель OpenAI:</label>
+                    <select id="openAiModel">
+                        <option value="gpt-4o-mini-tts" selected>gpt-4o-mini-tts</option>
+                        <option value="tts-1">tts-1</option>
+                        <option value="tts-1-hd">tts-1-hd</option>
+                    </select>
+                    <div id="openAiStatus" class="openai-status"></div>
                 </div>
             </div>
         </div>
@@ -639,6 +689,9 @@ var Gl_AudioGuardStopTimer = null
 var Gl_BackgroundAudio = null
 var Gl_BackgroundAudioUrl = null
 var Gl_SayInterval = null
+var Gl_OpenAITtsAudio = null
+var Gl_OpenAITtsAudioUrl = null
+var Gl_OpenAITtsRequestId = 0
 
 function createTrainingBackgroundAudioUrl(){
   var sampleRate = 8000
@@ -746,6 +799,127 @@ function resumeTrainingAudio(){
   }catch(e){}
 }
 
+function setOpenAITtsStatus(message, isError){
+  try{
+    var status = document.getElementById("openAiStatus")
+    if (!status) return
+    status.textContent = message || ""
+    status.className = "openai-status" + (isError ? " error" : "")
+  }catch(e){}
+}
+
+function stopOpenAITtsPlayback(){
+  try{
+    if (Gl_OpenAITtsAudio){
+      Gl_OpenAITtsAudio.pause()
+      Gl_OpenAITtsAudio.removeAttribute("src")
+      Gl_OpenAITtsAudio.load()
+    }
+    if (Gl_OpenAITtsAudioUrl) URL.revokeObjectURL(Gl_OpenAITtsAudioUrl)
+  }catch(e){}
+
+  Gl_OpenAITtsAudio = null
+  Gl_OpenAITtsAudioUrl = null
+}
+
+function isOpenAITtsEnabled(){
+  var useOpenAI = document.getElementById("idUseOpenAITts")
+  return !!(useOpenAI && useOpenAI.checked)
+}
+
+function normalizeOpenAITtsSpeed(value){
+  var speed = parseFloat(value)
+  if (isNaN(speed)) return 1
+  return Math.min(4, Math.max(0.25, speed))
+}
+
+function speakWithBrowser(str){
+  var utterance0 = new SpeechSynthesisUtterance(str);
+  utterance0.rate=document.getElementById("inputRate").value;// 1.5; //скорость речи
+  window.speechSynthesis.speak(utterance0);
+}
+
+async function speakWithOpenAI(str){
+  var apiKey = ""
+  var model = "gpt-4o-mini-tts"
+  var voice = "nova"
+
+  try{
+    apiKey = document.getElementById("openAiApiKey").value.trim()
+    model = document.getElementById("openAiModel").value || model
+    voice = document.getElementById("openAiVoice").value || voice
+  }catch(e){}
+
+  if (!apiKey){
+    setOpenAITtsStatus("Введите OpenAI API key для озвучки через OpenAI.", true)
+    speakWithBrowser(str)
+    return
+  }
+
+  var requestId = ++Gl_OpenAITtsRequestId
+  var didFallbackToBrowser = false
+  stopOpenAITtsPlayback()
+  setOpenAITtsStatus("OpenAI генерирует озвучку...", false)
+
+  function fallbackToBrowser(){
+    if (requestId !== Gl_OpenAITtsRequestId) return
+    if (didFallbackToBrowser) return
+    didFallbackToBrowser = true
+    speakWithBrowser(str)
+  }
+
+  try{
+    var response = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: model,
+        voice: voice,
+        input: str,
+        response_format: "mp3",
+        speed: normalizeOpenAITtsSpeed(document.getElementById("inputRate").value)
+      })
+    })
+
+    if (!response.ok){
+      var errorText = await response.text()
+      throw new Error(errorText || ("OpenAI API error " + response.status))
+    }
+
+    var audioBlob = await response.blob()
+    if (requestId !== Gl_OpenAITtsRequestId) return
+
+    Gl_OpenAITtsAudioUrl = URL.createObjectURL(audioBlob)
+    Gl_OpenAITtsAudio = new Audio(Gl_OpenAITtsAudioUrl)
+    Gl_OpenAITtsAudio.setAttribute("playsinline", "playsinline")
+    Gl_OpenAITtsAudio.onended = function(){
+      if (requestId === Gl_OpenAITtsRequestId)
+        setOpenAITtsStatus("", false)
+    }
+    Gl_OpenAITtsAudio.onerror = function(){
+      setOpenAITtsStatus("Не удалось воспроизвести OpenAI озвучку.", true)
+      fallbackToBrowser()
+    }
+
+    var playResult = Gl_OpenAITtsAudio.play()
+    setOpenAITtsStatus("OpenAI озвучивает...", false)
+    if (playResult && playResult.catch)
+      playResult.catch(function(e){
+        setOpenAITtsStatus("Браузер заблокировал воспроизведение OpenAI озвучки.", true)
+        console.log("OpenAI TTS playback failed:", e)
+        fallbackToBrowser()
+      })
+  }catch(e){
+    if (requestId !== Gl_OpenAITtsRequestId) return
+    setOpenAITtsStatus("OpenAI API недоступен, использую озвучку браузера.", true)
+    console.log("OpenAI TTS failed:", e)
+    fallbackToBrowser()
+  }
+}
+
 function startTrainingAudioGuard(){
   Gl_WakeLockWanted = true
   clearTimeout(Gl_AudioGuardStopTimer)
@@ -804,6 +978,9 @@ function stopTrainingAudioGuard(){
     clearInterval(Gl_SayInterval)
     Gl_SayInterval = null
   }
+
+  Gl_OpenAITtsRequestId++
+  stopOpenAITtsPlayback()
 
   if (Gl_AudioGuardTimer){
     clearInterval(Gl_AudioGuardTimer)
@@ -3011,11 +3188,16 @@ END:VEVENT\n`
         }catch(e){}
 
         if (!docNoSound.checked){
-            var utterance0 = new SpeechSynthesisUtterance(str);
-            utterance0.rate=document.getElementById("inputRate").value;// 1.5; //скорость речи
-            if (Gl_StopSpeakIfNext) window.speechSynthesis.cancel()
+            if (Gl_StopSpeakIfNext){
+              window.speechSynthesis.cancel()
+              Gl_OpenAITtsRequestId++
+              stopOpenAITtsPlayback()
+            }
             resumeTrainingAudio()
-            window.speechSynthesis.speak(utterance0);
+            if (isOpenAITtsEnabled())
+              speakWithOpenAI(str)
+            else
+              speakWithBrowser(str)
             //
         } else{
             docTextTrain.value = str
@@ -3970,6 +4152,8 @@ END:VEVENT\n`
      if (Gl_decodeExternalCallValue.length=0)
          alert ("Будет произведен переход на дело '"+Gl_aRithmLisp[i]+"'")
      window.speechSynthesis.cancel()
+     Gl_OpenAITtsRequestId++
+     stopOpenAITtsPlayback()
 
      for(var j=0; j<i;j++){
         try{
