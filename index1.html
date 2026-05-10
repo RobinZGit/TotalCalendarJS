@@ -457,7 +457,7 @@
     <div id="delimiter1" class="delimiter"></div>
 
     <div id="externalcall" class="warning-banner" style="display:block">
-        ПЕРЕД ПЕРЕХОДОМ ПО ССЫЛКЕ НЕ ЗАБУДЬТЕ ВКЛЮЧИТЬ STAYALIVE.
+        Во время тренировки страница удерживает экран активным, чтобы звук не прерывался на телефоне.
     </div>
 
     <section id="calendarPage" class="section-card" style="display:none">
@@ -646,6 +646,135 @@
 
  var GlBegTime = new Date()
  var Gl_StopSpeakIfNext = false //прерывать проговаривание сразу при наступлении следующего упра
+var Gl_WakeLock = null
+var Gl_WakeLockWanted = false
+var Gl_AudioGuardContext = null
+var Gl_AudioGuardOscillator = null
+var Gl_AudioGuardGain = null
+var Gl_AudioGuardTimer = null
+var Gl_AudioGuardStopTimer = null
+var Gl_SayInterval = null
+
+function resumeTrainingAudio(){
+  try{
+    if (window.speechSynthesis && window.speechSynthesis.paused)
+      window.speechSynthesis.resume()
+  }catch(e){}
+
+  try{
+    if (Gl_AudioGuardContext && Gl_AudioGuardContext.state === "suspended")
+      Gl_AudioGuardContext.resume()
+  }catch(e){}
+}
+
+function startTrainingAudioGuard(){
+  Gl_WakeLockWanted = true
+  clearTimeout(Gl_AudioGuardStopTimer)
+  Gl_AudioGuardStopTimer = null
+  requestTrainingWakeLock()
+
+  try{
+    var AudioContextClass = window.AudioContext || window.webkitAudioContext
+    if (AudioContextClass && !Gl_AudioGuardContext){
+      Gl_AudioGuardContext = new AudioContextClass()
+      Gl_AudioGuardGain = Gl_AudioGuardContext.createGain()
+      Gl_AudioGuardGain.gain.value = 0.0001
+      Gl_AudioGuardOscillator = Gl_AudioGuardContext.createOscillator()
+      Gl_AudioGuardOscillator.frequency.value = 1
+      Gl_AudioGuardOscillator.connect(Gl_AudioGuardGain)
+      Gl_AudioGuardGain.connect(Gl_AudioGuardContext.destination)
+      Gl_AudioGuardOscillator.start()
+    }
+  }catch(e){}
+
+  resumeTrainingAudio()
+
+  if (!Gl_AudioGuardTimer)
+    Gl_AudioGuardTimer = setInterval(resumeTrainingAudio, 15000)
+}
+
+function scheduleStopTrainingAudioGuard(){
+  if (Gl_AudioGuardStopTimer)
+    return
+
+  Gl_AudioGuardStopTimer = setTimeout(function(){
+    Gl_AudioGuardStopTimer = null
+    stopTrainingAudioGuard()
+  }, 5000)
+}
+
+function finishTrainingPlayback(){
+  Gl_IsFinished = true
+  GlIsRunning = false
+
+  try{
+    btnSelectAllTrain.innerHTML = TXT_BTN_FINISHED
+  }catch(e){}
+
+  scheduleStopTrainingAudioGuard()
+}
+
+function stopTrainingAudioGuard(){
+  Gl_WakeLockWanted = false
+
+  clearTimeout(Gl_AudioGuardStopTimer)
+  Gl_AudioGuardStopTimer = null
+
+  if (Gl_SayInterval){
+    clearInterval(Gl_SayInterval)
+    Gl_SayInterval = null
+  }
+
+  if (Gl_AudioGuardTimer){
+    clearInterval(Gl_AudioGuardTimer)
+    Gl_AudioGuardTimer = null
+  }
+
+  try{
+    if (Gl_WakeLock){
+      Gl_WakeLock.release()
+      Gl_WakeLock = null
+    }
+  }catch(e){}
+
+  try{
+    if (Gl_AudioGuardOscillator){
+      Gl_AudioGuardOscillator.stop()
+      Gl_AudioGuardOscillator.disconnect()
+    }
+    if (Gl_AudioGuardGain) Gl_AudioGuardGain.disconnect()
+    if (Gl_AudioGuardContext) Gl_AudioGuardContext.close()
+  }catch(e){}
+
+  Gl_AudioGuardOscillator = null
+  Gl_AudioGuardGain = null
+  Gl_AudioGuardContext = null
+}
+
+async function requestTrainingWakeLock(){
+  if (!Gl_WakeLockWanted || !("wakeLock" in navigator) || document.visibilityState !== "visible")
+    return
+
+  try{
+    if (!Gl_WakeLock){
+      Gl_WakeLock = await navigator.wakeLock.request("screen")
+      Gl_WakeLock.addEventListener("release", function(){
+        Gl_WakeLock = null
+        if (Gl_WakeLockWanted && document.visibilityState === "visible")
+          setTimeout(requestTrainingWakeLock, 1000)
+      }, { once: true })
+    }
+  }catch(e){
+    console.log("Screen Wake Lock is unavailable:", e)
+  }
+}
+
+document.addEventListener("visibilitychange", function(){
+  if (document.visibilityState === "visible"){
+    requestTrainingWakeLock()
+    resumeTrainingAudio()
+  }
+})
 
  /*Проверки (д.б) и формат
  заглавные буквы - не листья , строчные - листья
@@ -2787,6 +2916,7 @@ END:VEVENT\n`
             var utterance0 = new SpeechSynthesisUtterance(str);
             utterance0.rate=document.getElementById("inputRate").value;// 1.5; //скорость речи
             if (Gl_StopSpeakIfNext) window.speechSynthesis.cancel()
+            resumeTrainingAudio()
             window.speechSynthesis.speak(utterance0);
             //
         } else{
@@ -2888,7 +3018,10 @@ END:VEVENT\n`
 
    function fSayInTime(){
         //alert(Gl_aRithmLisp)
-        if(Gl_IsFinished) return
+        if(Gl_IsFinished) {
+          scheduleStopTrainingAudioGuard()
+          return
+        }
 
         var dCurr = new Date();
         if(!GlflSayIntro2)
@@ -2937,7 +3070,8 @@ END:VEVENT\n`
                      //сказать текст текущего дела
                      Gl_aRithmLisp[GlnInd]= calcEval("S",Gl_aRithmLisp[GlnInd])
                      say(Gl_aRithmLisp[GlnInd]);
-                     if(Gl_aRithmLisp[GlnInd]==TXT_BTN_FINISHED) Gl_IsFinished=true
+                     if(Gl_aRithmLisp[GlnInd]==TXT_BTN_FINISHED)
+                       finishTrainingPlayback()
                      //сбросить начало отсчета отсчет времени, пересчитать текущий интервал и индекс дела
                      GldPrev = new Date();
                      Gl_aRithmLisp[GlnInd+1]= calcEval("N",String(Gl_aRithmLisp[GlnInd+1])) //!!!String
@@ -2946,6 +3080,7 @@ END:VEVENT\n`
             } else {
                 GlnInd+=2;
                 say("Тренировка завершена")
+                finishTrainingPlayback()
             }
         }
 
@@ -3837,6 +3972,8 @@ END:VEVENT\n`
     }
     if (!GlIsRunning && sMode=="Run"){
        GlIsRunning =true;
+       Gl_IsFinished=false
+       startTrainingAudioGuard()
        btnSelectAllTrain.innerHTML = 'Пауза'
 
        //скрываем/открываем контролы
@@ -3950,7 +4087,8 @@ END:VEVENT\n`
       //  (button.firstChild.data == TXT_BTN_STARTED)     ||
       //  (button.firstChild.data == TXT_BTN_PAUSED))
         {
-            setInterval(fSayInTime,10);  //цикл с задержками по 10 мс
+            if (!Gl_SayInterval)
+              Gl_SayInterval = setInterval(fSayInTime,10);  //цикл с задержками по 10 мс
         }
     //##################################################################################
 
