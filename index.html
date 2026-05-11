@@ -3094,7 +3094,7 @@ END:VEVENT\n`
     }
     sICS += 'END:VCALENDAR'
     var icsFilename = 'FromTotalCalendarJS.ics'
-    if (callAndroidTraining("saveAndOpenCalendarIcs", sICS, icsFilename))
+    if (callAndroidTraining("openCalendarIcs", sICS, icsFilename))
       return
 
     download(sICS, icsFilename, 'text/calendar')

@@ -49,8 +49,6 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private WebView printWebView;
     private ValueCallback<Uri[]> filePathCallback;
     private String pendingSaveFileText;
-    private String pendingCalendarImportText;
-    private String pendingCalendarImportFilename;
     private TextToSpeech textToSpeech;
     private PowerManager.WakeLock trainingWakeLock;
     private PowerManager.WakeLock trainingScreenWakeLock;
@@ -171,20 +169,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
                     .setMessage("Не удалось открыть диалог сохранения файла.")
                     .setPositiveButton(android.R.string.ok, null)
                     .show();
-            if (pendingCalendarImportText != null) {
-                String calendarText = pendingCalendarImportText;
-                String calendarFilename = pendingCalendarImportFilename;
-                pendingCalendarImportText = null;
-                pendingCalendarImportFilename = null;
-                openCalendarIcsOnUiThread(calendarText, calendarFilename);
-            }
         }
-    }
-
-    private void saveAndOpenCalendarIcsOnUiThread(String text, String filename) {
-        pendingCalendarImportText = text == null ? "" : text;
-        pendingCalendarImportFilename = sanitizeFilename(filename);
-        saveTextFileOnUiThread(text, pendingCalendarImportFilename, "text/calendar");
     }
 
     private String normalizeMimeType(String mimeType) {
@@ -557,13 +542,6 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
             } else {
                 pendingSaveFileText = null;
             }
-            if (pendingCalendarImportText != null) {
-                String calendarText = pendingCalendarImportText;
-                String calendarFilename = pendingCalendarImportFilename;
-                pendingCalendarImportText = null;
-                pendingCalendarImportFilename = null;
-                openCalendarIcsOnUiThread(calendarText, calendarFilename);
-            }
             return;
         }
 
@@ -616,8 +594,6 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
             filePathCallback = null;
         }
         pendingSaveFileText = null;
-        pendingCalendarImportText = null;
-        pendingCalendarImportFilename = null;
 
         if (webView != null) {
             webView.removeJavascriptInterface("AndroidTraining");
@@ -666,8 +642,8 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         }
 
         @JavascriptInterface
-        public void saveAndOpenCalendarIcs(String text, String filename) {
-            runOnUiThread(() -> saveAndOpenCalendarIcsOnUiThread(text, filename));
+        public void openCalendarIcs(String text, String filename) {
+            runOnUiThread(() -> openCalendarIcsOnUiThread(text, filename));
         }
 
         @JavascriptInterface
