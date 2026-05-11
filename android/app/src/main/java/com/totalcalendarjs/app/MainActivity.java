@@ -3,8 +3,13 @@ package com.totalcalendarjs.app;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.media.AudioAttributes;
 import android.os.Build;
@@ -30,6 +35,9 @@ import java.util.Locale;
 public final class MainActivity extends Activity implements TextToSpeech.OnInitListener {
     private static final int FILE_CHOOSER_REQUEST_CODE = 42;
     private static final int SAVE_FILE_REQUEST_CODE = 43;
+    private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 44;
+    private static final int TRAINING_NOTIFICATION_ID = 1001;
+    private static final String TRAINING_NOTIFICATION_CHANNEL_ID = "training_status";
     private static final int MAX_PENDING_SPEECH_ITEMS = 20;
 
     private WebView webView;
@@ -46,6 +54,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         super.onCreate(savedInstanceState);
 
         textToSpeech = new TextToSpeech(this, this);
+        createTrainingNotificationChannel();
         webView = new WebView(this);
         setContentView(webView);
 
@@ -243,17 +252,20 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private void startTrainingGuardOnUiThread() {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         acquireTrainingWakeLock();
+        showTrainingNotification();
     }
 
     private void stopTrainingGuardOnUiThread() {
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         releaseTrainingWakeLock();
+        hideTrainingNotification();
         stopSpeechOnUiThread();
     }
 
     private void stopSpeechAndFinishOnUiThread() {
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         releaseTrainingWakeLock();
+        hideTrainingNotification();
         stopSpeechOnUiThread();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -294,6 +306,83 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         }
     }
 
+    private void createTrainingNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return;
+        }
+
+        NotificationChannel channel = new NotificationChannel(
+                TRAINING_NOTIFICATION_CHANNEL_ID,
+                "Тренировка",
+                NotificationManager.IMPORTANCE_LOW
+        );
+        channel.setDescription("Показывает активную тренировку в шторке уведомлений.");
+
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        if (notificationManager != null) {
+            notificationManager.createNotificationChannel(channel);
+        }
+    }
+
+    private boolean canPostTrainingNotification() {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+                || checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestTrainingNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !canPostTrainingNotification()) {
+            requestPermissions(
+                    new String[]{android.Manifest.permission.POST_NOTIFICATIONS},
+                    NOTIFICATION_PERMISSION_REQUEST_CODE
+            );
+        }
+    }
+
+    private void showTrainingNotification() {
+        if (!canPostTrainingNotification()) {
+            requestTrainingNotificationPermissionIfNeeded();
+            return;
+        }
+
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                ? new Notification.Builder(this, TRAINING_NOTIFICATION_CHANNEL_ID)
+                : new Notification.Builder(this);
+
+        Notification notification = builder
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("Календарь тренировок")
+                .setContentText("Тренировка идет. Звук активен.")
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setShowWhen(false)
+                .setCategory(Notification.CATEGORY_STATUS)
+                .setPriority(Notification.PRIORITY_LOW)
+                .build();
+
+        NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (notificationManager != null) {
+            notificationManager.notify(TRAINING_NOTIFICATION_ID, notification);
+        }
+    }
+
+    private void hideTrainingNotification() {
+        NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (notificationManager != null) {
+            notificationManager.cancel(TRAINING_NOTIFICATION_ID);
+        }
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -316,6 +405,18 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     }
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == NOTIFICATION_PERMISSION_REQUEST_CODE
+                && grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                && trainingWakeLock != null
+                && trainingWakeLock.isHeld()) {
+            showTrainingNotification();
+        }
+    }
+
+    @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         webView.saveState(outState);
@@ -334,6 +435,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     protected void onDestroy() {
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         releaseTrainingWakeLock();
+        hideTrainingNotification();
 
         if (filePathCallback != null) {
             filePathCallback.onReceiveValue(null);
