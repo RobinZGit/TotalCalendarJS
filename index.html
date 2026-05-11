@@ -3199,8 +3199,47 @@ END:VEVENT\n`
       return sTrainName.replaceAll(sSpace,' ')
   }
 
+  function tryOpenAndroidAppFromStartLink(onFallback){
+    if (window.AndroidTraining)
+      return false
+
+    try{
+      if (!location.search || location.search.indexOf('startwith=') < 0)
+        return false
+
+      if (tryOpenAndroidAppFromStartLink.tried)
+        return false
+      tryOpenAndroidAppFromStartLink.tried = true
+
+      var didFallback = false
+      var fallbackTimer = setTimeout(function(){
+        if (document.visibilityState !== "hidden" && !didFallback){
+          didFallback = true
+          onFallback()
+        }
+      }, 1500)
+
+      document.addEventListener("visibilitychange", function(){
+        if (document.visibilityState === "hidden")
+          clearTimeout(fallbackTimer)
+      }, { once: true })
+
+      window.location.href = "totalcalendarjs://open" + location.search
+      return true
+    }catch(e){
+      return false
+    }
+  }
+
   //Выводим данные на форму при загрузке страницы
   function loadTrainData() {
+    if (tryOpenAndroidAppFromStartLink(loadTrainDataWeb))
+      return
+
+    loadTrainDataWeb()
+  }
+
+  function loadTrainDataWeb() {
     alert('все проходит');
     alert('и это пройдет');
     //
