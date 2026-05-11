@@ -100,6 +100,34 @@
             padding: 28px 0 48px;
         }
 
+        .app-bar {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 18px;
+            padding: 18px 22px;
+            border: 1px solid rgba(37, 99, 235, 0.16);
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.86);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+        }
+
+        .app-bar img {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.22);
+        }
+
+        .app-bar-title {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: clamp(26px, 4vw, 42px);
+            line-height: 1.05;
+            letter-spacing: -0.03em;
+        }
+
         .hero {
             display: grid;
             gap: 18px;
@@ -421,6 +449,11 @@
 </div>
 
 <div id="idMainWindow" class="app-shell">
+    <header class="app-bar">
+        <img src="favicon.svg" alt="" aria-hidden="true">
+        <h1 class="app-bar-title">Календарь тренировок</h1>
+    </header>
+
     <section id="trainingControlsTop" class="section-card">
         <div id="idDivAllTrain">
             <div class="field">
