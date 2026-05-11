@@ -71,10 +71,24 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         webView.addJavascriptInterface(new TrainingBridge(), "AndroidTraining");
 
         if (savedInstanceState == null) {
-            webView.loadUrl("file:///android_asset/index.html");
+            webView.loadUrl(getLaunchUrl(getIntent()));
         } else {
             webView.restoreState(savedInstanceState);
         }
+    }
+
+    private String getLaunchUrl(Intent intent) {
+        Uri data = intent == null ? null : intent.getData();
+        if (data == null || !"totalcalendarjs".equals(data.getScheme())) {
+            return "file:///android_asset/index.html";
+        }
+
+        String query = data.getEncodedQuery();
+        if (query == null || query.isEmpty()) {
+            return "file:///android_asset/index.html";
+        }
+
+        return "file:///android_asset/index.html?" + query;
     }
 
     private void configureWebView() {
@@ -570,6 +584,16 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         webView.saveState(outState);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        stopTrainingGuardOnUiThread();
+        if (webView != null) {
+            webView.loadUrl(getLaunchUrl(intent));
+        }
     }
 
     @Override

@@ -313,6 +313,19 @@
             fill: currentColor;
         }
 
+        .open-android-app-link {
+            display: none;
+            margin-bottom: 14px;
+            color: var(--primary-dark);
+            font-weight: 700;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .open-android-app-link:hover {
+            text-decoration: underline;
+        }
+
         .warning-banner {
             display: flex;
             align-items: center;
@@ -505,6 +518,7 @@
         </div>
 
         <div id="idDivStatrPause" class="section-card" style="margin-top:18px;box-shadow:none;">
+            <a id="openAndroidAppLink" class="open-android-app-link" href="totalcalendarjs://open">Открыть в приложении</a>
             <div class="button-row">
                 <button id="btnSelectAllTrain" class="success-btn" type="button">Начать тренировку</button>
                 <button id="btnExit" class="danger-btn" type="button" onclick="exitTrainingApp()">Выход</button>
@@ -853,6 +867,39 @@ function speakWithAndroidTraining(str){
   }catch(e){}
 
   return callAndroidTraining("speak", String(str), rate)
+}
+
+function getSelectedTrainingNameForLink(){
+  try{
+    if (selectAllTrain && selectAllTrain.selectedIndex >= 0){
+      var selectedTrainingName = selectAllTrain.options[selectAllTrain.selectedIndex].text.trim()
+      if (selectedTrainingName.charAt(0) === "<" && selectedTrainingName.charAt(selectedTrainingName.length - 1) === ">")
+        selectedTrainingName = selectedTrainingName.substring(1, selectedTrainingName.length - 1)
+      return selectedTrainingName
+    }
+  }catch(e){}
+
+  return ""
+}
+
+function updateOpenAndroidAppLink(){
+  var link = document.getElementById("openAndroidAppLink")
+  if (!link)
+    return
+
+  if (window.AndroidTraining){
+    link.style.display = "none"
+    return
+  }
+
+  var selectedTrainingName = getSelectedTrainingNameForLink()
+  if (!selectedTrainingName){
+    link.style.display = "none"
+    return
+  }
+
+  link.href = "totalcalendarjs://open?startwith=" + encodeURIComponent(forURL(selectedTrainingName, "String->URL"))
+  link.style.display = "block"
 }
 
 function syncAndroidNoSoundMode(){
@@ -3423,6 +3470,7 @@ END:VEVENT\n`
      if (sName!=undefined)
        nGlInd = getTrainIndexByName(sName)
      execTrain1(nGlInd,"Act")
+     updateOpenAndroidAppLink()
   }
 
   function onSelectCalendar(nInd){
@@ -3520,6 +3568,7 @@ END:VEVENT\n`
         if (selectAllTrain.options[i].text.trim()=="<"+loadTrain.trim()+">")
           selectAllTrain.selectedIndex = i
       //selectAllTrain.selectedIndex = getTrainIndexByName("<"+loadTrain+">")
+    updateOpenAndroidAppLink()
   }
 
   //"стусовка" тренировок из массива (может не работать, если промежутки времени зависят от онлайн-вычисляемых параметров)
