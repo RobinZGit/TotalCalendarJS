@@ -111,6 +111,11 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
                         .show();
                 return true;
             }
+
+            @Override
+            public void onCloseWindow(WebView window) {
+                stopSpeechAndFinishOnUiThread();
+            }
         });
     }
 
@@ -162,6 +167,17 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         pendingSpeech.clear();
         if (textToSpeech != null) {
             textToSpeech.stop();
+        }
+    }
+
+    private void stopSpeechAndFinishOnUiThread() {
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        stopSpeechOnUiThread();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            finishAndRemoveTask();
+        } else {
+            finish();
         }
     }
 
@@ -240,6 +256,11 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         @JavascriptInterface
         public void stopSpeech() {
             runOnUiThread(() -> stopSpeechOnUiThread());
+        }
+
+        @JavascriptInterface
+        public void exitApp() {
+            runOnUiThread(() -> stopSpeechAndFinishOnUiThread());
         }
 
         @JavascriptInterface
