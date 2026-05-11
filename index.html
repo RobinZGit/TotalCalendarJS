@@ -612,8 +612,13 @@
         </div>
 
         <details id="idTextToSpeekDetails">
-            <summary>Текст тренировки</summary>
+            <summary>Древовидная схема тренировки</summary>
             <textarea id="idTextsToSpeek" style="height:400px;"> </textarea>
+        </details>
+
+        <details id="idTextPrintDetails">
+            <summary>Текст тренировки для печати</summary>
+            <textarea id="idTextPrint" style="height:400px;"> </textarea>
         </details>
 
         <div style="margin-top:18px">
@@ -2794,7 +2799,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   var Gl_sSimultTrain='[ОДНОВРЕМЕННО С]'
   var Gl_sNextTrain='[ДАЛЕЕ ДЕЛАТЬ]'
 
-  var Gl_txtPrint = document.createElement('textarea');
+  var Gl_txtPrint = document.getElementById("idTextPrint");
   var Gl_calendarVisible = true;//false;
   //длЯ задержки начала тренировки (чтобы закрепить смартфон после нажатия стартовой кнопки)
   var GlnDelay = 0;
@@ -4385,25 +4390,13 @@ END:VEVENT\n`
 
     //Печать тренировки
     function CallPrint() {
-      GltxtSpeek.value=Gl_txtPrint.value
-      document.getElementById("idDivCalendar").style.display ='none'
-      document.getElementById("btnRecalcCal").style.display ='none'
-      document.getElementById("btnImportCal").style.display ='none'
-      document.getElementById("idDivActionCalendar").style.display ='none'
-      document.getElementById("btnPrint").style.display ='none'
-      document.getElementById("idDivAllTrain").style.display ='none'
-      document.getElementById("idDivNavigation").style.display ='none'
-      document.getElementById("idDivTextTime").style.display ='none'
-      document.getElementById("idNoSound").style.display ='none'
-      document.getElementById("idDivStatrPause").style.display ='none'
-      document.getElementById("selectedCalendars").style.display ='none'
-      document.getElementById("checkPage").style.display ='none'
-      //
-      document.getElementById("idTextsToSpeek").style.height =(200+document.getElementById("idTextsToSpeek").scrollHeight)+"px"
+      document.getElementById("idTextPrint").value=Gl_txtPrint.value
+      document.getElementById("idTextPrint").style.height =(200+document.getElementById("idTextPrint").scrollHeight)+"px"
    }
 
    function btnPrintOnClick(){
-     document.getElementById("idTextToSpeekDetails").open='open';
+     getText2Print(Gl_currentTrainName)
+     document.getElementById("idTextPrintDetails").open='open';
      CallPrint()
    }
 
