@@ -29,11 +29,27 @@ android {
 }
 
 tasks.register('syncWebAssets', Copy) {
+    outputs.upToDateWhen { false }
+
     from(rootProject.projectDir.parentFile) {
         include '*.html'
         include 'favicon.svg'
     }
     into(generatedWebAssetsDir)
+
+    doLast {
+        def indexFile = generatedWebAssetsDir.get().asFile.toPath().resolve('index.html').toFile()
+        if (indexFile.exists()) {
+            def stayAliveBannerPattern = /(?s)<div id="externalcall" class="warning-banner" style="display:block">\s*.*?STAYALIVE\.\s*<\/div>/
+            indexFile.setText(
+                indexFile.getText('UTF-8').replaceFirst(
+                    stayAliveBannerPattern,
+                    '<div id="externalcall" class="warning-banner" style="display:none"></div>'
+                ),
+                'UTF-8'
+            )
+        }
+    }
 }
 
 tasks.named('preBuild').configure {
