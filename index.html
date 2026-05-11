@@ -466,7 +466,7 @@
         <textarea id="idTextTrain" style="display:none;"> </textarea>
     </div>
 
-    <header class="app-bar">
+    <header class="app-bar" ondblclick="restartTrainingApp()" title="Двойной клик: перезапуск приложения">
         <img src="favicon.svg" alt="" aria-hidden="true">
         <h1 class="app-bar-title">Календарь тренировок</h1>
     </header>
@@ -1002,6 +1002,19 @@ function exitTrainingApp(){
 
   if (!callAndroidTraining("exitApp"))
     window.close()
+}
+
+function restartTrainingApp(){
+  GlIsRunning = false
+  Gl_IsFinished = true
+  Gl_State = TXT_BTN_FINISHED
+  Gl_PauseStartedAt = null
+
+  stopTrainingAudioGuard()
+  stopCurrentSpeech()
+
+  if (!callAndroidTraining("restartApp"))
+    window.location.reload()
 }
 
 async function requestTrainingWakeLock(){

@@ -289,6 +289,22 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         }
     }
 
+    private void restartAppOnUiThread() {
+        trainingGuardActive = false;
+        noSoundMode = false;
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        releaseTrainingScreenWakeLock();
+        releaseTrainingWakeLock();
+        hideTrainingNotification();
+        stopSpeechOnUiThread();
+
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish();
+        overridePendingTransition(0, 0);
+    }
+
     private float normalizeSpeechRate(double rate) {
         if (Double.isNaN(rate) || Double.isInfinite(rate) || rate <= 0) {
             return 1.0f;
@@ -535,6 +551,11 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         @JavascriptInterface
         public void exitApp() {
             runOnUiThread(() -> stopSpeechAndFinishOnUiThread());
+        }
+
+        @JavascriptInterface
+        public void restartApp() {
+            runOnUiThread(() -> restartAppOnUiThread());
         }
 
         @JavascriptInterface
