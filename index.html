@@ -507,7 +507,7 @@
             <div class="option-grid">
                 <label class="option-card checkbox-line" for="idNoSound">
                     <span><strong>Без звука:</strong></span>
-                    <input id="idNoSound" type="checkbox" onclick="if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else {document.getElementById('idTextTrain').style.display='block'; window.speechSynthesis.cancel()}">
+                    <input id="idNoSound" type="checkbox" onclick="if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else {document.getElementById('idTextTrain').style.display='block'; stopCurrentSpeech()}">
                 </label>
                 <label class="option-card checkbox-line" for="idStopSpeakIfNext">
                     <span><strong>Прерывать текст упражнения сразу при наступлении времени следующего:</strong></span>
@@ -746,10 +746,48 @@ function resumeTrainingAudio(){
   }catch(e){}
 }
 
+function callAndroidTraining(methodName){
+  try{
+    if (window.AndroidTraining && typeof window.AndroidTraining[methodName] === "function"){
+      var args = Array.prototype.slice.call(arguments, 1)
+      window.AndroidTraining[methodName].apply(window.AndroidTraining, args)
+      return true
+    }
+  }catch(e){
+    console.log("Android training bridge error:", e)
+  }
+
+  return false
+}
+
+function stopCurrentSpeech(){
+  callAndroidTraining("stopSpeech")
+
+  try{
+    if (window.speechSynthesis)
+      window.speechSynthesis.cancel()
+  }catch(e){}
+}
+
+function speakWithAndroidTraining(str){
+  var rate = 1
+
+  try{
+    rate = Number(document.getElementById("inputRate").value) || 1
+  }catch(e){}
+
+  return callAndroidTraining("speak", String(str), rate)
+}
+
 function startTrainingAudioGuard(){
   Gl_WakeLockWanted = true
+  var androidGuardStarted = callAndroidTraining("startTrainingGuard")
   clearTimeout(Gl_AudioGuardStopTimer)
   Gl_AudioGuardStopTimer = null
+
+  if (androidGuardStarted)
+    return
+
   requestTrainingWakeLock()
   startTrainingBackgroundAudio()
 
@@ -796,6 +834,7 @@ function finishTrainingPlayback(){
 
 function stopTrainingAudioGuard(){
   Gl_WakeLockWanted = false
+  callAndroidTraining("stopTrainingGuard")
 
   clearTimeout(Gl_AudioGuardStopTimer)
   Gl_AudioGuardStopTimer = null
@@ -869,6 +908,8 @@ async function requestTrainingWakeLock(){
 
 document.addEventListener("visibilitychange", function(){
   if (document.visibilityState === "visible"){
+    if (Gl_WakeLockWanted)
+      callAndroidTraining("startTrainingGuard")
     requestTrainingWakeLock()
     resumeTrainingAudio()
   }
@@ -2598,7 +2639,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
     ];
   var GlTest = 1;
   var GltxtSpeek  = document.getElementById("idTextsToSpeek");
-  var GlUtterance = new SpeechSynthesisUtterance("");
+  var GlUtterance = (typeof SpeechSynthesisUtterance !== "undefined") ? new SpeechSynthesisUtterance("") : null;
   var calendar = document.getElementById("actionsInCalendar");
   var currentT = document.getElementById("currentT");
   var inputMinDay = document.getElementById("inputMinDay");
@@ -3011,11 +3052,13 @@ END:VEVENT\n`
         }catch(e){}
 
         if (!docNoSound.checked){
-            var utterance0 = new SpeechSynthesisUtterance(str);
-            utterance0.rate=document.getElementById("inputRate").value;// 1.5; //скорость речи
-            if (Gl_StopSpeakIfNext) window.speechSynthesis.cancel()
+            if (Gl_StopSpeakIfNext) stopCurrentSpeech()
             resumeTrainingAudio()
-            window.speechSynthesis.speak(utterance0);
+            if (!speakWithAndroidTraining(str) && typeof SpeechSynthesisUtterance !== "undefined" && window.speechSynthesis){
+                var utterance0 = new SpeechSynthesisUtterance(str);
+                utterance0.rate=document.getElementById("inputRate").value;// 1.5; //скорость речи
+                window.speechSynthesis.speak(utterance0);
+            }
             //
         } else{
             docTextTrain.value = str
@@ -3969,7 +4012,7 @@ END:VEVENT\n`
   function navigate(i){ // для навигации по делам текущей трени
      if (Gl_decodeExternalCallValue.length=0)
          alert ("Будет произведен переход на дело '"+Gl_aRithmLisp[i]+"'")
-     window.speechSynthesis.cancel()
+     stopCurrentSpeech()
 
      for(var j=0; j<i;j++){
         try{

@@ -1,0 +1,260 @@
+package com.totalcalendarjs.app;
+
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.speech.tts.TextToSpeech;
+import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
+import android.webkit.JsResult;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+
+import java.util.ArrayDeque;
+import java.util.Locale;
+
+public final class MainActivity extends Activity implements TextToSpeech.OnInitListener {
+    private static final int FILE_CHOOSER_REQUEST_CODE = 42;
+    private static final int MAX_PENDING_SPEECH_ITEMS = 20;
+
+    private WebView webView;
+    private ValueCallback<Uri[]> filePathCallback;
+    private TextToSpeech textToSpeech;
+    private boolean textToSpeechReady;
+    private final ArrayDeque<SpeechRequest> pendingSpeech = new ArrayDeque<>();
+
+    @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        textToSpeech = new TextToSpeech(this, this);
+        webView = new WebView(this);
+        setContentView(webView);
+
+        configureWebView();
+        webView.addJavascriptInterface(new TrainingBridge(), "AndroidTraining");
+
+        if (savedInstanceState == null) {
+            webView.loadUrl("file:///android_asset/index.html");
+        } else {
+            webView.restoreState(savedInstanceState);
+        }
+    }
+
+    private void configureWebView() {
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
+        settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
+        settings.setAllowFileAccessFromFileURLs(true);
+        settings.setAllowUniversalAccessFromFileURLs(true);
+        settings.setLoadWithOverviewMode(true);
+        settings.setUseWideViewPort(true);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            settings.setSafeBrowsingEnabled(true);
+        }
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri uri = request.getUrl();
+                if ("http".equals(uri.getScheme()) || "https".equals(uri.getScheme()) || "file".equals(uri.getScheme())) {
+                    return false;
+                }
+
+                openExternalUri(uri);
+                return true;
+            }
+        });
+
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(
+                    WebView view,
+                    ValueCallback<Uri[]> callback,
+                    FileChooserParams fileChooserParams
+            ) {
+                if (filePathCallback != null) {
+                    filePathCallback.onReceiveValue(null);
+                }
+
+                filePathCallback = callback;
+                try {
+                    startActivityForResult(fileChooserParams.createIntent(), FILE_CHOOSER_REQUEST_CODE);
+                    return true;
+                } catch (ActivityNotFoundException exception) {
+                    filePathCallback = null;
+                    return false;
+                }
+            }
+
+            @Override
+            public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setMessage(message)
+                        .setPositiveButton(android.R.string.ok, (dialog, which) -> result.confirm())
+                        .setOnCancelListener(dialog -> result.cancel())
+                        .show();
+                return true;
+            }
+        });
+    }
+
+    private void openExternalUri(Uri uri) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, uri));
+        } catch (ActivityNotFoundException ignored) {
+            // If Android has no handler for the scheme, keep the user inside the app.
+        }
+    }
+
+    @Override
+    public void onInit(int status) {
+        if (status != TextToSpeech.SUCCESS || textToSpeech == null) {
+            pendingSpeech.clear();
+            return;
+        }
+
+        int languageStatus = textToSpeech.setLanguage(new Locale("ru"));
+        if (languageStatus == TextToSpeech.LANG_MISSING_DATA || languageStatus == TextToSpeech.LANG_NOT_SUPPORTED) {
+            textToSpeech.setLanguage(Locale.getDefault());
+        }
+
+        textToSpeechReady = true;
+        while (!pendingSpeech.isEmpty()) {
+            SpeechRequest request = pendingSpeech.removeFirst();
+            speakOnUiThread(request.text, request.rate);
+        }
+    }
+
+    private void speakOnUiThread(String text, float rate) {
+        if (text == null || text.trim().isEmpty()) {
+            return;
+        }
+
+        if (!textToSpeechReady || textToSpeech == null) {
+            if (pendingSpeech.size() >= MAX_PENDING_SPEECH_ITEMS) {
+                pendingSpeech.removeFirst();
+            }
+            pendingSpeech.addLast(new SpeechRequest(text, rate));
+            return;
+        }
+
+        textToSpeech.setSpeechRate(rate);
+        textToSpeech.speak(text, TextToSpeech.QUEUE_ADD, null, "training-" + System.nanoTime());
+    }
+
+    private void stopSpeechOnUiThread() {
+        pendingSpeech.clear();
+        if (textToSpeech != null) {
+            textToSpeech.stop();
+        }
+    }
+
+    private float normalizeSpeechRate(double rate) {
+        if (Double.isNaN(rate) || Double.isInfinite(rate) || rate <= 0) {
+            return 1.0f;
+        }
+        return Math.max(0.1f, Math.min((float) rate, 3.0f));
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != FILE_CHOOSER_REQUEST_CODE || filePathCallback == null) {
+            return;
+        }
+
+        Uri[] results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+        filePathCallback.onReceiveValue(results);
+        filePathCallback = null;
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        webView.saveState(outState);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView != null && webView.canGoBack()) {
+            webView.goBack();
+            return;
+        }
+        super.onBackPressed();
+    }
+
+    @Override
+    protected void onDestroy() {
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        if (filePathCallback != null) {
+            filePathCallback.onReceiveValue(null);
+            filePathCallback = null;
+        }
+
+        if (webView != null) {
+            webView.removeJavascriptInterface("AndroidTraining");
+            webView.destroy();
+            webView = null;
+        }
+
+        if (textToSpeech != null) {
+            textToSpeech.stop();
+            textToSpeech.shutdown();
+            textToSpeech = null;
+        }
+
+        super.onDestroy();
+    }
+
+    public final class TrainingBridge {
+        @JavascriptInterface
+        public void startTrainingGuard() {
+            runOnUiThread(() -> getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON));
+        }
+
+        @JavascriptInterface
+        public void stopTrainingGuard() {
+            runOnUiThread(() -> {
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                stopSpeechOnUiThread();
+            });
+        }
+
+        @JavascriptInterface
+        public void stopSpeech() {
+            runOnUiThread(() -> stopSpeechOnUiThread());
+        }
+
+        @JavascriptInterface
+        public void speak(String text, double rate) {
+            runOnUiThread(() -> speakOnUiThread(text, normalizeSpeechRate(rate)));
+        }
+    }
+
+    private static final class SpeechRequest {
+        private final String text;
+        private final float rate;
+
+        private SpeechRequest(String text, float rate) {
+            this.text = text;
+            this.rate = rate;
+        }
+    }
+}
