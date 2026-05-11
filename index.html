@@ -346,12 +346,25 @@
             margin-top: 18px;
         }
 
+        .no-sound-training-display {
+            margin: 0;
+        }
+
         .training-display textarea {
             min-height: 240px;
             padding: 20px;
             font-size: clamp(28px, 5vw, 50px);
             text-align: center;
             resize: vertical;
+        }
+
+        #idTextTrain {
+            height: 100vh;
+            height: 100dvh;
+            min-height: 100vh;
+            min-height: 100dvh;
+            max-height: 100vh;
+            max-height: 100dvh;
         }
 
         #idTextTime {
@@ -449,6 +462,10 @@
 </div>
 
 <div id="idMainWindow" class="app-shell">
+    <div class="training-display no-sound-training-display">
+        <textarea id="idTextTrain" style="display:none;"> </textarea>
+    </div>
+
     <header class="app-bar">
         <img src="favicon.svg" alt="" aria-hidden="true">
         <h1 class="app-bar-title">Календарь тренировок</h1>
@@ -578,10 +595,6 @@
                 <div id="delimiter8" class="delimiter"></div>
             </div>
         </section>
-
-        <div class="training-display">
-            <textarea id="idTextTrain" style="display:none;"> </textarea>
-        </div>
 
         <div id="idDivTextTime" class="training-display" style="display:none">
             <textarea id="idTextTime"> </textarea>
