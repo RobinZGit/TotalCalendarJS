@@ -6,8 +6,10 @@ import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
+import android.media.AudioAttributes;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.speech.tts.TextToSpeech;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
@@ -34,6 +36,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private ValueCallback<Uri[]> filePathCallback;
     private String pendingSaveFileText;
     private TextToSpeech textToSpeech;
+    private PowerManager.WakeLock trainingWakeLock;
     private boolean textToSpeechReady;
     private final ArrayDeque<SpeechRequest> pendingSpeech = new ArrayDeque<>();
 
@@ -199,6 +202,12 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         if (languageStatus == TextToSpeech.LANG_MISSING_DATA || languageStatus == TextToSpeech.LANG_NOT_SUPPORTED) {
             textToSpeech.setLanguage(Locale.getDefault());
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            textToSpeech.setAudioAttributes(new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build());
+        }
 
         textToSpeechReady = true;
         while (!pendingSpeech.isEmpty()) {
@@ -231,8 +240,20 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         }
     }
 
+    private void startTrainingGuardOnUiThread() {
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        acquireTrainingWakeLock();
+    }
+
+    private void stopTrainingGuardOnUiThread() {
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        releaseTrainingWakeLock();
+        stopSpeechOnUiThread();
+    }
+
     private void stopSpeechAndFinishOnUiThread() {
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        releaseTrainingWakeLock();
         stopSpeechOnUiThread();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -247,6 +268,30 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
             return 1.0f;
         }
         return Math.max(0.1f, Math.min((float) rate, 3.0f));
+    }
+
+    private void acquireTrainingWakeLock() {
+        if (trainingWakeLock == null) {
+            PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+            if (powerManager == null) {
+                return;
+            }
+            trainingWakeLock = powerManager.newWakeLock(
+                    PowerManager.PARTIAL_WAKE_LOCK,
+                    "TotalCalendar:TrainingAudio"
+            );
+            trainingWakeLock.setReferenceCounted(false);
+        }
+
+        if (!trainingWakeLock.isHeld()) {
+            trainingWakeLock.acquire();
+        }
+    }
+
+    private void releaseTrainingWakeLock() {
+        if (trainingWakeLock != null && trainingWakeLock.isHeld()) {
+            trainingWakeLock.release();
+        }
     }
 
     @Override
@@ -288,6 +333,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     @Override
     protected void onDestroy() {
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        releaseTrainingWakeLock();
 
         if (filePathCallback != null) {
             filePathCallback.onReceiveValue(null);
@@ -313,15 +359,12 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     public final class TrainingBridge {
         @JavascriptInterface
         public void startTrainingGuard() {
-            runOnUiThread(() -> getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON));
+            runOnUiThread(() -> startTrainingGuardOnUiThread());
         }
 
         @JavascriptInterface
         public void stopTrainingGuard() {
-            runOnUiThread(() -> {
-                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                stopSpeechOnUiThread();
-            });
+            runOnUiThread(() -> stopTrainingGuardOnUiThread());
         }
 
         @JavascriptInterface
