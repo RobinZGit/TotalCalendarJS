@@ -498,7 +498,7 @@
         <div id="idDivStatrPause" class="section-card" style="margin-top:18px;box-shadow:none;">
             <div class="button-row">
                 <button id="btnSelectAllTrain" class="success-btn" type="button">Начать тренировку</button>
-                <button id="btnExit" class="danger-btn" type="button" onclick="window.close()">Выход</button>
+                <button id="btnExit" class="danger-btn" type="button" onclick="exitTrainingApp()">Выход</button>
             </div>
             <div class="button-row" style="margin-top:14px">
                 <button id="btnPrev" class="secondary-btn" type="button" onclick="prev()">&lt;&lt; Previous</button>
@@ -639,6 +639,7 @@ var Gl_AudioGuardStopTimer = null
 var Gl_BackgroundAudio = null
 var Gl_BackgroundAudioUrl = null
 var Gl_SayInterval = null
+var Gl_PauseStartedAt = null
 
 function createTrainingBackgroundAudioUrl(){
   var sampleRate = 8000
@@ -713,12 +714,13 @@ function startTrainingBackgroundAudio(){
       })
       navigator.mediaSession.playbackState = "playing"
       navigator.mediaSession.setActionHandler("play", function(){
-        startTrainingBackgroundAudio()
-        resumeTrainingAudio()
+        if (!resumeTrainingPlayback()){
+          startTrainingBackgroundAudio()
+          resumeTrainingAudio()
+        }
       })
       navigator.mediaSession.setActionHandler("pause", function(){
-        startTrainingBackgroundAudio()
-        resumeTrainingAudio()
+        pauseTrainingPlayback()
       })
     }
   }catch(e){}
@@ -886,6 +888,64 @@ function stopTrainingAudioGuard(){
   Gl_AudioGuardOscillator = null
   Gl_AudioGuardGain = null
   Gl_AudioGuardContext = null
+}
+
+function pauseTrainingPlayback(){
+  if (!GlIsRunning || Gl_IsFinished)
+    return false
+
+  GlIsRunning = false
+  Gl_State = TXT_BTN_PAUSED
+  Gl_PauseStartedAt = new Date()
+
+  try{
+    btnSelectAllTrain.innerHTML = "Продолжить"
+  }catch(e){}
+
+  stopTrainingAudioGuard()
+  stopCurrentSpeech()
+  return true
+}
+
+function resumeTrainingPlayback(){
+  if (Gl_State !== TXT_BTN_PAUSED || Gl_IsFinished)
+    return false
+
+  var now = new Date()
+  if (Gl_PauseStartedAt){
+    var pauseMs = now - Gl_PauseStartedAt
+    if (!isNaN(pauseMs) && pauseMs > 0){
+      GlBegTime = new Date(GlBegTime.getTime() + pauseMs)
+      GldPrev = new Date(GldPrev.getTime() + pauseMs)
+    }
+  }
+  Gl_PauseStartedAt = null
+
+  GlIsRunning = true
+  Gl_State = TXT_BTN_STARTED
+
+  try{
+    btnSelectAllTrain.innerHTML = "Пауза"
+  }catch(e){}
+
+  startTrainingAudioGuard()
+  if (!Gl_SayInterval)
+    Gl_SayInterval = setInterval(fSayInTime,10)
+
+  return true
+}
+
+function exitTrainingApp(){
+  GlIsRunning = false
+  Gl_IsFinished = true
+  Gl_State = TXT_BTN_FINISHED
+  Gl_PauseStartedAt = null
+
+  stopTrainingAudioGuard()
+  stopCurrentSpeech()
+
+  if (!callAndroidTraining("exitApp"))
+    window.close()
 }
 
 async function requestTrainingWakeLock(){
@@ -4108,12 +4168,20 @@ END:VEVENT\n`
     //?! document.getElementById("idDivActionCalendar").style.display ='none'
     //? document.getElementById("btnRecalcCal").innerHTML = 'Показать календарь'
 
-    if (GlIsRunning) {
-      alert("Продолжить тренировку")
+    if (sMode=="Run"){
+      if (GlIsRunning){
+        pauseTrainingPlayback()
+        return
+      }
+      if (Gl_State==TXT_BTN_PAUSED){
+        resumeTrainingPlayback()
+        return
+      }
     }
     if (!GlIsRunning && sMode=="Run"){
        GlIsRunning =true;
        Gl_IsFinished=false
+       Gl_PauseStartedAt=null
        startTrainingAudioGuard()
        btnSelectAllTrain.innerHTML = 'Пауза'
 
