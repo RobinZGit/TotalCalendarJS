@@ -31,6 +31,7 @@ android {
 tasks.register('syncWebAssets', Copy) {
     from(rootProject.projectDir.parentFile) {
         include '*.html'
+        include 'favicon.svg'
     }
     into(generatedWebAssetsDir)
 }
