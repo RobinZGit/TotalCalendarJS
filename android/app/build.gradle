@@ -1,0 +1,35 @@
+plugins {
+    id 'com.android.application'
+}
+
+def generatedWebAssetsDir = layout.buildDirectory.dir('generated/web-assets')
+
+android {
+    namespace 'com.totalcalendarjs.app'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.totalcalendarjs.app'
+        minSdk 23
+        targetSdk 36
+        versionCode 1
+        versionName '1.0'
+    }
+
+    sourceSets {
+        main {
+            assets.srcDir(generatedWebAssetsDir)
+        }
+    }
+}
+
+tasks.register('syncWebAssets', Copy) {
+    from(rootProject.projectDir.parentFile) {
+        include '*.html'
+    }
+    into(generatedWebAssetsDir)
+}
+
+tasks.named('preBuild').configure {
+    dependsOn('syncWebAssets')
+}
