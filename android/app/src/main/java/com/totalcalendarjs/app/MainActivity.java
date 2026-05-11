@@ -19,15 +19,20 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Locale;
 
 public final class MainActivity extends Activity implements TextToSpeech.OnInitListener {
     private static final int FILE_CHOOSER_REQUEST_CODE = 42;
+    private static final int SAVE_FILE_REQUEST_CODE = 43;
     private static final int MAX_PENDING_SPEECH_ITEMS = 20;
 
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
+    private String pendingSaveFileText;
     private TextToSpeech textToSpeech;
     private boolean textToSpeechReady;
     private final ArrayDeque<SpeechRequest> pendingSpeech = new ArrayDeque<>();
@@ -127,6 +132,62 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         }
     }
 
+    private void saveTextFileOnUiThread(String text, String filename, String mimeType) {
+        pendingSaveFileText = text == null ? "" : text;
+
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType(normalizeMimeType(mimeType));
+        intent.putExtra(Intent.EXTRA_TITLE, sanitizeFilename(filename));
+
+        try {
+            startActivityForResult(intent, SAVE_FILE_REQUEST_CODE);
+        } catch (ActivityNotFoundException exception) {
+            pendingSaveFileText = null;
+            new AlertDialog.Builder(this)
+                    .setMessage("Не удалось открыть диалог сохранения файла.")
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
+        }
+    }
+
+    private String normalizeMimeType(String mimeType) {
+        if (mimeType == null || mimeType.trim().isEmpty()) {
+            return "text/plain";
+        }
+
+        return mimeType;
+    }
+
+    private String sanitizeFilename(String filename) {
+        if (filename == null || filename.trim().isEmpty()) {
+            return "TotalCalendar.txt";
+        }
+
+        return filename.replaceAll("[\\\\/:*?\"<>|]", "_");
+    }
+
+    private void writePendingSaveFile(Uri uri) {
+        if (uri == null || pendingSaveFileText == null) {
+            pendingSaveFileText = null;
+            return;
+        }
+
+        try (OutputStream outputStream = getContentResolver().openOutputStream(uri)) {
+            if (outputStream == null) {
+                throw new IOException("Output stream is unavailable");
+            }
+            outputStream.write(pendingSaveFileText.getBytes(StandardCharsets.UTF_8));
+        } catch (IOException exception) {
+            new AlertDialog.Builder(this)
+                    .setMessage("Не удалось сохранить файл: " + exception.getMessage())
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
+        } finally {
+            pendingSaveFileText = null;
+        }
+    }
+
     @Override
     public void onInit(int status) {
         if (status != TextToSpeech.SUCCESS || textToSpeech == null) {
@@ -191,6 +252,15 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == SAVE_FILE_REQUEST_CODE) {
+            if (resultCode == RESULT_OK && data != null) {
+                writePendingSaveFile(data.getData());
+            } else {
+                pendingSaveFileText = null;
+            }
+            return;
+        }
+
         if (requestCode != FILE_CHOOSER_REQUEST_CODE || filePathCallback == null) {
             return;
         }
@@ -223,6 +293,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
             filePathCallback.onReceiveValue(null);
             filePathCallback = null;
         }
+        pendingSaveFileText = null;
 
         if (webView != null) {
             webView.removeJavascriptInterface("AndroidTraining");
@@ -256,6 +327,11 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         @JavascriptInterface
         public void stopSpeech() {
             runOnUiThread(() -> stopSpeechOnUiThread());
+        }
+
+        @JavascriptInterface
+        public void saveTextFile(String text, String filename, String mimeType) {
+            runOnUiThread(() -> saveTextFileOnUiThread(text, filename, mimeType));
         }
 
         @JavascriptInterface

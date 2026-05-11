@@ -2902,8 +2902,11 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   }
 
   function download(text,filename, type) {
+      if (callAndroidTraining("saveTextFile", String(text), String(filename), String(type || "text/plain")))
+        return
+
       var element = document.createElement('a');
-      element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+      element.setAttribute('href', 'data:' + (type || 'text/plain') + ';charset=utf-8,' + encodeURIComponent(text));
       element.setAttribute('download', filename);
 
       element.style.display = 'none';
