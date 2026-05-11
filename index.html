@@ -3076,12 +3076,14 @@ END:VEVENT\n`
     alert('и это пройдет');
     //
     document.getElementById('externalcall').style.display='none';
-    setTimeout(function () {
-        document.getElementById('externalcall').style.display='block';
-    }, 1500);
-    setTimeout(function () {
-        document.getElementById('externalcall').style.display='none';
-    }, 5500);
+    if (!window.AndroidTraining){
+      setTimeout(function () {
+          document.getElementById('externalcall').style.display='block';
+      }, 1500);
+      setTimeout(function () {
+          document.getElementById('externalcall').style.display='none';
+      }, 5500);
+    }
     //добавим в общий календарь календари из массива тренировок
     for(var i=0;i<Gl_aMetaRithm.length;i++)
       try {if (Gl_aMetaRithm[i][2]!=undefined) if(Gl_aMetaRithm[i][2].length>1) Gl_aMetaMetaCalendar.push(Gl_aMetaRithm[i][2]);} catch(e) {}
