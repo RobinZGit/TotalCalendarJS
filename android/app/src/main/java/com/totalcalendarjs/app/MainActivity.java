@@ -45,6 +45,9 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private String pendingSaveFileText;
     private TextToSpeech textToSpeech;
     private PowerManager.WakeLock trainingWakeLock;
+    private PowerManager.WakeLock trainingScreenWakeLock;
+    private boolean trainingGuardActive;
+    private boolean noSoundMode;
     private boolean textToSpeechReady;
     private final ArrayDeque<SpeechRequest> pendingSpeech = new ArrayDeque<>();
 
@@ -250,20 +253,31 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     }
 
     private void startTrainingGuardOnUiThread() {
+        trainingGuardActive = true;
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         acquireTrainingWakeLock();
+        updateTrainingScreenWakeLock();
         showTrainingNotification();
     }
 
     private void stopTrainingGuardOnUiThread() {
+        trainingGuardActive = false;
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        releaseTrainingScreenWakeLock();
         releaseTrainingWakeLock();
         hideTrainingNotification();
         stopSpeechOnUiThread();
     }
 
+    private void setNoSoundModeOnUiThread(boolean enabled) {
+        noSoundMode = enabled;
+        updateTrainingScreenWakeLock();
+    }
+
     private void stopSpeechAndFinishOnUiThread() {
+        trainingGuardActive = false;
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        releaseTrainingScreenWakeLock();
         releaseTrainingWakeLock();
         hideTrainingNotification();
         stopSpeechOnUiThread();
@@ -303,6 +317,38 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private void releaseTrainingWakeLock() {
         if (trainingWakeLock != null && trainingWakeLock.isHeld()) {
             trainingWakeLock.release();
+        }
+    }
+
+    private void updateTrainingScreenWakeLock() {
+        if (trainingGuardActive && noSoundMode) {
+            acquireTrainingScreenWakeLock();
+        } else {
+            releaseTrainingScreenWakeLock();
+        }
+    }
+
+    private void acquireTrainingScreenWakeLock() {
+        if (trainingScreenWakeLock == null) {
+            PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+            if (powerManager == null) {
+                return;
+            }
+            trainingScreenWakeLock = powerManager.newWakeLock(
+                    PowerManager.SCREEN_BRIGHT_WAKE_LOCK,
+                    "TotalCalendar:NoSoundScreen"
+            );
+            trainingScreenWakeLock.setReferenceCounted(false);
+        }
+
+        if (!trainingScreenWakeLock.isHeld()) {
+            trainingScreenWakeLock.acquire();
+        }
+    }
+
+    private void releaseTrainingScreenWakeLock() {
+        if (trainingScreenWakeLock != null && trainingScreenWakeLock.isHeld()) {
+            trainingScreenWakeLock.release();
         }
     }
 
@@ -433,7 +479,9 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
 
     @Override
     protected void onDestroy() {
+        trainingGuardActive = false;
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        releaseTrainingScreenWakeLock();
         releaseTrainingWakeLock();
         hideTrainingNotification();
 
@@ -472,6 +520,11 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         @JavascriptInterface
         public void stopSpeech() {
             runOnUiThread(() -> stopSpeechOnUiThread());
+        }
+
+        @JavascriptInterface
+        public void setNoSoundMode(boolean enabled) {
+            runOnUiThread(() -> setNoSoundModeOnUiThread(enabled));
         }
 
         @JavascriptInterface

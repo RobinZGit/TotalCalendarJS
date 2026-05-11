@@ -484,7 +484,7 @@
             <div class="option-grid">
                 <label class="option-card checkbox-line" for="idNoSound">
                     <span><strong>Без звука:</strong></span>
-                    <input id="idNoSound" type="checkbox" onclick="if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else {document.getElementById('idTextTrain').style.display='block'; stopCurrentSpeech()}">
+                    <input id="idNoSound" type="checkbox" onclick="syncAndroidNoSoundMode(); if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else {document.getElementById('idTextTrain').style.display='block'; stopCurrentSpeech()}">
                 </label>
                 <label class="option-card checkbox-line" for="idStopSpeakIfNext">
                     <span><strong>Прерывать текст упражнения сразу при наступлении времени следующего:</strong></span>
@@ -815,8 +815,16 @@ function speakWithAndroidTraining(str){
   return callAndroidTraining("speak", String(str), rate)
 }
 
+function syncAndroidNoSoundMode(){
+  try{
+    var noSoundInput = document.getElementById("idNoSound")
+    callAndroidTraining("setNoSoundMode", !!(noSoundInput && noSoundInput.checked))
+  }catch(e){}
+}
+
 function startTrainingAudioGuard(){
   Gl_WakeLockWanted = true
+  syncAndroidNoSoundMode()
   var androidGuardStarted = callAndroidTraining("startTrainingGuard")
   clearTimeout(Gl_AudioGuardStopTimer)
   Gl_AudioGuardStopTimer = null
@@ -870,6 +878,7 @@ function finishTrainingPlayback(){
 
 function stopTrainingAudioGuard(){
   Gl_WakeLockWanted = false
+  callAndroidTraining("setNoSoundMode", false)
   callAndroidTraining("stopTrainingGuard")
 
   clearTimeout(Gl_AudioGuardStopTimer)
@@ -1002,8 +1011,10 @@ async function requestTrainingWakeLock(){
 
 document.addEventListener("visibilitychange", function(){
   if (document.visibilityState === "visible"){
-    if (Gl_WakeLockWanted)
+    if (Gl_WakeLockWanted){
+      syncAndroidNoSoundMode()
       callAndroidTraining("startTrainingGuard")
+    }
     requestTrainingWakeLock()
     resumeTrainingAudio()
   }
