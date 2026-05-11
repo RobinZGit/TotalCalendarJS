@@ -420,6 +420,50 @@
 </div>
 
 <div id="idMainWindow" class="app-shell">
+    <section id="trainingControlsTop" class="section-card">
+        <div id="idDivAllTrain">
+            <div class="field">
+                <label for="selectAllTrain">Выбор тренировки:</label>
+                <select id="selectAllTrain" class="select-large" onchange="onSelectTrain(this.selectedIndex,this.options[this.selectedIndex].text);"></select>
+            </div>
+            <div class="option-grid">
+                <div class="field">
+                    <label for="filterStr">Тренировка cодержит подстроку (фильтр перед выбором):</label>
+                    <input id="filterStr" onchange="readFilteredListOfTrainings(value,null)">
+                </div>
+                <label class="option-card checkbox-line" for="simultMode">
+                    <span><strong>Выбор нескольких тренировок для одновременного выполнения:</strong></span>
+                    <input id="simultMode" type="checkbox" onclick="changeSelectMode(this.checked)">
+                </label>
+            </div>
+        </div>
+
+        <div id="idDivStatrPause" class="section-card" style="margin-top:18px;box-shadow:none;">
+            <div class="button-row">
+                <button id="btnSelectAllTrain" class="success-btn" type="button">Начать тренировку</button>
+                <button id="btnExit" class="danger-btn" type="button" onclick="exitTrainingApp()">Выход</button>
+            </div>
+            <div class="button-row" style="margin-top:14px">
+                <button id="btnPrev" class="secondary-btn" type="button" onclick="prev()">&lt;&lt; Previous</button>
+                <button id="btnNext" class="secondary-btn" type="button" onclick="next()">Next &gt;&gt;</button>
+            </div>
+            <div class="option-grid">
+                <label class="option-card checkbox-line" for="idNoSound">
+                    <span><strong>Без звука:</strong></span>
+                    <input id="idNoSound" type="checkbox" onclick="if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else {document.getElementById('idTextTrain').style.display='block'; stopCurrentSpeech()}">
+                </label>
+                <label class="option-card checkbox-line" for="idStopSpeakIfNext">
+                    <span><strong>Прерывать текст упражнения сразу при наступлении времени следующего:</strong></span>
+                    <input id="idStopSpeakIfNext" type="checkbox" onclick="Gl_StopSpeakIfNext=this.checked">
+                </label>
+                <div class="field">
+                    <label for="inputRate">Темп речи:</label>
+                    <input id="inputRate" value="1.5">
+                </div>
+            </div>
+        </div>
+    </section>
+
     <section id="checkPage" class="section-card">
         <div id="checkPage1" class="toolbar">
             <label class="option-card checkbox-line" for="checkCalendarPage">
@@ -478,50 +522,6 @@
     <div id="delimiter3" class="delimiter"></div>
 
     <section id="trainPage" class="section-card">
-        <div id="idDivAllTrain">
-            <div class="field">
-                <label for="selectAllTrain">Выбор тренировки:</label>
-                <select id="selectAllTrain" class="select-large" onchange="onSelectTrain(this.selectedIndex,this.options[this.selectedIndex].text);"></select>
-            </div>
-            <div class="option-grid">
-                <div class="field">
-                    <label for="filterStr">Тренировка cодержит подстроку (фильтр перед выбором):</label>
-                    <input id="filterStr" onchange="readFilteredListOfTrainings(value,null)">
-                </div>
-                <label class="option-card checkbox-line" for="simultMode">
-                    <span><strong>Выбор нескольких тренировок для одновременного выполнения:</strong></span>
-                    <input id="simultMode" type="checkbox" onclick="changeSelectMode(this.checked)">
-                </label>
-            </div>
-        </div>
-
-        <div id="idDivStatrPause" class="section-card" style="margin-top:18px;box-shadow:none;">
-            <div class="button-row">
-                <button id="btnSelectAllTrain" class="success-btn" type="button">Начать тренировку</button>
-                <button id="btnExit" class="danger-btn" type="button" onclick="exitTrainingApp()">Выход</button>
-            </div>
-            <div class="button-row" style="margin-top:14px">
-                <button id="btnPrev" class="secondary-btn" type="button" onclick="prev()">&lt;&lt; Previous</button>
-                <button id="btnNext" class="secondary-btn" type="button" onclick="next()">Next &gt;&gt;</button>
-            </div>
-            <div class="option-grid">
-                <label class="option-card checkbox-line" for="idNoSound">
-                    <span><strong>Без звука:</strong></span>
-                    <input id="idNoSound" type="checkbox" onclick="if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else {document.getElementById('idTextTrain').style.display='block'; stopCurrentSpeech()}">
-                </label>
-                <label class="option-card checkbox-line" for="idStopSpeakIfNext">
-                    <span><strong>Прерывать текст упражнения сразу при наступлении времени следующего:</strong></span>
-                    <input id="idStopSpeakIfNext" type="checkbox" onclick="Gl_StopSpeakIfNext=this.checked">
-                </label>
-                <div class="field">
-                    <label for="inputRate">Темп речи:</label>
-                    <input id="inputRate" value="1.5">
-                </div>
-            </div>
-        </div>
-
-        <div id="delimiter4" class="delimiter"></div>
-
         <section id="idImpExp" class="section-card" style="box-shadow:none;">
             <div class="file-grid">
                 <div class="file-card">
