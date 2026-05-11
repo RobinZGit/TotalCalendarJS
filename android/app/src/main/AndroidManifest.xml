@@ -23,6 +23,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <provider
+            android:name=".CalendarIcsProvider"
+            android:authorities="com.totalcalendarjs.app.calendarics"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 
 </manifest>

@@ -3015,6 +3015,19 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
       document.body.removeChild(element);
   }
 
+  function openCalendarIcsInWeb(icsText){
+      try{
+          var url = URL.createObjectURL(new Blob([icsText], {type: 'text/calendar'}))
+          var opened = window.open(url, '_blank')
+          setTimeout(function(){
+              URL.revokeObjectURL(url)
+          }, 60000)
+          return !!opened
+      }catch(e){
+          return false
+      }
+  }
+
   Date.prototype.yyyymmddhhmmss = function(sBetweenDateandTime='') {
       var mm = this.getMonth() + 1; // getMonth() is zero-based
       var dd = this.getDate();
@@ -3080,7 +3093,12 @@ END:VALARM
 END:VEVENT\n`
     }
     sICS += 'END:VCALENDAR'
-    download(sICS, 'FromTotalCalendarJS.ics', 'text/plain')
+    var icsFilename = 'FromTotalCalendarJS.ics'
+    if (callAndroidTraining("saveAndOpenCalendarIcs", sICS, icsFilename))
+      return
+
+    download(sICS, icsFilename, 'text/calendar')
+    openCalendarIcsInWeb(sICS)
   }
 
   //импорт тренировки (кастомный формат .rtm)
