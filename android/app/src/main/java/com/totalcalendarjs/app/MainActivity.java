@@ -15,6 +15,9 @@ import android.media.AudioAttributes;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintManager;
 import android.speech.tts.TextToSpeech;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
@@ -41,6 +44,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private static final int MAX_PENDING_SPEECH_ITEMS = 20;
 
     private WebView webView;
+    private WebView printWebView;
     private ValueCallback<Uri[]> filePathCallback;
     private String pendingSaveFileText;
     private TextToSpeech textToSpeech;
@@ -201,6 +205,63 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         } finally {
             pendingSaveFileText = null;
         }
+    }
+
+    private void printTextOnUiThread(String text, String title) {
+        if (text == null || text.trim().isEmpty()) {
+            return;
+        }
+
+        PrintManager printManager = (PrintManager) getSystemService(PRINT_SERVICE);
+        if (printManager == null) {
+            new AlertDialog.Builder(this)
+                    .setMessage("Не удалось открыть печать на этом устройстве.")
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
+            return;
+        }
+
+        if (printWebView != null) {
+            printWebView.destroy();
+        }
+
+        String printTitle = normalizePrintTitle(title);
+        printWebView = new WebView(this);
+        printWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                PrintDocumentAdapter adapter = view.createPrintDocumentAdapter(printTitle);
+                PrintAttributes attributes = new PrintAttributes.Builder()
+                        .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+                        .setColorMode(PrintAttributes.COLOR_MODE_MONOCHROME)
+                        .build();
+                printManager.print(printTitle, adapter, attributes);
+            }
+        });
+
+        String html = "<!doctype html><html><head><meta charset=\"utf-8\">"
+                + "<style>body{font-family:sans-serif;margin:24px;}pre{white-space:pre-wrap;font-size:16px;line-height:1.45;}</style>"
+                + "</head><body><pre>"
+                + escapeHtml(text)
+                + "</pre></body></html>";
+        printWebView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+    }
+
+    private String normalizePrintTitle(String title) {
+        if (title == null || title.trim().isEmpty()) {
+            return "Текст тренировки";
+        }
+
+        return title;
+    }
+
+    private String escapeHtml(String text) {
+        return text
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 
     @Override
@@ -513,6 +574,11 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
             webView = null;
         }
 
+        if (printWebView != null) {
+            printWebView.destroy();
+            printWebView = null;
+        }
+
         if (textToSpeech != null) {
             textToSpeech.stop();
             textToSpeech.shutdown();
@@ -546,6 +612,11 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         @JavascriptInterface
         public void saveTextFile(String text, String filename, String mimeType) {
             runOnUiThread(() -> saveTextFileOnUiThread(text, filename, mimeType));
+        }
+
+        @JavascriptInterface
+        public void printText(String text, String title) {
+            runOnUiThread(() -> printTextOnUiThread(text, title));
         }
 
         @JavascriptInterface

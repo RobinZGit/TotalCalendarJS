@@ -298,6 +298,21 @@
             background: #dc2626;
         }
 
+        .print-text-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            margin: 18px 0 0;
+        }
+
+        .print-text-button svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
         .warning-banner {
             display: flex;
             align-items: center;
@@ -616,9 +631,16 @@
             <textarea id="idTextsToSpeek" style="height:400px;"> </textarea>
         </details>
 
+        <button id="btnPrintTextToPrinter" class="secondary-btn print-text-button" type="button" style="display:none" onclick="printTrainingText()">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 3h12v5H6V3Zm12 8h1a3 3 0 0 1 3 3v5h-4v2H6v-2H2v-5a3 3 0 0 1 3-3h1v3h12v-3ZM8 19h8v-4H8v4Zm10-5h2v-2h-2v2Z"></path>
+            </svg>
+            <span>Печать</span>
+        </button>
+
         <details id="idTextPrintDetails">
             <summary>Текст тренировки для печати</summary>
-            <textarea id="idTextPrint" style="height:400px;"> </textarea>
+            <textarea id="idTextPrint" style="height:400px;" oninput="updatePrintTextButtonVisibility()"> </textarea>
         </details>
 
         <div style="margin-top:18px">
@@ -2799,7 +2821,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   var Gl_sSimultTrain='[ОДНОВРЕМЕННО С]'
   var Gl_sNextTrain='[ДАЛЕЕ ДЕЛАТЬ]'
 
-  var Gl_txtPrint = document.getElementById("idTextPrint");
+  var Gl_txtPrint = { value: '' };
   var Gl_calendarVisible = true;//false;
   //длЯ задержки начала тренировки (чтобы закрепить смартфон после нажатия стартовой кнопки)
   var GlnDelay = 0;
@@ -4389,9 +4411,55 @@ END:VEVENT\n`
 
 
     //Печать тренировки
+    function updatePrintTextButtonVisibility(){
+      var printText = document.getElementById("idTextPrint")
+      var printButton = document.getElementById("btnPrintTextToPrinter")
+      if (!printText || !printButton)
+        return
+
+      printButton.style.display = printText.value.trim().length ? 'inline-flex' : 'none'
+    }
+
+    function escapeHtmlForPrint(text){
+      return String(text)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;')
+    }
+
+    function printTrainingText(){
+      var text = document.getElementById("idTextPrint").value
+      if (!text.trim()){
+        updatePrintTextButtonVisibility()
+        return
+      }
+
+      if (callAndroidTraining("printText", text, "Текст тренировки для печати"))
+        return
+
+      var printWindow = window.open('', '_blank')
+      if (!printWindow){
+        window.print()
+        return
+      }
+
+      printWindow.document.open()
+      printWindow.document.write(
+        '<!doctype html><html><head><meta charset="utf-8"><title>Текст тренировки для печати</title>' +
+        '<style>body{font-family:Arial,Helvetica,sans-serif;margin:24px;}pre{white-space:pre-wrap;font-size:16px;line-height:1.45;}</style>' +
+        '</head><body><pre>' + escapeHtmlForPrint(text) + '</pre></body></html>'
+      )
+      printWindow.document.close()
+      printWindow.focus()
+      printWindow.print()
+    }
+
     function CallPrint() {
       document.getElementById("idTextPrint").value=Gl_txtPrint.value
       document.getElementById("idTextPrint").style.height =(200+document.getElementById("idTextPrint").scrollHeight)+"px"
+      updatePrintTextButtonVisibility()
    }
 
    function btnPrintOnClick(){
