@@ -713,6 +713,8 @@
  //----онлайн параметры--------------------------------------
  var _номер_итерации_=0;
  var _history_ = [];
+ // _пульс_: текущий пульс (уд/мин) в формулах; -1 если нет данных
+ var _пульс_ = -1;
  //-----------------------------------------------------------
  var Gl_SelectedInd=-1; //выбранная тренировка
  var Gl_aMultiCalendar
@@ -3371,8 +3373,16 @@ END:VEVENT\n`
              ||(str.indexOf('_прошло_минут_')>=0)
              ||(str.indexOf('_прошло_секунд_')>=0)
              ||(str.indexOf('_прошло_милисекунд_')>=0)
+             ||(str.indexOf('_пульс_')>=0)
              ||(str.indexOf('_history_')>=0)
             )
+   }
+
+   function syncOnlinePulseParam(){
+     if (typeof Gl_lastHeartRateBpm !== "undefined" && Gl_lastHeartRateBpm >= 0)
+       _пульс_ = Gl_lastHeartRateBpm
+     else
+       _пульс_ = -1
    }
 
 
@@ -3494,6 +3504,7 @@ END:VEVENT\n`
                      //----онлайн параметры--------------------------------------
                      //!! вычисляется во второй проход но тут не помешает, тк этой переменной в формуле уже нет
                      _номер_итерации_+=1;
+                     syncOnlinePulseParam()
                      //-----------------------------------------------------------
                      try{
                        document.getElementById('buttonCurrentTr' + GlnInd).style.background='green'
@@ -3522,6 +3533,7 @@ END:VEVENT\n`
                        finishTrainingPlayback()
                      //сбросить начало отсчета отсчет времени, пересчитать текущий интервал и индекс дела
                      GldPrev = new Date();
+                     syncOnlinePulseParam()
                      Gl_aRithmLisp[GlnInd+1]= calcEval("N",String(Gl_aRithmLisp[GlnInd+1])) //!!!String
                      GlnInd+=2;
               }
@@ -4206,10 +4218,12 @@ END:VEVENT\n`
       _прошло_минут_=0
       _прошло_секунд_=0
       _прошло_милисекунд_=0
+      _пульс_=-1
       _history_ = []
       //alert(Gl_aRithmLisp)
       for (var i = 0; i < Gl_aRithmLisp.length; i++){
         if (i%2==0){
+          syncOnlinePulseParam()
           _номер_итерации_+=1;
           Gl_aRithmLisp[i]=calcEval("N",String(Gl_aRithmLisp[i]))
           Gl_aRithmLisp[i+1]=calcEval("S",String(Gl_aRithmLisp[i+1]))
