@@ -1,6 +1,7 @@
 package com.totalcalendarjs.app;
 
 import android.annotation.SuppressLint;
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Notification;
@@ -41,6 +42,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private static final int FILE_CHOOSER_REQUEST_CODE = 42;
     private static final int SAVE_FILE_REQUEST_CODE = 43;
     private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 44;
+    private static final int HEART_RATE_BLE_PERMISSION_REQUEST_CODE = 56;
     private static final int TRAINING_NOTIFICATION_ID = 1001;
     private static final String TRAINING_NOTIFICATION_CHANNEL_ID = "training_status";
     private static final int MAX_PENDING_SPEECH_ITEMS = 20;
@@ -56,6 +58,8 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private boolean noSoundMode;
     private boolean textToSpeechReady;
     private final ArrayDeque<SpeechRequest> pendingSpeech = new ArrayDeque<>();
+    private HeartRateBleManager heartRateBleManager;
+    private boolean pendingHeartRateScanAfterPermission;
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
@@ -69,6 +73,21 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
 
         configureWebView();
         webView.addJavascriptInterface(new TrainingBridge(), "AndroidTraining");
+
+        heartRateBleManager = new HeartRateBleManager(this, new HeartRateBleManager.Listener() {
+            @Override
+            public void onHeartRateBpm(int bpm) {
+                if (!trainingGuardActive) {
+                    return;
+                }
+                deliverHeartRateBpmToWeb(bpm);
+            }
+
+            @Override
+            public void onSensorDisconnected() {
+                deliverHeartRateBpmToWeb(-1);
+            }
+        });
 
         if (savedInstanceState == null) {
             webView.loadUrl(getLaunchUrl(getIntent()));
@@ -577,7 +596,82 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
                 && trainingWakeLock != null
                 && trainingWakeLock.isHeld()) {
             showTrainingNotification();
+            return;
         }
+
+        if (requestCode == HEART_RATE_BLE_PERMISSION_REQUEST_CODE) {
+            boolean wanted = pendingHeartRateScanAfterPermission;
+            pendingHeartRateScanAfterPermission = false;
+            if (wanted && heartRateBleManager != null && allPermissionsGranted(grantResults)) {
+                heartRateBleManager.startScanAndPickDevice();
+            }
+        }
+    }
+
+    private static boolean allPermissionsGranted(int[] grantResults) {
+        if (grantResults == null || grantResults.length == 0) {
+            return false;
+        }
+        for (int result : grantResults) {
+            if (result != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void deliverHeartRateBpmToWeb(int bpm) {
+        if (webView == null) {
+            return;
+        }
+
+        webView.evaluateJavascript(
+                "try{if(typeof onAndroidHeartRate==='function'){onAndroidHeartRate(" + bpm + ");}}catch(e){}",
+                null
+        );
+    }
+
+    private boolean hasBluetoothPermissionsForHeartRate() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
+                    && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        }
+        return true;
+    }
+
+    private void requestHeartRateSensorFlow() {
+        if (heartRateBleManager == null) {
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!hasBluetoothPermissionsForHeartRate()) {
+                pendingHeartRateScanAfterPermission = true;
+                requestPermissions(
+                        new String[]{
+                                Manifest.permission.BLUETOOTH_SCAN,
+                                Manifest.permission.BLUETOOTH_CONNECT
+                        },
+                        HEART_RATE_BLE_PERMISSION_REQUEST_CODE
+                );
+                return;
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!hasBluetoothPermissionsForHeartRate()) {
+                pendingHeartRateScanAfterPermission = true;
+                requestPermissions(
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                        HEART_RATE_BLE_PERMISSION_REQUEST_CODE
+                );
+                return;
+            }
+        }
+
+        pendingHeartRateScanAfterPermission = false;
+        heartRateBleManager.startScanAndPickDevice();
     }
 
     @Override
@@ -618,6 +712,11 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
             filePathCallback = null;
         }
         pendingSaveFileText = null;
+
+        if (heartRateBleManager != null) {
+            heartRateBleManager.destroy();
+            heartRateBleManager = null;
+        }
 
         if (webView != null) {
             webView.removeJavascriptInterface("AndroidTraining");
@@ -688,6 +787,20 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         @JavascriptInterface
         public void speak(String text, double rate) {
             runOnUiThread(() -> speakOnUiThread(text, normalizeSpeechRate(rate)));
+        }
+
+        @JavascriptInterface
+        public void startHeartRateSensor() {
+            runOnUiThread(() -> requestHeartRateSensorFlow());
+        }
+
+        @JavascriptInterface
+        public void stopHeartRateSensor() {
+            runOnUiThread(() -> {
+                if (heartRateBleManager != null) {
+                    heartRateBleManager.disconnect();
+                }
+            });
         }
     }
 

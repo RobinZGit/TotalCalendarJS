@@ -11,7 +11,10 @@ HTML app.
   - keep the Android screen on while a training run is active;
   - stop native speech when training is stopped or muted;
   - use Android `TextToSpeech` instead of browser speech synthesis inside the
-    Android app.
+    Android app;
+  - connect a **BLE heart rate monitor** (GATT Heart Rate service). While a
+    run is active, BPM is sent to the page (`onAndroidHeartRate`) and shown in
+    the time textarea next to elapsed time.
 
 ## Build
 

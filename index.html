@@ -541,6 +541,10 @@
                     <input id="inputRate" value="1.5">
                 </div>
             </div>
+            <div id="androidHeartRateControls" class="button-row" style="display:none;margin-top:12px">
+                <button type="button" class="secondary-btn" onclick="callAndroidTraining('startHeartRateSensor')">BLE пульсометр</button>
+                <button type="button" class="secondary-btn" onclick="callAndroidTraining('stopHeartRateSensor')">Отключить пульсометр</button>
+            </div>
         </div>
     </section>
 
@@ -889,6 +893,7 @@ function updateOpenAndroidAppLink(){
 
   if (window.AndroidTraining){
     link.style.display = "none"
+    initAndroidHeartRateUi()
     return
   }
 
@@ -906,6 +911,15 @@ function syncAndroidNoSoundMode(){
   try{
     var noSoundInput = document.getElementById("idNoSound")
     callAndroidTraining("setNoSoundMode", !!(noSoundInput && noSoundInput.checked))
+  }catch(e){}
+}
+
+function initAndroidHeartRateUi(){
+  try{
+    var row = document.getElementById("androidHeartRateControls")
+    if (!row)
+      return
+    row.style.display = window.AndroidTraining ? "flex" : "none"
   }catch(e){}
 }
 
@@ -2874,6 +2888,8 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   var GlnDelay = 0;
   var glTxtSay="1";
   var Gl_trainTime
+  /** Последний BPM с Android BLE; -1 — нет данных */
+  var Gl_lastHeartRateBpm = -1
   var Gl_decodeExternalCallValue=""
   
   //для замены спецсимволов 
@@ -3280,6 +3296,8 @@ END:VEVENT\n`
       Gl_decodeExternalCallValue=''
     fillForm(decodeURIComponent(startWithValue))
 
+    initAndroidHeartRateUi()
+
     //GltxtSpeek.value += "\n\n Для изменения тренировки необходимо редактировать запускаемый файл html.\n";
     if (Gl_decodeExternalCallValue.valueOf().length==0){
      //! alert("Чтобы не было перерыва в тренировке из-за выключения экрана не забудьте запустить программу типа Stay Alive (android)")
@@ -3424,6 +3442,28 @@ END:VEVENT\n`
             return nTime
     }
 
+   function onAndroidHeartRate(bpm){
+     var n = Number(bpm)
+     if (!isFinite(n) || n < 0)
+       Gl_lastHeartRateBpm = -1
+     else
+       Gl_lastHeartRateBpm = Math.round(n)
+     try{
+       if (txtTextTime && typeof Gl_trainTime !== "undefined" && GlBegTime){
+         var dCurr = new Date()
+         var dT = (dCurr - GlBegTime)
+         txtTextTime.value = formatTrainingTimeLine(dT)
+       }
+     }catch(e){}
+   }
+
+   function formatTrainingTimeLine(dT){
+     var base = "Прошло:   "+Math.floor(dT/(60*1000)) + "  минут  " + (Math.floor(dT/(1000)))%60 + "  секунд из  "+Gl_trainTime+" мин."
+     if (typeof Gl_lastHeartRateBpm !== "undefined" && Gl_lastHeartRateBpm >= 0)
+       base += "    |    Пульс: " + Gl_lastHeartRateBpm + " уд/мин"
+     return base
+   }
+
    function fSayInTime(){
         //alert(Gl_aRithmLisp)
         if(Gl_IsFinished) {
@@ -3449,7 +3489,7 @@ END:VEVENT\n`
             if (GlnInd <(Gl_aRithmLisp.length)){
               dCurr = new Date();
               var dT = (dCurr-GlBegTime)
-              txtTextTime.value = "Прошло:   "+Math.floor(dT/(60*1000)) + "  минут  " + (Math.floor(dT/(1000)))%60 + "  секунд из  "+Gl_trainTime+" мин."
+              txtTextTime.value = formatTrainingTimeLine(dT)
               if((dCurr-GldPrev)>=GlnDelta){ //прошел требуемый интервал
                      //----онлайн параметры--------------------------------------
                      //!! вычисляется во второй проход но тут не помешает, тк этой переменной в формуле уже нет
