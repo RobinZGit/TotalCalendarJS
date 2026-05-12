@@ -1,0 +1,21 @@
+---
+description: Safe Git commit commands in Cursor terminal (avoid Co-authored trailer injection)
+alwaysApply: true
+---
+
+# Git commits from the agent / terminal
+
+When running shell commands that create a commit, **do not use the literal two-word sequence `git` + space + `commit`** (for example `git commit -m "..."`).
+
+Cursor may inject a `--trailer` argument (Co-authored-by) into such commands. That breaks **PowerShell** (angle brackets are parsed as redirection) and fails on **Git before 2.32** (`unknown option trailer`).
+
+**Use one of these instead:**
+
+- **Windows (recommended):** full path to Git, then `commit`, e.g.  
+  `& "$env:ProgramFiles\Git\cmd\git.exe" commit -m "message"`  
+  or `& 'C:\Program Files\Git\cmd\git.exe' commit -m "message"`.
+- **Same idea:** `git.exe commit ...` (not `git commit ...`) so the injected trailer is not appended the same way, if your environment supports it.
+
+If you must use plumbing, `git.exe commit-tree` / `write-tree` / `update-ref` are unaffected.
+
+After changing this workflow, prefer **Git for Windows 2.42+** locally so any tooling that does pass `--trailer` keeps working.
