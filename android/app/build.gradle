@@ -4,8 +4,18 @@ plugins {
 
 def generatedWebAssetsDir = layout.buildDirectory.dir('generated/web-assets')
 
-/** В GitHub Actions задано; при локальной сборке пусто — тогда версия по умолчанию. */
+/** В GitHub Actions; иначе — первая строка app-build.txt в корне репозитория. */
 def tcjsGithubRun = (System.getenv("GITHUB_RUN_NUMBER") ?: "").trim()
+
+String readRootAppBuildTxt() {
+    def f = rootProject.projectDir.parentFile.toPath().resolve('app-build.txt').toFile()
+    if (!f.exists()) return ''
+    def lines = f.getText('UTF-8').readLines()
+    def t = lines.isEmpty() ? '' : (lines[0] ?: '').trim()
+    return (t ==~ /^[0-9]+$/) ? t : ''
+}
+
+def effectiveTcjsRun = tcjsGithubRun ?: readRootAppBuildTxt()
 
 android {
     namespace 'com.totalcalendarjs.app'
@@ -15,8 +25,8 @@ android {
         applicationId 'com.totalcalendarjs.app'
         minSdk 23
         targetSdk 36
-        versionCode (tcjsGithubRun ? Integer.parseInt(tcjsGithubRun) : 1)
-        versionName (tcjsGithubRun ? "1.0.${tcjsGithubRun}" : "1.0")
+        versionCode (effectiveTcjsRun ? Integer.parseInt(effectiveTcjsRun) : 1)
+        versionName (effectiveTcjsRun ? "1.0.${effectiveTcjsRun}" : "1.0")
     }
 
     compileOptions {
@@ -49,15 +59,26 @@ tasks.register('syncWebAssets', Copy) {
         if (indexFile.exists()) {
             def text = indexFile.getText('UTF-8')
             text = text.replaceFirst(stayAliveBannerPattern, hiddenBanner)
-            if (tcjsGithubRun) {
-                text = text.replace('__TCJS_GITHUB_RUN__', tcjsGithubRun)
+            if (effectiveTcjsRun) {
+                text = text.replace('__TCJS_GITHUB_RUN__', effectiveTcjsRun)
+                text = text.replaceAll(
+                    ~/<script id="tcjs-app-build" type="text\/plain">[^<]*<\/script>/,
+                    '<script id="tcjs-app-build" type="text/plain">' + effectiveTcjsRun + '</script>'
+                )
             }
             indexFile.setText(text, 'UTF-8')
         }
 
         def index1File = generatedWebAssetsDir.get().asFile.toPath().resolve('index1.html').toFile()
-        if (index1File.exists() && tcjsGithubRun) {
-            def t1 = index1File.getText('UTF-8').replace('__TCJS_GITHUB_RUN__', tcjsGithubRun)
+        if (index1File.exists()) {
+            def t1 = index1File.getText('UTF-8')
+            if (effectiveTcjsRun) {
+                t1 = t1.replace('__TCJS_GITHUB_RUN__', effectiveTcjsRun)
+                t1 = t1.replaceAll(
+                    ~/<script id="tcjs-app-build" type="text\/plain">[^<]*<\/script>/,
+                    '<script id="tcjs-app-build" type="text/plain">' + effectiveTcjsRun + '</script>'
+                )
+            }
             index1File.setText(t1, 'UTF-8')
         }
     }
