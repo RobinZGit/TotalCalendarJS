@@ -2863,7 +2863,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
                 [
                   "<ОЗВУЧКА ПУЛЬСА>=3600<ЦИКЛ>",
                   "<ЦИКЛ>=<ПУЛЬС_ФРАЗА>;<#30 [СЕК]#>",
-                  "<ПУЛЬС_ФРАЗА>=<[eval](_пульс_>=0?('пульс '+_пульс_):'пульс')[eval]>",
+                  "<ПУЛЬС_ФРАЗА>=<[eval_online](_пульс_>=0?('пульс '+_пульс_):'пульс')[eval_online]>",
                   "[BEGIN EVAL PARAMETERS]",
                   "[END EVAL PARAMETERS]",
                 ],
@@ -3375,7 +3375,8 @@ END:VEVENT\n`
       }
 
   function hasOnlineCalcedParams(str){
-     return ((str.indexOf('_номер_итерации_')>=0)
+     return ((str.indexOf('[eval_online]')>=0)
+             ||(str.indexOf('_номер_итерации_')>=0)
              ||(str.indexOf('_прошло_лет_')>=0)
              ||(str.indexOf('_прошло_месяцев_')>=0)
              ||(str.indexOf('_прошло_недель_')>=0)
@@ -3418,14 +3419,43 @@ END:VEVENT\n`
    }
 
 
-   function calcEval(nMode,str){ //вычисляем вставки [eval]
-                              // nMode ="N"- число  ="S"-строка
-                    var sRet=str
+   /** [eval_online]…[eval_online] — только при flEvalOnline (перед say); на втором проходе не трогается. */
+   function processEvalOnlineBlocks(str, nMode, flEvalOnline){
+     if (typeof str !== "string") str = String(str);
+     if (str.indexOf("[eval_online]") < 0) return str;
+     var a = str.split("[eval_online]");
+     if (a.length < 3 || (a.length % 2) === 0) return str;
+     var i;
+     for (i = 1; i < a.length; i += 2) {
+       if (flEvalOnline) {
+         try {
+           a[i] = eval(a[i]);
+           if (a[i] === undefined || a[i] === null) a[i] = "";
+           a[i] = String(a[i]);
+         } catch (e) {
+           a[i] = "0";
+         }
+       }
+     }
+     var sRet = a[0];
+     for (i = 1; i < a.length; i += 2) {
+       if (flEvalOnline) sRet += a[i];
+       else sRet += "[eval_online]" + a[i] + "[eval_online]";
+       if (i + 1 < a.length) sRet += a[i + 1];
+     }
+     return sRet;
+   }
 
-                    if ((str.indexOf('[eval]')>=0)){//нужно досчитать интервал по онлайн-параметрам
+   function calcEval(nMode,str,flEvalOnline){ //вычисляем вставки [eval]; [eval_online] — см. processEvalOnlineBlocks
+                              // nMode ="N"- число  ="S"-строка
+                              // flEvalOnline === true — вычислить [eval_online] (перед say); иначе блоки сохраняются
+                    var sRet;
+                    var sWork = processEvalOnlineBlocks(String(str), nMode, flEvalOnline === true);
+
+                    if ((sWork.indexOf('[eval]')>=0)){//нужно досчитать интервал по онлайн-параметрам
                        //разбиваем строку в массив через $, для четных индексов массива заменяем элемнт на eval(element) и собираем зново в строку уже с пустым разделителем
 //alert(str)
-                       var aDelta = str.split('[eval]');
+                       var aDelta = sWork.split('[eval]');
                        for(i=1; i< aDelta.length; i+=2){
                          try{
                            // alert(aDelta[i] )
@@ -3441,6 +3471,7 @@ END:VEVENT\n`
                        }
 
                      }else {
+                         sRet = sWork;
                          if(!(nMode=="S")){
                              //alert(sRet)
                            sRet=calcInterval(sRet); //!!!!
@@ -3539,14 +3570,14 @@ END:VEVENT\n`
                      //...
                      //
                      //сказать текст текущего дела
-                     Gl_aRithmLisp[GlnInd]= calcEval("S",Gl_aRithmLisp[GlnInd])
+                     Gl_aRithmLisp[GlnInd]= calcEval("S",Gl_aRithmLisp[GlnInd],true)
                      say(Gl_aRithmLisp[GlnInd]);
                      if(Gl_aRithmLisp[GlnInd]==TXT_BTN_FINISHED)
                        finishTrainingPlayback()
                      //сбросить начало отсчета отсчет времени, пересчитать текущий интервал и индекс дела
                      GldPrev = new Date();
                      syncOnlinePulseParam()
-                     Gl_aRithmLisp[GlnInd+1]= calcEval("N",String(Gl_aRithmLisp[GlnInd+1])) //!!!String
+                     Gl_aRithmLisp[GlnInd+1]= calcEval("N",String(Gl_aRithmLisp[GlnInd+1]),true) //!!!String
                      GlnInd+=2;
               }
             } else {
