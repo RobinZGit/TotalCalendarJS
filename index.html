@@ -3330,7 +3330,7 @@ END:VEVENT\n`
 
   function say(str0){
         //alert(Gl_aRithmLisp);
-        var str = str0
+        var str = processEvalOnlineBlocks(String(str0), "S", true)
         var sImg = '*img*'
         //если в тексте есть ссылка на картинку - показываем картинку
         try{
@@ -3420,7 +3420,7 @@ END:VEVENT\n`
    }
 
 
-   /** В массиве остаётся «{[eval_online]выражение[eval_online]}» (уголки снимает finish_Gl_aRithmLisp). Вычисление только при flEvalOnline (перед say). */
+   /** В массиве остаётся «{[eval_online]выражение[eval_online]}» (уголки снимает finish_Gl_aRithmLisp). Развёртывание: в say() для речи; в calcEval(...,true) только для режима "N" (интервал). */
    function processEvalOnlineBlocks(str, nMode, flEvalOnline){
      if (typeof str !== "string") str = String(str);
      if (!flEvalOnline) return str;
@@ -3450,11 +3450,13 @@ END:VEVENT\n`
      return out;
    }
 
-   function calcEval(nMode,str,flEvalOnline){ //вычисляем вставки [eval]; { [eval_online]…} — см. processEvalOnlineBlocks
+   function calcEval(nMode,str,flEvalOnline){ //вычисляем вставки [eval]; { [eval_online]…} для "N" — см. processEvalOnlineBlocks; для "S" блок снимает say()
                               // nMode ="N"- число  ="S"-строка
-                              // flEvalOnline === true — развернуть { [eval_online]…} (перед say); иначе строка без изменений
+                              // flEvalOnline === true и nMode!=="S" — развернуть { [eval_online]…} в интервале; речь — только в say()
                     var sRet;
-                    var sWork = processEvalOnlineBlocks(String(str), nMode, flEvalOnline === true);
+                    var sWork = String(str);
+                    if (flEvalOnline === true && nMode !== "S")
+                      sWork = processEvalOnlineBlocks(sWork, nMode, true);
 
                     if ((sWork.indexOf('[eval]')>=0)){//нужно досчитать интервал по онлайн-параметрам
                        //разбиваем строку в массив через $, для четных индексов массива заменяем элемнт на eval(element) и собираем зново в строку уже с пустым разделителем
