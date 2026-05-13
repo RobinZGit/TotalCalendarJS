@@ -8,7 +8,11 @@
       "default": true
     }
   ],
+  "git.path": "C:\\Program Files\\Git\\cmd\\git.exe",
+  "git.allowNoVerifyCommit": true,
+  "git.confirmNoVerifyCommit": false,
   "terminal.integrated.env.windows": {
-    "JAVA_HOME": "C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.19.10-hotspot"
+    "JAVA_HOME": "C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.19.10-hotspot",
+    "PATH": "${env:LOCALAPPDATA}\\Programs\\Python\\Python312;${env:LOCALAPPDATA}\\Programs\\Python\\Python312\\Scripts;${env:PATH}"
   }
 }

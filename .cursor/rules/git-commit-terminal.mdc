@@ -19,3 +19,11 @@ Cursor may inject a `--trailer` argument (Co-authored-by) into such commands. Th
 If you must use plumbing, `git.exe commit-tree` / `write-tree` / `update-ref` are unaffected.
 
 After changing this workflow, prefer **Git for Windows 2.42+** locally so any tooling that does pass `--trailer` keeps working.
+
+## Если падает `git commit` или кнопка «Фиксация» в VS Code / Cursor (часто про Python)
+
+Частая причина на Windows: в `PATH` раньше шёл только `…\WindowsApps\python.exe` (заглушка Microsoft Store), а **pre-commit** или другой **git-hook** вызывает `python` — из UI Git процесс не находит нормальный интерпретатор.
+
+**Что сделать:** установить настоящий Python (например с [python.org](https://www.python.org/downloads/) или `winget install Python.Python.3.12`), чтобы в пользовательском `PATH` **раньше** WindowsApps были `…\Python312\` и `…\Python312\Scripts\`, затем **полностью перезапустить** VS Code / Cursor.
+
+В этом репозитории в `.vscode/settings.json` задано: `git.path` на Git for Windows, при необходимости — **Фиксация (без проверки)** / `git commit --no-verify` (`git.allowNoVerifyCommit`), и в терминале редактора в начало `PATH` подмешивается Python из `%LOCALAPPDATA%\Programs\Python\Python312` (см. `terminal.integrated.env.windows`).
