@@ -4,6 +4,9 @@ plugins {
 
 def generatedWebAssetsDir = layout.buildDirectory.dir('generated/web-assets')
 
+/** В GitHub Actions задано; при локальной сборке пусто — тогда версия по умолчанию. */
+def tcjsGithubRun = (System.getenv("GITHUB_RUN_NUMBER") ?: "").trim()
+
 android {
     namespace 'com.totalcalendarjs.app'
     compileSdk 36
@@ -12,8 +15,8 @@ android {
         applicationId 'com.totalcalendarjs.app'
         minSdk 23
         targetSdk 36
-        versionCode 1
-        versionName '1.0'
+        versionCode (tcjsGithubRun ? Integer.parseInt(tcjsGithubRun) : 1)
+        versionName (tcjsGithubRun ? "1.0.${tcjsGithubRun}" : "1.0")
     }
 
     compileOptions {
@@ -38,16 +41,23 @@ tasks.register('syncWebAssets', Copy) {
     into(generatedWebAssetsDir)
 
     doLast {
+        def stayAliveBannerPattern = /(?s)<div id="externalcall" class="warning-banner" style="display:block">\s*.*?STAYALIVE\.\s*<\/div>/
+        def hiddenBanner = '<div id="externalcall" class="warning-banner" style="display:none"></div>'
+
         def indexFile = generatedWebAssetsDir.get().asFile.toPath().resolve('index.html').toFile()
         if (indexFile.exists()) {
-            def stayAliveBannerPattern = /(?s)<div id="externalcall" class="warning-banner" style="display:block">\s*.*?STAYALIVE\.\s*<\/div>/
-            indexFile.setText(
-                indexFile.getText('UTF-8').replaceFirst(
-                    stayAliveBannerPattern,
-                    '<div id="externalcall" class="warning-banner" style="display:none"></div>'
-                ),
-                'UTF-8'
-            )
+            def text = indexFile.getText('UTF-8')
+            text = text.replaceFirst(stayAliveBannerPattern, hiddenBanner)
+            if (tcjsGithubRun) {
+                text = text.replace('__TCJS_GITHUB_RUN__', tcjsGithubRun)
+            }
+            indexFile.setText(text, 'UTF-8')
+        }
+
+        def index1File = generatedWebAssetsDir.get().asFile.toPath().resolve('index1.html').toFile()
+        if (index1File.exists() && tcjsGithubRun) {
+            def t1 = index1File.getText('UTF-8').replace('__TCJS_GITHUB_RUN__', tcjsGithubRun)
+            index1File.setText(t1, 'UTF-8')
         }
     }
 }

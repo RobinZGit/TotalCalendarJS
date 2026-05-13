@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
+    <meta name="tcjs-build" content="__TCJS_GITHUB_RUN__">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Календарь тренировок</title>
     <style>
@@ -423,8 +424,21 @@
 <div id="idMainWindow" class="app-shell">
     <header class="hero">
         <h1>Календарь тренировок</h1>
-        <p>Удобная панель для выбора тренировки, запуска расписания, импорта файлов и печати плана занятий.</p>
+        <p>Удобная панель для выбора тренировки, запуска расписания, экспорта и импорта файлов и печати плана занятий.</p>
+        <p class="app-build-version" id="idAppBuildVersion" style="margin:0;font-size:12px;color:var(--muted);">сборка …</p>
     </header>
+    <script>
+    (function () {
+        try {
+            var m = document.querySelector('meta[name="tcjs-build"]');
+            var el = document.getElementById('idAppBuildVersion');
+            if (!m || !el) return;
+            var v = (m.getAttribute('content') || '').trim();
+            if (v === '__TCJS_GITHUB_RUN__') el.textContent = 'локальная сборка';
+            else el.textContent = 'сборка ' + v;
+        } catch (e) { /* ignore */ }
+    })();
+    </script>
 
     <section id="checkPage" class="section-card">
         <h2 class="section-title"><span>1</span>Разделы</h2>
@@ -448,7 +462,7 @@
                 <button id="btnDownLoad" class="secondary-btn" type="button" onclick="downloadTrainAndCalFromFile(this)">Сохранить календарь и тренировки в .genall</button>
             </div>
             <div class="file-card">
-                <label for="inpLoad">Импорт всех данных из .genall</label>
+                <label for="inpLoad">Загрузка всех данных из файла .genall</label>
                 <input type="file" accept=".genall" id="inpLoad" onchange="loadTrainAndCalFromFile(this)">
             </div>
         </div>
@@ -475,7 +489,7 @@
         </div>
         <div id="idDivCalendarBtns" class="button-row" style="margin-top:14px">
             <button id="btnRecalcCal" class="primary-btn" type="button" onclick="btnRecalcCalOnClick()">Пересчитать календарь</button>
-            <button id="btnImportCal" class="secondary-btn" type="button" onclick="btnImportCalOnClick()">Импорт календаря ICS</button>
+            <button id="btnImportCal" class="secondary-btn" type="button" onclick="btnImportCalOnClick()">Экспорт календаря ICS</button>
         </div>
         <div id="delimiter2" class="delimiter"></div>
         <div class="field">
@@ -537,7 +551,7 @@
         <div id="delimiter4" class="delimiter"></div>
 
         <section id="idImpExp" class="section-card" style="box-shadow:none;">
-            <h2 class="section-title"><span>6</span>Импорт и экспорт тренировок</h2>
+            <h2 class="section-title"><span>6</span>Экспорт и импорт тренировок</h2>
             <div class="file-grid">
                 <div class="file-card">
                     <label>Экспорт тренировки .rtm</label>
@@ -2654,7 +2668,7 @@ END:VEVENT\n`
     download(sICS, 'FromTotalCalendarJS.ics', 'text/plain')
   }
 
-  //импорт тренировки (кастомный формат .rtm)
+  //экспорт тренировки в файл .rtm (кастомный формат)
   function btnImportTrainOnClick(){
       var aRithmLisp=[]
       var aSimult = []

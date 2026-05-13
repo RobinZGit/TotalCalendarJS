@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
+    <meta name="tcjs-build" content="__TCJS_GITHUB_RUN__">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <title>КАЛЕНДАРЬ</title>
@@ -126,6 +127,14 @@
             font-size: clamp(18px, 2.2vw, 28px);
             line-height: 1.05;
             letter-spacing: -0.03em;
+        }
+
+        .app-build-version {
+            margin-left: auto;
+            font-size: 12px;
+            color: var(--muted);
+            white-space: nowrap;
+            font-weight: normal;
         }
 
         .hero {
@@ -497,7 +506,20 @@
     <header class="app-bar" ondblclick="restartTrainingApp()" title="Двойной клик: перезапуск приложения">
         <img src="favicon.svg" alt="" aria-hidden="true">
         <h1 class="app-bar-title">Календарь тренировок</h1>
+        <span class="app-build-version" id="idAppBuildVersion" title="Номер сборки (GitHub Actions)">сборка …</span>
     </header>
+    <script>
+    (function () {
+        try {
+            var m = document.querySelector('meta[name="tcjs-build"]');
+            var el = document.getElementById('idAppBuildVersion');
+            if (!m || !el) return;
+            var v = (m.getAttribute('content') || '').trim();
+            if (v === '__TCJS_GITHUB_RUN__') el.textContent = 'локальная сборка';
+            else el.textContent = 'сборка ' + v;
+        } catch (e) { /* ignore */ }
+    })();
+    </script>
 
     <section id="trainingControlsTop" class="section-card">
         <div id="idDivAllTrain">
@@ -564,7 +586,7 @@
     <section id="idImpExpAll" class="section-card">
         <div class="file-grid">
             <div class="file-card">
-                <button id="btnDownLoad" class="secondary-btn" type="button" onclick="downloadTrainAndCalFromFile(this)">Импорт всех данных о календарях и тренировках в файл .genall</button>
+                <button id="btnDownLoad" class="secondary-btn" type="button" onclick="downloadTrainAndCalFromFile(this)">Экспорт всех данных о календарях и тренировках в файл .genall</button>
             </div>
             <div class="file-card">
                 <label for="inpLoad">Загрузить данные о календарях и тренировках из файла .genall:</label>
@@ -592,7 +614,7 @@
         </div>
         <div id="idDivCalendarBtns" class="button-row" style="margin-top:14px">
             <button id="btnRecalcCal" class="primary-btn" type="button" onclick="btnRecalcCalOnClick()">Пересчитать календарь</button>
-            <button id="btnImportCal" class="secondary-btn" type="button" onclick="btnImportCalOnClick()">Импорт календаря в формате ICS</button>
+            <button id="btnImportCal" class="secondary-btn" type="button" onclick="btnImportCalOnClick()">Экспорт календаря в формате ICS</button>
         </div>
         <div id="delimiter2" class="delimiter"></div>
         <div class="field">
@@ -609,7 +631,7 @@
         <section id="idImpExp" class="section-card" style="box-shadow:none;">
             <div class="file-grid">
                 <div class="file-card">
-                    <button id="btnImportTrain" class="secondary-btn" type="button" onclick="btnImportTrainOnClick()">Импорт тренировки в файл .rtm</button>
+                    <button id="btnImportTrain" class="secondary-btn" type="button" onclick="btnImportTrainOnClick()">Экспорт тренировки в файл .rtm</button>
                 </div>
                 <div id="delimiter5" class="delimiter"></div>
                 <div id="idRunTrain" class="file-card">
@@ -618,7 +640,7 @@
                 </div>
                 <div id="delimiter6" class="delimiter"></div>
                 <div class="file-card">
-                    <button id="btnImportTrain2Gen" class="secondary-btn" type="button" onclick="btnImportTrainInGenOnClick()">Импорт тренировки в файл .gen</button>
+                    <button id="btnImportTrain2Gen" class="secondary-btn" type="button" onclick="btnImportTrainInGenOnClick()">Экспорт тренировки в файл .gen</button>
                 </div>
                 <div id="delimiter7" class="delimiter"></div>
                 <div id="idRunTrainFromGen" class="file-card">
@@ -3177,7 +3199,7 @@ END:VEVENT\n`
     openCalendarIcsInWeb(sICS)
   }
 
-  //импорт тренировки (кастомный формат .rtm)
+  //экспорт тренировки в файл .rtm (кастомный формат)
   function btnImportTrainOnClick(){
       var aRithmLisp=[]
       var aSimult = []
