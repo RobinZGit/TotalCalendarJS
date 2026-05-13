@@ -131,15 +131,6 @@
             min-width: 0;
         }
 
-        .app-bar-title .app-bar-version-inline {
-            font-weight: 500;
-            font-size: 0.5em;
-            color: var(--muted);
-            white-space: nowrap;
-            letter-spacing: 0;
-            margin-left: 0.35em;
-        }
-
         .hero {
             display: grid;
             gap: 18px;
@@ -508,13 +499,13 @@
 
     <header class="app-bar" ondblclick="restartTrainingApp()" title="Двойной клик: перезапуск приложения">
         <img src="favicon.svg" alt="" aria-hidden="true">
-        <h1 class="app-bar-title"><span id="idAppBarTitleText">Календарь тренировок</span><span class="app-bar-version-inline" id="idAppBarTitleVersion" title="Номер сборки"></span></h1>
+        <h1 class="app-bar-title"><span id="idAppBarTitleText">Календарь тренировок</span><span id="idAppBarTitleVersion" title="Версия сборки"></span></h1>
     </header>
     <script>
     (function () {
         function applyBuild(n) {
             var verEl = document.getElementById('idAppBarTitleVersion');
-            if (verEl) verEl.textContent = String(n);
+            if (verEl) verEl.textContent = ' (v' + n + ')';
         }
         try {
             var m = document.querySelector('meta[name="tcjs-build"]');

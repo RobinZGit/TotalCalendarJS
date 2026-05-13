@@ -118,14 +118,6 @@
             letter-spacing: -0.04em;
         }
 
-        .hero h1 .app-bar-version-inline {
-            font-size: 0.45em;
-            font-weight: 500;
-            color: rgba(255, 255, 255, 0.75);
-            white-space: nowrap;
-            margin-left: 0.35em;
-        }
-
         .hero p {
             max-width: 760px;
             margin: 0;
@@ -431,14 +423,14 @@
 
 <div id="idMainWindow" class="app-shell">
     <header class="hero">
-        <h1>Календарь тренировок<span class="app-bar-version-inline" id="idAppBarTitleVersion" title="Номер сборки"></span></h1>
+        <h1><span id="idAppBarTitleText">Календарь тренировок</span><span id="idAppBarTitleVersion" title="Версия сборки"></span></h1>
         <p>Удобная панель для выбора тренировки, запуска расписания, экспорта и импорта файлов и печати плана занятий.</p>
     </header>
     <script>
     (function () {
         function applyBuild(n) {
             var verEl = document.getElementById('idAppBarTitleVersion');
-            if (verEl) verEl.textContent = String(n);
+            if (verEl) verEl.textContent = ' (v' + n + ')';
         }
         try {
             var m = document.querySelector('meta[name="tcjs-build"]');
