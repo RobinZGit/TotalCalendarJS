@@ -3421,12 +3421,12 @@ END:VEVENT\n`
    }
 
 
-   /** В массиве остаётся «{[eval_online]выражение[eval_online]}» (уголки снимает finish_Gl_aRithmLisp). Развёртывание: в say() для речи; в calcEval(...,true) только для режима "N" (интервал). */
+   /** В массиве остаётся «{[eval_online]выражение[eval_online]}» (уголки снимает finish_Gl_aRithmLisp; блок целиком маскируется от strip < >). Развёртывание только в say(). */
    function processEvalOnlineBlocks(str, nMode, flEvalOnline){
      if (typeof str !== "string") str = String(str);
      if (!flEvalOnline) return str;
      var reBlock = /\{\[eval_online\]([\s\S]*?)\[eval_online\]\}?/g;
-     str = str.replace(reBlock, function (_full, expr) {
+     return str.replace(reBlock, function (_full, expr) {
        try {
          var ev = eval(expr);
          return (ev === undefined || ev === null) ? "" : String(ev);
@@ -3434,9 +3434,6 @@ END:VEVENT\n`
          return "0";
        }
      });
-     if (str.indexOf("{[eval_online]") >= 0)
-       str = str.split("{[eval_online]").join("");
-     return str;
    }
 
    function calcEval(nMode,str,flEvalOnline){ //вычисляем вставки [eval]; { [eval_online]…} для "N" — см. processEvalOnlineBlocks; для "S" блок снимает say()
@@ -4225,15 +4222,35 @@ END:VEVENT\n`
     return Gl_aRithmLisp.slice();
     }
 
+  /** Временно убираем блоки { [eval_online]…} из строки, чтобы split('<')/split('>') не ломали >= и маркеры до say(). */
+  function maskEvalOnlineBlocksForAngleStrip(s){
+    if (typeof s !== "string") s = String(s);
+    var parts = [];
+    var t = s.replace(/\{\[eval_online\][\s\S]*?\[eval_online\]\}?/g, function (m) {
+      parts.push(m);
+      return "__TCJS_EVON_" + (parts.length - 1) + "__";
+    });
+    return { t: t, parts: parts };
+  }
+  function unmaskEvalOnlineBlocksForAngleStrip(t, parts) {
+    var out = t;
+    for (var i = 0; i < parts.length; i++)
+      out = out.split("__TCJS_EVON_" + i + "__").join(parts[i]);
+    return out;
+  }
+
     function  finish_Gl_aRithmLisp(){
       for (var i1 = 0; i1 < Gl_aRithmLisp.length; i1++){
           //alert(Gl_aRithmLisp[i1])
           //убираем спецсимволы из речи
           try{
-              Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('><').join(' ');
-              Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('<').join(' ');
-              Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('>').join(' ');
-              Gl_aRithmLisp[i1] = Gl_aRithmLisp[i1].split('>').join(' ');
+              var evMask = maskEvalOnlineBlocksForAngleStrip(Gl_aRithmLisp[i1]);
+              var tStrip = evMask.t;
+              tStrip = tStrip.split('><').join(' ');
+              tStrip = tStrip.split('<').join(' ');
+              tStrip = tStrip.split('>').join(' ');
+              tStrip = tStrip.split('>').join(' ');
+              Gl_aRithmLisp[i1] = unmaskEvalOnlineBlocksForAngleStrip(tStrip, evMask.parts);
           }catch(e){}
       }
       
