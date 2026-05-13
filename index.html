@@ -3021,6 +3021,17 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
                   "[END EVAL PARAMETERS]",
                 ],
               ],
+              //========================== ОЗВУЧКА ВРЕМЕНИ (3600× каждые 30 с: «прошло минут» + _прошло_минут_ от таймера тренировки)
+              [
+                [],
+                [
+                  "<ОЗВУЧКА ВРЕМЕНИ>=3600<ЦИКЛ_ВРЕМЯ>",
+                  "<ЦИКЛ_ВРЕМЯ>=<МИНУТЫ_ФРАЗА>;<#30 [СЕК]#>",
+                  "<МИНУТЫ_ФРАЗА>=<{[eval_online]'прошло минут '+_прошло_минут_[eval_online]}>",
+                  "[BEGIN EVAL PARAMETERS]",
+                  "[END EVAL PARAMETERS]",
+                ],
+              ],
     ];
   var GlTest = 1;
   var GltxtSpeek  = document.getElementById("idTextsToSpeek");
@@ -3554,6 +3565,23 @@ END:VEVENT\n`
        _пульс_ = -1
    }
 
+   /** Для eval_online в речи: _прошло_* от реального времени с момента старта тренировки (GlBegTime), а не от статического разбора ритма. */
+   function syncOnlineWallClockFromTrainingStart(){
+     try{
+       if (!GlBegTime || !GlflSayIntro)
+         return
+       var ms = Math.max(0, new Date() - GlBegTime)
+       _прошло_милисекунд_ = ms
+       _прошло_секунд_ = Math.floor(ms / 1000)
+       _прошло_минут_ = Math.floor(ms / (1000 * 60))
+       _прошло_часов_ = Math.floor(ms / (1000 * 60 * 60))
+       _прошло_дней_ = Math.floor(ms / (1000 * 60 * 60 * 24))
+       _прошло_недель_ = Math.floor(ms / (1000 * 60 * 60 * 24 * 7))
+       _прошло_лет_ = Math.floor(ms / (1000 * 60 * 60 * 24 * 365))
+       _прошло_месяцев_ = 0
+     }catch(e){}
+   }
+
 
    function calcInterval(sInterval){ //распарсить интервал вида <#19 [СЕК][%ДИСПЕРС]10#> или <#19 [СЕК]#>
         //дисперсия
@@ -3695,6 +3723,7 @@ END:VEVENT\n`
                      //!! вычисляется во второй проход но тут не помешает, тк этой переменной в формуле уже нет
                      _номер_итерации_+=1;
                      syncOnlinePulseParam()
+                     syncOnlineWallClockFromTrainingStart()
                      //-----------------------------------------------------------
                      try{
                        document.getElementById('buttonCurrentTr' + GlnInd).style.background='green'
@@ -3724,6 +3753,7 @@ END:VEVENT\n`
                      //сбросить начало отсчета отсчет времени, пересчитать текущий интервал и индекс дела
                      GldPrev = new Date();
                      syncOnlinePulseParam()
+                     syncOnlineWallClockFromTrainingStart()
                      Gl_aRithmLisp[GlnInd+1]= calcEval("N",String(Gl_aRithmLisp[GlnInd+1]),true) //!!!String
                      GlnInd+=2;
               }
