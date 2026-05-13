@@ -1,0 +1,28 @@
+# Фрагмент для вставки в .github/workflows/build-android-apk.yml (через веб-редактор GitHub),
+# если локальный push workflow блокируется OAuth без scope «workflow».
+#
+# 1) В начало файла (после name/on) добавьте:
+#    permissions:
+#      contents: write
+#
+# 2) В on.push.paths добавьте строку:  - 'app-build.txt'
+#
+# 3) После шага «Upload APK artifact» вставьте шаг:
+
+      - name: Sync app-build.txt for web (GITHUB_RUN_NUMBER)
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+        run: |
+          set -euo pipefail
+          echo "${GITHUB_RUN_NUMBER}" > app-build.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app-build.txt
+          if git diff --staged --quiet; then
+            echo "app-build.txt already ${GITHUB_RUN_NUMBER}"
+          else
+            git commit -m "chore: sync app-build.txt [skip ci]"
+            git push
+          fi
+
+# Коммит с [skip ci] не запускает workflow повторно. Число в app-build.txt совпадает с номером
+# последнего успешного прогона Build Android APK и подтягивается в заголовок через fetch.
