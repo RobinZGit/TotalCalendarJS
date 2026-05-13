@@ -3348,6 +3348,7 @@ END:VEVENT\n`
           }
         }
         }catch(e){}
+        str = processEvalOnlineBlocks(String(str), "S", true)
 
         if (!docNoSound.checked){
             if (Gl_StopSpeakIfNext) stopCurrentSpeech()
@@ -3424,30 +3425,18 @@ END:VEVENT\n`
    function processEvalOnlineBlocks(str, nMode, flEvalOnline){
      if (typeof str !== "string") str = String(str);
      if (!flEvalOnline) return str;
-     var open = "{[eval_online]";
-     var close = "[eval_online]";
-     var out = str;
-     var pos = 0;
-     while (true) {
-       var i0 = out.indexOf(open, pos);
-       if (i0 < 0) break;
-       var i1 = i0 + open.length;
-       var i2 = out.indexOf(close, i1);
-       if (i2 < 0) break;
-       var expr = out.substring(i1, i2);
-       var iEnd = i2 + close.length;
-       if (iEnd < out.length && out.charAt(iEnd) === "}") iEnd++;
-       var repl;
+     var reBlock = /\{\[eval_online\]([\s\S]*?)\[eval_online\]\}?/g;
+     str = str.replace(reBlock, function (_full, expr) {
        try {
          var ev = eval(expr);
-         repl = (ev === undefined || ev === null) ? "" : String(ev);
+         return (ev === undefined || ev === null) ? "" : String(ev);
        } catch (e) {
-         repl = "0";
+         return "0";
        }
-       out = out.substring(0, i0) + repl + out.substring(iEnd);
-       pos = i0 + repl.length;
-     }
-     return out;
+     });
+     if (str.indexOf("{[eval_online]") >= 0)
+       str = str.split("{[eval_online]").join("");
+     return str;
    }
 
    function calcEval(nMode,str,flEvalOnline){ //вычисляем вставки [eval]; { [eval_online]…} для "N" — см. processEvalOnlineBlocks; для "S" блок снимает say()
