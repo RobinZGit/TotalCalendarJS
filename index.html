@@ -2863,7 +2863,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
                 [
                   "<ОЗВУЧКА ПУЛЬСА>=3600<ЦИКЛ>",
                   "<ЦИКЛ>=<ПУЛЬС_ФРАЗА>;<#30 [СЕК]#>",
-                  "<ПУЛЬС_ФРАЗА>=<{[eval_online](true?('пульс '+_пульс_):'пульс')[eval_online]}>",
+                  "<ПУЛЬС_ФРАЗА>=<{[eval_online](_пульс_>=0?('пульс '+_пульс_):'пульс')[eval_online]}>",
                   "[BEGIN EVAL PARAMETERS]",
                   "[END EVAL PARAMETERS]",
                 ],
@@ -3907,6 +3907,22 @@ END:VEVENT\n`
                          .replaceAll("'",GlSSquote)
                          .replaceAll('"',GlSDquote)
   }
+  /** Временно убираем блоки { [eval_online]…} из строки: split('<')/split('>') в finish и замена '→<> в Gl_aGenRithm не ломают >= и кавычки внутри выражения. */
+  function maskEvalOnlineBlocksForAngleStrip(s){
+    if (typeof s !== "string") s = String(s);
+    var parts = [];
+    var t = s.replace(/\{\[eval_online\][\s\S]*?\[eval_online\]\}?/g, function (m) {
+      parts.push(m);
+      return "__TCJS_EVON_" + (parts.length - 1) + "__";
+    });
+    return { t: t, parts: parts };
+  }
+  function unmaskEvalOnlineBlocksForAngleStrip(t, parts) {
+    var out = t;
+    for (var i = 0; i < parts.length; i++)
+      out = out.split("__TCJS_EVON_" + i + "__").join(parts[i]);
+    return out;
+  }
   //выдает массив тренировки (начинается всегда с интервала, чередуется интервал-команда)
   function getArithmOneIteration(aGen){
     
@@ -4002,11 +4018,14 @@ END:VEVENT\n`
 
 
     /* не убирать, напр в ИМ появляются дела undefined, сначала разобраться с ними*/
-    for(var i=0; i<Gl_aGenRithm.length; i++){ //?ОНО НАДО ВООБЩЕ ?? сначала возьмем слова в кавычках в угловые скобки
-       while(Gl_aGenRithm[i].indexOf("'")>=0){
-           Gl_aGenRithm[i]=Gl_aGenRithm[i].replace("'","<");
-           Gl_aGenRithm[i]=Gl_aGenRithm[i].replace("'",">");
+    for(var i=0; i<Gl_aGenRithm.length; i++){ //?ОНО НАДО ВООБЩЕ ?? сначала возьмем слова в кавычках в угловые скобки (не трогать кавычки внутри { [eval_online]…})
+       var qMask = maskEvalOnlineBlocksForAngleStrip(Gl_aGenRithm[i]);
+       var qi = qMask.t;
+       while(qi.indexOf("'")>=0){
+           qi=qi.replace("'","<");
+           qi=qi.replace("'",">");
        }
+       Gl_aGenRithm[i]=unmaskEvalOnlineBlocksForAngleStrip(qi, qMask.parts);
        if (Gl_aGenRithm[i].trim()[Gl_aGenRithm[i].trim().length-1]==";"){ //уберем последнюю ;
            Gl_aGenRithm[i] = Gl_aGenRithm[i].trim().substr(0,Gl_aGenRithm[i].trim().length-1)
        }
@@ -4221,23 +4240,6 @@ END:VEVENT\n`
     Gl_IsGenerated = true
     return Gl_aRithmLisp.slice();
     }
-
-  /** Временно убираем блоки { [eval_online]…} из строки, чтобы split('<')/split('>') не ломали >= и маркеры до say(). */
-  function maskEvalOnlineBlocksForAngleStrip(s){
-    if (typeof s !== "string") s = String(s);
-    var parts = [];
-    var t = s.replace(/\{\[eval_online\][\s\S]*?\[eval_online\]\}?/g, function (m) {
-      parts.push(m);
-      return "__TCJS_EVON_" + (parts.length - 1) + "__";
-    });
-    return { t: t, parts: parts };
-  }
-  function unmaskEvalOnlineBlocksForAngleStrip(t, parts) {
-    var out = t;
-    for (var i = 0; i < parts.length; i++)
-      out = out.split("__TCJS_EVON_" + i + "__").join(parts[i]);
-    return out;
-  }
 
     function  finish_Gl_aRithmLisp(){
       for (var i1 = 0; i1 < Gl_aRithmLisp.length; i1++){
