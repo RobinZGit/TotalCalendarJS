@@ -2863,7 +2863,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
                 [
                   "<ОЗВУЧКА ПУЛЬСА>=3600<ЦИКЛ>",
                   "<ЦИКЛ>=<ПУЛЬС_ФРАЗА>;<#30 [СЕК]#>",
-                  "<ПУЛЬС_ФРАЗА>=<{[eval_online](_пульс_>=0?('пульс '+_пульс_):'пульс')[eval_online]}>",
+                  "<ПУЛЬС_ФРАЗА>=<{[eval_online]if(_пульс_>=0){'пульс '+_пульс_} else {'пульс'}[eval_online]}>",
                   "[BEGIN EVAL PARAMETERS]",
                   "[END EVAL PARAMETERS]",
                 ],
@@ -3428,7 +3428,7 @@ END:VEVENT\n`
      var reBlock = /\{\[eval_online\]([\s\S]*?)\[eval_online\]\}?/g;
      return str.replace(reBlock, function (_full, expr) {
        try {
-         var ev = eval(expr);
+         var ev = eval(unwrapSpecSymbForEval(expr));
          return (ev === undefined || ev === null) ? "" : String(ev);
        } catch (e) {
          return "0";
@@ -3907,6 +3907,16 @@ END:VEVENT\n`
                          .replaceAll("'",GlSSquote)
                          .replaceAll('"',GlSDquote)
   }
+  /** Обратно к JS перед eval() в processEvalOnlineBlocks (после replaceSpecSymb в генераторе). */
+  function unwrapSpecSymbForEval(str){
+    return String(str)
+      .replaceAll(GlSEqual,'=')
+      .replaceAll(GlSMore,'>')
+      .replaceAll(GlSLess,'<')
+      .replaceAll(GlSSemicol,';')
+      .replaceAll(GlSSquote,"'")
+      .replaceAll(GlSDquote,'"');
+  }
   /** Временно убираем блоки { [eval_online]…} из строки: split('<')/split('>') в finish и замена '→<> в Gl_aGenRithm не ломают >= и кавычки внутри выражения. */
   function maskEvalOnlineBlocksForAngleStrip(s){
     if (typeof s !== "string") s = String(s);
@@ -3948,6 +3958,13 @@ END:VEVENT\n`
           arr[j] =replaceSpecSymb(arr[j])
         Gl_aGenRithm00[i] = arr.join('[eval]')
       }  
+    }
+
+    //замена спецсимволов внутри { [eval_online]…[eval_online] } — как в блоках [eval], чтобы >=, <=, <, >, = не ломали раскрытие <…> (isInAngleBrackets / fgetPosBracket*)
+    for(var i=0; i<Gl_aGenRithm00.length; i++){
+      Gl_aGenRithm00[i] = Gl_aGenRithm00[i].replace(/\{\[eval_online\]([\s\S]*?)\[eval_online\](\})?/g, function (_m, inner, optBrace) {
+        return '{[eval_online]' + replaceSpecSymb(inner) + '[eval_online]' + (optBrace || '');
+      });
     }
 
     //замена двоеточий в блоках [ВЫБОР ...[КАК]
