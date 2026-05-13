@@ -123,6 +123,7 @@
             font-weight: 500;
             color: rgba(255, 255, 255, 0.75);
             white-space: nowrap;
+            margin-left: 0.35em;
         }
 
         .hero p {
@@ -435,14 +436,30 @@
     </header>
     <script>
     (function () {
+        function applyBuild(n) {
+            var verEl = document.getElementById('idAppBarTitleVersion');
+            if (verEl) verEl.textContent = String(n);
+        }
         try {
             var m = document.querySelector('meta[name="tcjs-build"]');
-            var verEl = document.getElementById('idAppBarTitleVersion');
-            if (!verEl) return;
             var v = m ? (m.getAttribute('content') || '').trim() : '';
-            if (!v || v === '__TCJS_GITHUB_RUN__') verEl.textContent = ' · локальная сборка';
-            else verEl.textContent = ' · сборка ' + v;
+            if (v && v !== '__TCJS_GITHUB_RUN__' && /^[0-9]+$/.test(v)) {
+                applyBuild(parseInt(v, 10));
+                return;
+            }
         } catch (e) { /* ignore */ }
+        try {
+            fetch('app-build.txt', { cache: 'no-store' }).then(function (r) {
+                return r.ok ? r.text() : '0';
+            }).then(function (t) {
+                var n = parseInt(String(t).trim(), 10);
+                applyBuild(isFinite(n) && n >= 0 ? n : 0);
+            }).catch(function () {
+                applyBuild(0);
+            });
+        } catch (e2) {
+            applyBuild(0);
+        }
     })();
     </script>
 
