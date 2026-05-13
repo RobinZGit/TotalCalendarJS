@@ -127,14 +127,16 @@
             font-size: clamp(18px, 2.2vw, 28px);
             line-height: 1.05;
             letter-spacing: -0.03em;
+            flex: 1;
+            min-width: 0;
         }
 
-        .app-build-version {
-            margin-left: auto;
-            font-size: 12px;
+        .app-bar-title .app-bar-version-inline {
+            font-weight: 500;
+            font-size: 0.5em;
             color: var(--muted);
             white-space: nowrap;
-            font-weight: normal;
+            letter-spacing: 0;
         }
 
         .hero {
@@ -505,18 +507,17 @@
 
     <header class="app-bar" ondblclick="restartTrainingApp()" title="Двойной клик: перезапуск приложения">
         <img src="favicon.svg" alt="" aria-hidden="true">
-        <h1 class="app-bar-title">Календарь тренировок</h1>
-        <span class="app-build-version" id="idAppBuildVersion" title="Номер сборки (GitHub Actions)">сборка …</span>
+        <h1 class="app-bar-title"><span id="idAppBarTitleText">Календарь тренировок</span><span class="app-bar-version-inline" id="idAppBarTitleVersion" title="Номер сборки"></span></h1>
     </header>
     <script>
     (function () {
         try {
             var m = document.querySelector('meta[name="tcjs-build"]');
-            var el = document.getElementById('idAppBuildVersion');
-            if (!m || !el) return;
-            var v = (m.getAttribute('content') || '').trim();
-            if (v === '__TCJS_GITHUB_RUN__') el.textContent = 'локальная сборка';
-            else el.textContent = 'сборка ' + v;
+            var verEl = document.getElementById('idAppBarTitleVersion');
+            if (!verEl) return;
+            var v = m ? (m.getAttribute('content') || '').trim() : '';
+            if (!v || v === '__TCJS_GITHUB_RUN__') verEl.textContent = ' · локальная сборка';
+            else verEl.textContent = ' · сборка ' + v;
         } catch (e) { /* ignore */ }
     })();
     </script>
@@ -564,8 +565,8 @@
                 </div>
             </div>
             <div id="androidHeartRateControls" class="button-row" style="display:none;margin-top:12px">
-                <button type="button" class="secondary-btn" onclick="callAndroidTraining('startHeartRateSensor')">BLE пульсометр</button>
-                <button type="button" class="secondary-btn" onclick="callAndroidTraining('stopHeartRateSensor')">Отключить пульсометр</button>
+                <button type="button" class="secondary-btn" onclick="heartRateSensorStart()">Подключить пульсометр</button>
+                <button type="button" class="secondary-btn" onclick="heartRateSensorStop()">Отключить пульсометр</button>
             </div>
         </div>
     </section>
@@ -878,6 +879,113 @@ function callAndroidTraining(methodName){
   return false
 }
 
+function isWebBluetoothHeartRateAvailable(){
+  try{
+    return !!(window.isSecureContext && navigator.bluetooth && typeof navigator.bluetooth.requestDevice === "function")
+  }catch(e){
+    return false
+  }
+}
+
+function parseWebBleHeartRate(dataView){
+  try{
+    if (!dataView || dataView.byteLength < 2) return -1
+    var flags = dataView.getUint8(0)
+    var bpm
+    if (flags & 1){
+      if (dataView.byteLength < 3) return -1
+      bpm = dataView.getUint16(1, true)
+    } else {
+      bpm = dataView.getUint8(1)
+    }
+    if (bpm <= 0 || bpm > 250) return -1
+    return bpm
+  }catch(e){
+    return -1
+  }
+}
+
+function glWebBleHrNotifyHandler(ev){
+  try{
+    var dv = ev.target && ev.target.value
+    if (!dv) return
+    var bpm = parseWebBleHeartRate(dv)
+    if (bpm > 0) onAndroidHeartRate(bpm)
+  }catch(e){}
+}
+
+function onWebBleHrDisconnected(){
+  try{
+    if (Gl_WebBleHrChar){
+      Gl_WebBleHrChar.removeEventListener("characteristicvaluechanged", glWebBleHrNotifyHandler)
+      Gl_WebBleHrChar = null
+    }
+  }catch(e){}
+  Gl_WebBleHrDevice = null
+  onAndroidHeartRate(-1)
+}
+
+function webBleHeartRateStop(){
+  try{
+    if (Gl_WebBleHrChar){
+      Gl_WebBleHrChar.removeEventListener("characteristicvaluechanged", glWebBleHrNotifyHandler)
+      Gl_WebBleHrChar.stopNotifications().catch(function(){})
+      Gl_WebBleHrChar = null
+    }
+    if (Gl_WebBleHrDevice){
+      try{
+        Gl_WebBleHrDevice.removeEventListener("gattserverdisconnected", onWebBleHrDisconnected)
+      }catch(e2){}
+      if (Gl_WebBleHrDevice.gatt && Gl_WebBleHrDevice.gatt.connected)
+        Gl_WebBleHrDevice.gatt.disconnect()
+    }
+  }catch(e){}
+  Gl_WebBleHrDevice = null
+  onAndroidHeartRate(-1)
+}
+
+async function webBleHeartRateStart(){
+  if (!isWebBluetoothHeartRateAvailable()){
+    alert("Пульс по Bluetooth в браузере: нужен Chrome или Edge, страница по HTTPS (или localhost), Bluetooth включён.")
+    return
+  }
+  webBleHeartRateStop()
+  try{
+    var device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: ["heart_rate"]
+    })
+    var server = await device.gatt.connect()
+    var service = await server.getPrimaryService("heart_rate")
+    var chr = await service.getCharacteristic("heart_rate_measurement")
+    await chr.startNotifications()
+    chr.addEventListener("characteristicvaluechanged", glWebBleHrNotifyHandler)
+    Gl_WebBleHrChar = chr
+    Gl_WebBleHrDevice = device
+    device.addEventListener("gattserverdisconnected", onWebBleHrDisconnected)
+  }catch(e){
+    if (e && e.name !== "NotFoundError" && e.name !== "AbortError")
+      alert("Bluetooth: " + (e.message || String(e)))
+    webBleHeartRateStop()
+  }
+}
+
+function heartRateSensorStart(){
+  if (window.AndroidTraining && typeof window.AndroidTraining.startHeartRateSensor === "function"){
+    callAndroidTraining("startHeartRateSensor")
+    return
+  }
+  webBleHeartRateStart()
+}
+
+function heartRateSensorStop(){
+  if (window.AndroidTraining && typeof window.AndroidTraining.stopHeartRateSensor === "function"){
+    callAndroidTraining("stopHeartRateSensor")
+    return
+  }
+  webBleHeartRateStop()
+}
+
 function stopCurrentSpeech(){
   callAndroidTraining("stopSpeech")
 
@@ -943,7 +1051,8 @@ function initAndroidHeartRateUi(){
     var row = document.getElementById("androidHeartRateControls")
     if (!row)
       return
-    row.style.display = window.AndroidTraining ? "flex" : "none"
+    var show = !!(window.AndroidTraining || isWebBluetoothHeartRateAvailable())
+    row.style.display = show ? "flex" : "none"
   }catch(e){}
 }
 
@@ -2925,6 +3034,8 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   var Gl_trainTime
   /** Последний BPM с Android BLE; -1 — нет данных */
   var Gl_lastHeartRateBpm = -1
+  var Gl_WebBleHrDevice = null
+  var Gl_WebBleHrChar = null
   var Gl_decodeExternalCallValue=""
   
   //для замены спецсимволов 
