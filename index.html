@@ -2863,7 +2863,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
                 [
                   "<ОЗВУЧКА ПУЛЬСА>=3600<ЦИКЛ>",
                   "<ЦИКЛ>=<ПУЛЬС_ФРАЗА>;<#30 [СЕК]#>",
-                  "<ПУЛЬС_ФРАЗА>=<[eval_online](_пульс_>=0?('пульс '+_пульс_):'пульс')[eval_online]>",
+                  "<ПУЛЬС_ФРАЗА>=<{[eval_online](_пульс_>=0?('пульс '+_пульс_):'пульс')[eval_online]}>",
                   "[BEGIN EVAL PARAMETERS]",
                   "[END EVAL PARAMETERS]",
                 ],
@@ -3375,7 +3375,8 @@ END:VEVENT\n`
       }
 
   function hasOnlineCalcedParams(str){
-     return ((str.indexOf('[eval_online]')>=0)
+     return ((str.indexOf('{[eval_online]')>=0)
+             ||(str.indexOf('[eval_online]')>=0)
              ||(str.indexOf('_номер_итерации_')>=0)
              ||(str.indexOf('_прошло_лет_')>=0)
              ||(str.indexOf('_прошло_месяцев_')>=0)
@@ -3419,36 +3420,39 @@ END:VEVENT\n`
    }
 
 
-   /** [eval_online]…[eval_online] — только при flEvalOnline (перед say); на втором проходе не трогается. */
+   /** В массиве остаётся «{[eval_online]выражение[eval_online]}» (уголки снимает finish_Gl_aRithmLisp). Вычисление только при flEvalOnline (перед say). */
    function processEvalOnlineBlocks(str, nMode, flEvalOnline){
      if (typeof str !== "string") str = String(str);
-     if (str.indexOf("[eval_online]") < 0) return str;
-     var a = str.split("[eval_online]");
-     if (a.length < 3 || (a.length % 2) === 0) return str;
-     var i;
-     for (i = 1; i < a.length; i += 2) {
-       if (flEvalOnline) {
-         try {
-           a[i] = eval(a[i]);
-           if (a[i] === undefined || a[i] === null) a[i] = "";
-           a[i] = String(a[i]);
-         } catch (e) {
-           a[i] = "0";
-         }
+     if (!flEvalOnline) return str;
+     var open = "{[eval_online]";
+     var close = "[eval_online]";
+     var out = str;
+     var pos = 0;
+     while (true) {
+       var i0 = out.indexOf(open, pos);
+       if (i0 < 0) break;
+       var i1 = i0 + open.length;
+       var i2 = out.indexOf(close, i1);
+       if (i2 < 0) break;
+       var expr = out.substring(i1, i2);
+       var iEnd = i2 + close.length;
+       if (iEnd < out.length && out.charAt(iEnd) === "}") iEnd++;
+       var repl;
+       try {
+         var ev = eval(expr);
+         repl = (ev === undefined || ev === null) ? "" : String(ev);
+       } catch (e) {
+         repl = "0";
        }
+       out = out.substring(0, i0) + repl + out.substring(iEnd);
+       pos = i0 + repl.length;
      }
-     var sRet = a[0];
-     for (i = 1; i < a.length; i += 2) {
-       if (flEvalOnline) sRet += a[i];
-       else sRet += "[eval_online]" + a[i] + "[eval_online]";
-       if (i + 1 < a.length) sRet += a[i + 1];
-     }
-     return sRet;
+     return out;
    }
 
-   function calcEval(nMode,str,flEvalOnline){ //вычисляем вставки [eval]; [eval_online] — см. processEvalOnlineBlocks
+   function calcEval(nMode,str,flEvalOnline){ //вычисляем вставки [eval]; { [eval_online]…} — см. processEvalOnlineBlocks
                               // nMode ="N"- число  ="S"-строка
-                              // flEvalOnline === true — вычислить [eval_online] (перед say); иначе блоки сохраняются
+                              // flEvalOnline === true — развернуть { [eval_online]…} (перед say); иначе строка без изменений
                     var sRet;
                     var sWork = processEvalOnlineBlocks(String(str), nMode, flEvalOnline === true);
 
