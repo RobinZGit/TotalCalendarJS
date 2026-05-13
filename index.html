@@ -290,6 +290,18 @@
             background: #fff;
         }
 
+        .btn-heart-connect {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-heart-connect .hr-heart-svg {
+            flex-shrink: 0;
+            display: block;
+        }
+
         .success-btn {
             background: var(--success);
         }
@@ -587,7 +599,11 @@
                 </div>
             </div>
             <div id="androidHeartRateControls" class="button-row" style="display:none;margin-top:12px">
-                <button type="button" class="secondary-btn" onclick="heartRateSensorStart()">Подключить пульсометр</button>
+                <button type="button" id="btnHeartRateConnect" class="secondary-btn btn-heart-connect" onclick="heartRateSensorStart()">
+                    <span class="hr-heart-solid hr-heart-svg" style="display:none;line-height:0" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#dc2626" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span>
+                    <span class="hr-heart-outline hr-heart-svg" style="display:inline;line-height:0" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ffffff" stroke="#dc2626" stroke-width="1.35" stroke-linejoin="round" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span>
+                    <span>Подключить пульсометр</span>
+                </button>
                 <button type="button" class="secondary-btn" onclick="heartRateSensorStop()">Отключить пульсометр</button>
             </div>
         </div>
@@ -985,11 +1001,39 @@ async function webBleHeartRateStart(){
     Gl_WebBleHrChar = chr
     Gl_WebBleHrDevice = device
     device.addEventListener("gattserverdisconnected", onWebBleHrDisconnected)
+    updateHeartRateConnectButtonIcon()
   }catch(e){
     if (e && e.name !== "NotFoundError" && e.name !== "AbortError")
       alert("Bluetooth: " + (e.message || String(e)))
     webBleHeartRateStop()
   }
+}
+
+function isHeartRateSensorConnected(){
+  try{
+    if (typeof Gl_WebBleHrChar !== "undefined" && Gl_WebBleHrChar != null)
+      return true
+    if (typeof Gl_lastHeartRateBpm !== "undefined" && Gl_lastHeartRateBpm >= 0)
+      return true
+    return false
+  }catch(e){
+    return false
+  }
+}
+
+function updateHeartRateConnectButtonIcon(){
+  try{
+    var btn = document.getElementById("btnHeartRateConnect")
+    if (!btn)
+      return
+    var solid = btn.querySelector(".hr-heart-solid")
+    var outline = btn.querySelector(".hr-heart-outline")
+    var on = isHeartRateSensorConnected()
+    if (solid)
+      solid.style.display = on ? "inline" : "none"
+    if (outline)
+      outline.style.display = on ? "none" : "inline"
+  }catch(e){}
 }
 
 function heartRateSensorStart(){
@@ -1075,6 +1119,7 @@ function initAndroidHeartRateUi(){
       return
     var show = !!(window.AndroidTraining || isWebBluetoothHeartRateAvailable())
     row.style.display = show ? "flex" : "none"
+    updateHeartRateConnectButtonIcon()
   }catch(e){}
 }
 
@@ -3683,6 +3728,7 @@ END:VEVENT\n`
          txtTextTime.value = formatTrainingTimeLine(dT)
        }
      }catch(e){}
+     updateHeartRateConnectButtonIcon()
    }
 
    function formatTrainingTimeLine(dT){
