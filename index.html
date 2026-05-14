@@ -394,6 +394,19 @@
             margin: 0;
         }
 
+        /* Верхняя область текста упражнения в режиме «без звука»: по ширине min(колонка, текст), свёрнута без текста */
+        .text-train-shell {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            box-sizing: border-box;
+            padding: 0 clamp(10px, 2vw, 16px);
+        }
+
+        .text-train-shell.text-train-shell--hidden {
+            display: none !important;
+        }
+
         .training-display textarea {
             min-height: 240px;
             padding: 20px;
@@ -403,12 +416,16 @@
         }
 
         #idTextTrain {
-            height: 100vh;
-            height: 100dvh;
-            min-height: 100vh;
-            min-height: 100dvh;
-            max-height: 100vh;
-            max-height: 100dvh;
+            box-sizing: border-box;
+            display: none;
+            margin: 0 auto;
+            min-height: 0;
+            height: auto;
+            max-height: min(70vh, 70dvh);
+            overflow-y: auto;
+            resize: vertical;
+            width: auto;
+            max-width: min(1180px, calc(100vw - 32px));
         }
 
         #idTextTime {
@@ -507,7 +524,9 @@
 
 <div id="idMainWindow" class="app-shell">
     <div class="training-display no-sound-training-display">
-        <textarea id="idTextTrain" style="display:none;"> </textarea>
+        <div id="idTextTrainShell" class="text-train-shell text-train-shell--hidden" aria-live="polite">
+            <textarea id="idTextTrain" rows="1" wrap="soft" spellcheck="false"> </textarea>
+        </div>
     </div>
 
     <header class="app-bar" ondblclick="restartTrainingApp()" title="Двойной клик: перезапуск приложения">
@@ -587,7 +606,7 @@
             <div class="option-grid">
                 <label class="option-card checkbox-line" for="idNoSound">
                     <span><strong>Без звука:</strong></span>
-                    <input id="idNoSound" type="checkbox" onclick="syncAndroidNoSoundMode(); if (!this.checked) document.getElementById('idTextTrain').style.display='none'; else {document.getElementById('idTextTrain').style.display='block'; stopCurrentSpeech()}">
+                    <input id="idNoSound" type="checkbox" onclick="onNoSoundCheckboxClick()">
                 </label>
                 <label class="option-card checkbox-line" for="idStopSpeakIfNext">
                     <span><strong>Прерывать текст упражнения сразу при наступлении времени следующего:</strong></span>
@@ -1110,6 +1129,81 @@ function syncAndroidNoSoundMode(){
     var noSoundInput = document.getElementById("idNoSound")
     callAndroidTraining("setNoSoundMode", !!(noSoundInput && noSoundInput.checked))
   }catch(e){}
+}
+
+/** Ширина самой длинной строки (canvas), шрифт как у textarea */
+function measureMaxTextLineWidthForNoSound(text, fontCss) {
+  try {
+    var c = measureMaxTextLineWidthForNoSound._cv || document.createElement("canvas");
+    measureMaxTextLineWidthForNoSound._cv = c;
+    var ctx = c.getContext("2d");
+    if (!ctx) return 0;
+    ctx.font = fontCss;
+    var lines = String(text).replace(/\r\n/g, "\n").split("\n");
+    var w = 0;
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].length ? lines[i] : " ";
+      var lw = ctx.measureText(line).width;
+      if (lw > w) w = lw;
+    }
+    return w;
+  } catch (e) {
+    return 0;
+  }
+}
+
+/**
+ * Режим «без звука»: верхняя панель с текстом — min(ширина колонки, ширина текста), высота по содержимому;
+ * без непустого текста панель скрыта (не растягиваем пустое место).
+ */
+function syncNoSoundTextTrainLayout() {
+  var shell = document.getElementById("idTextTrainShell");
+  var ta = document.getElementById("idTextTrain");
+  var ns = document.getElementById("idNoSound");
+  if (!shell || !ta || !ns) return;
+
+  if (!ns.checked) {
+    shell.classList.add("text-train-shell--hidden");
+    ta.style.display = "none";
+    return;
+  }
+
+  if (!String(ta.value || "").trim()) {
+    shell.classList.add("text-train-shell--hidden");
+    ta.style.display = "none";
+    return;
+  }
+
+  shell.classList.remove("text-train-shell--hidden");
+  ta.style.display = "block";
+
+  var cs = window.getComputedStyle(ta);
+  var font = cs.font && cs.font.length ? cs.font : ((cs.fontStyle || "normal") + " " + (cs.fontWeight || "normal") + " " + cs.fontSize + " " + (cs.fontFamily || "sans-serif"));
+  var padL = parseFloat(cs.paddingLeft) || 0;
+  var padR = parseFloat(cs.paddingRight) || 0;
+  var borderL = parseFloat(cs.borderLeftWidth) || 0;
+  var borderR = parseFloat(cs.borderRightWidth) || 0;
+  var padX = padL + padR + borderL + borderR;
+
+  var maxPage = Math.min(1180, Math.max(0, window.innerWidth - 32));
+  var textW = measureMaxTextLineWidthForNoSound(ta.value, font);
+  var targetW = Math.ceil(textW + padX + 6);
+  if (targetW < 64) targetW = 64;
+  if (targetW > maxPage) targetW = maxPage;
+
+  ta.style.width = targetW + "px";
+  ta.style.maxWidth = maxPage + "px";
+
+  ta.style.height = "auto";
+  var sh = ta.scrollHeight;
+  ta.style.height = sh + "px";
+}
+
+function onNoSoundCheckboxClick() {
+  syncAndroidNoSoundMode();
+  var ns = document.getElementById("idNoSound");
+  if (ns && ns.checked) stopCurrentSpeech();
+  syncNoSoundTextTrainLayout();
 }
 
 function initAndroidHeartRateUi(){
@@ -3091,6 +3185,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   var txtTextTime  = document.getElementById("idTextTime");
   var docTextTrain = document.getElementById("idTextTrain");
   var docNoSound = document.getElementById("idNoSound");
+  var Gl_NoSoundLayoutTimer = null;
   Gl_DaysBeforeNowForShow = inputMinDay.value;
   Gl_DaysAfterNowForShow = inputMaxDay.value;
   var inputFilterStr = document.getElementById('filterStr');
@@ -3116,6 +3211,14 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   var Gl_WebBleHrChar = null
   var Gl_decodeExternalCallValue=""
   
+  try {
+    window.addEventListener("resize", function () {
+      if (Gl_NoSoundLayoutTimer) clearTimeout(Gl_NoSoundLayoutTimer);
+      Gl_NoSoundLayoutTimer = setTimeout(syncNoSoundTextTrainLayout, 140);
+    });
+    setTimeout(syncNoSoundTextTrainLayout, 0);
+  } catch (e) {}
+
   //для замены спецсимволов 
   var GlSEqual='__instead_of_equal__' //=
   var GlSMore='__instead_of_more__' //>
@@ -3578,6 +3681,7 @@ END:VEVENT\n`
               docTextTrain.style.backgroundColor='yellow'
             docTextTrain.scrollTop = docTextTrain.scrollHeight
             window.scrollBy(0,-100)
+            syncNoSoundTextTrainLayout()
         }
 
         var d=new Date();
