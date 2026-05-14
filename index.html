@@ -421,7 +421,7 @@
             margin: 0 auto;
             min-height: 0;
             height: auto;
-            max-height: min(70vh, 70dvh);
+            max-height: none;
             overflow-y: auto;
             resize: vertical;
             width: auto;
@@ -1152,9 +1152,20 @@ function measureMaxTextLineWidthForNoSound(text, fontCss) {
   }
 }
 
+/** Высота «одного экрана» для панели текста без звука (viewport, не весь документ). */
+function noSoundTextTrainViewportHeight() {
+  try {
+    if (window.visualViewport && typeof window.visualViewport.height === "number" && window.visualViewport.height > 0)
+      return Math.floor(window.visualViewport.height);
+  } catch (e) { /* ignore */ }
+  var h = window.innerHeight;
+  return (typeof h === "number" && h > 0) ? Math.floor(h) : 600;
+}
+
 /**
- * Режим «без звука»: верхняя панель с текстом — min(ширина колонки, ширина текста), высота по содержимому;
- * без непустого текста панель скрыта (не растягиваем пустое место).
+ * Режим «без звука»: панель скрыта без текста; ширина min(колонка, текст).
+ * Высота: по полному тексту, если он короче экрана; если длиннее — окно не меньше высоты экрана, прокрутка внутри.
+ * Прокрутка содержимого — к началу.
  */
 function syncNoSoundTextTrainLayout() {
   var shell = document.getElementById("idTextTrainShell");
@@ -1165,12 +1176,16 @@ function syncNoSoundTextTrainLayout() {
   if (!ns.checked) {
     shell.classList.add("text-train-shell--hidden");
     ta.style.display = "none";
+    ta.style.minHeight = "";
+    ta.style.maxHeight = "";
     return;
   }
 
   if (!String(ta.value || "").trim()) {
     shell.classList.add("text-train-shell--hidden");
     ta.style.display = "none";
+    ta.style.minHeight = "";
+    ta.style.maxHeight = "";
     return;
   }
 
@@ -1194,9 +1209,23 @@ function syncNoSoundTextTrainLayout() {
   ta.style.width = targetW + "px";
   ta.style.maxWidth = maxPage + "px";
 
+  ta.style.minHeight = "";
+  ta.style.maxHeight = "";
   ta.style.height = "auto";
-  var sh = ta.scrollHeight;
-  ta.style.height = sh + "px";
+  var contentH = ta.scrollHeight;
+  var vh = noSoundTextTrainViewportHeight();
+
+  if (contentH <= vh) {
+    ta.style.height = contentH + "px";
+    ta.style.minHeight = "";
+    ta.style.maxHeight = "";
+  } else {
+    ta.style.height = vh + "px";
+    ta.style.minHeight = vh + "px";
+    ta.style.maxHeight = vh + "px";
+  }
+
+  ta.scrollTop = 0;
 }
 
 function onNoSoundCheckboxClick() {
@@ -3679,7 +3708,7 @@ END:VEVENT\n`
               docTextTrain.style.backgroundColor='white'
             else
               docTextTrain.style.backgroundColor='yellow'
-            docTextTrain.scrollTop = docTextTrain.scrollHeight
+            docTextTrain.scrollTop = 0
             window.scrollBy(0,-100)
             syncNoSoundTextTrainLayout()
         }
