@@ -1,8 +1,11 @@
-# Скачивает последний artifact TotalCalendar-apk из GitHub Actions и отправляет на psl1@mail.ru.
-# Требует: gh auth, секреты или переменные MAILRU_SMTP_USER / MAILRU_SMTP_PASSWORD.
+# Скачивает последний artifact TotalCalendar-apk и отправляет на psl1@mail.ru.
+# По умолчанию Brevo SMTP (пароль Mail.ru не нужен): SMTP_USER, SMTP_PASSWORD, SMTP_FROM.
 param(
-  [string]$SmtpUser = $env:MAILRU_SMTP_USER,
-  [string]$SmtpPassword = $env:MAILRU_SMTP_PASSWORD,
+  [string]$SmtpHost = $(if ($env:SMTP_HOST) { $env:SMTP_HOST } else { 'smtp-relay.brevo.com' }),
+  [int]$SmtpPort = $(if ($env:SMTP_PORT) { [int]$env:SMTP_PORT } else { 587 }),
+  [string]$SmtpUser = $env:SMTP_USER,
+  [string]$SmtpPassword = $env:SMTP_PASSWORD,
+  [string]$SmtpFrom = $env:SMTP_FROM,
   [string]$To = 'psl1@mail.ru',
   [int]$RunId = 0
 )
@@ -10,8 +13,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-if ([string]::IsNullOrWhiteSpace($SmtpUser) -or [string]::IsNullOrWhiteSpace($SmtpPassword)) {
-  throw 'Задайте MAILRU_SMTP_USER и MAILRU_SMTP_PASSWORD (пароль для внешнего приложения Mail.ru).'
+if ([string]::IsNullOrWhiteSpace($SmtpUser) -or [string]::IsNullOrWhiteSpace($SmtpPassword) -or [string]::IsNullOrWhiteSpace($SmtpFrom)) {
+  throw 'Задайте SMTP_USER, SMTP_PASSWORD и SMTP_FROM (ключ Brevo: https://www.brevo.com).'
 }
 
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
@@ -44,18 +47,18 @@ if (!(Test-Path -LiteralPath $ApkPath)) {
 }
 
 $sizeMb = [math]::Round((Get-Item -LiteralPath $ApkPath).Length / 1MB, 2)
-Write-Host "Sending $ApkPath ($sizeMb MB) to $To via smtp.mail.ru ..."
+Write-Host "Sending $ApkPath ($sizeMb MB) to $To via ${SmtpHost}:${SmtpPort} ..."
 
 Add-Type -AssemblyName System.Net.Mail
 $msg = New-Object System.Net.Mail.MailMessage
-$msg.From = $SmtpUser
+$msg.From = $SmtpFrom
 [void]$msg.To.Add($To)
 $msg.Subject = "Total Calendar APK (manual send, run $RunId)"
 $msg.Body = "Вложение: TotalCalendar.apk из GitHub Actions run $RunId.`nРазмер: $sizeMb MB."
 $msg.Attachments.Add((New-Object System.Net.Mail.Attachment($ApkPath)))
 
-$smtp = New-Object System.Net.Mail.SmtpClient('smtp.mail.ru', 465)
-$smtp.EnableSsl = $true
+$smtp = New-Object System.Net.Mail.SmtpClient($SmtpHost, $SmtpPort)
+$smtp.EnableSsl = $SmtpPort -ne 25
 $smtp.Credentials = New-Object System.Net.NetworkCredential($SmtpUser, $SmtpPassword)
 $smtp.Send($msg)
 

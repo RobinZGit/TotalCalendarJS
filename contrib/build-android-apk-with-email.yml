@@ -1,7 +1,11 @@
 # Полная копия workflow с отправкой APK на psl1@mail.ru.
 # Скопируйте содержимое в .github/workflows/build-android-apk.yml на GitHub
 # (Edit file), если git push блокируется без scope workflow.
-# Секреты: MAILRU_SMTP_USER, MAILRU_SMTP_PASSWORD
+#
+# Пароль psl1@mail.ru НЕ нужен. Секреты (бесплатный Brevo / Sendinblue):
+#   SMTP_USER      — email аккаунта Brevo
+#   SMTP_PASSWORD  — SMTP key из кабинета Brevo
+#   SMTP_FROM      — подтверждённый отправитель в Brevo (адрес «от кого» — любой)
 #
 # Сборка Android APK на стороне GitHub (удалённый репозиторий).
 # Локальный build_apk.bat здесь не запускается — используется Linux + Gradle + Android SDK.
@@ -67,20 +71,18 @@ jobs:
           path: TotalCalendar.apk
           if-no-files-found: error
 
-      # Секреты репозитория (Settings → Secrets → Actions):
-      #   MAILRU_SMTP_USER     — ящик @mail.ru для отправки (часто psl1@mail.ru)
-      #   MAILRU_SMTP_PASSWORD — пароль; при 2FA — «Пароль для внешнего приложения» в настройках Mail.ru
+      # Доставка НА psl1@mail.ru через Brevo SMTP (пароль Mail.ru не нужен).
       - name: Send APK to email
         uses: dawidd6/action-send-mail@v4
         with:
-          server_address: smtp.mail.ru
-          server_port: 465
-          secure: true
-          username: ${{ secrets.MAILRU_SMTP_USER }}
-          password: ${{ secrets.MAILRU_SMTP_PASSWORD }}
+          server_address: smtp-relay.brevo.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASSWORD }}
           subject: Total Calendar APK — run ${{ github.run_number }}
           to: psl1@mail.ru
-          from: ${{ secrets.MAILRU_SMTP_USER }}
+          from: ${{ secrets.SMTP_FROM }}
           body: |
             Собран debug APK workflow «Build Android APK».
             Run: ${{ github.run_number }}
