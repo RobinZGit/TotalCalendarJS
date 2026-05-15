@@ -1540,16 +1540,7 @@ function resumeTrainingPlayback(){
 }
 
 function exitTrainingApp(){
-  GlIsRunning = false
-  Gl_IsFinished = true
-  Gl_State = TXT_BTN_FINISHED
-  Gl_PauseStartedAt = null
-
-  stopTrainingAudioGuard()
-  stopCurrentSpeech()
-
-  if (!callAndroidTraining("exitApp"))
-    window.close()
+  restartTrainingApp()
 }
 
 function restartTrainingApp(){
