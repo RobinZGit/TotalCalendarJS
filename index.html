@@ -856,7 +856,7 @@
    var awake = document.getElementById("idTrainingScreenAwake");
    var liveName = document.getElementById("idTrainingLiveName");
    if (head) head.classList.toggle("training-head-sticky--active", active);
-   if (awake) awake.hidden = !active;
+   if (awake) awake.hidden = !active || !!window.AndroidTraining;
    if (liveName) {
      if (active) {
        var n = String(Gl_currentTrainName || "").replace(/\s+/g, " ").trim();
