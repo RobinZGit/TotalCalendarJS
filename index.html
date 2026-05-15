@@ -132,6 +132,70 @@
             min-width: 0;
         }
 
+        .training-head-sticky {
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            margin-bottom: 14px;
+        }
+
+        .training-head-sticky--active {
+            padding-bottom: 4px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+        }
+
+        .training-head-sticky--active .app-bar {
+            margin-bottom: 8px;
+        }
+
+        .training-head-sticky--active .app-bar-title,
+        .training-head-sticky--active .app-bar-title #idAppBarTitleVersion {
+            color: #dc2626;
+        }
+
+        .training-screen-awake {
+            margin: 0 10px 8px;
+            padding: 10px 14px;
+            border: 2px solid #dc2626;
+            border-radius: 12px;
+            background: #fef2f2;
+            color: #dc2626;
+            font-weight: 800;
+            font-size: clamp(17px, 3.5vw, 24px);
+            line-height: 1.2;
+            text-align: center;
+            letter-spacing: 0.02em;
+            animation: tcjs-awake-pulse 1.6s ease-in-out infinite;
+        }
+
+        .training-screen-awake[hidden] {
+            display: none !important;
+        }
+
+        .training-live-name {
+            margin: 0 10px 10px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: rgba(254, 242, 242, 0.95);
+            color: #991b1b;
+            font-weight: 700;
+            font-size: clamp(14px, 2.6vw, 19px);
+            line-height: 1.35;
+            text-align: center;
+            white-space: pre-wrap;
+        }
+
+        .training-live-name[hidden] {
+            display: none !important;
+        }
+
+        @keyframes tcjs-awake-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
         .hero {
             display: grid;
             gap: 18px;
@@ -435,6 +499,17 @@
             text-align: center;
         }
 
+        #idImgTrain {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0 clamp(10px, 2vw, 16px);
+            margin-top: 12px;
+        }
+
+        .no-sound-training-display #idImgTrain.training-display {
+            margin-top: 12px;
+        }
+
         #idImgTrain img {
             max-width: 100%;
             height: auto;
@@ -527,12 +602,17 @@
         <div id="idTextTrainShell" class="text-train-shell text-train-shell--hidden" aria-live="polite">
             <textarea id="idTextTrain" rows="1" wrap="soft" spellcheck="false"> </textarea>
         </div>
+        <div id="idImgTrain" class="training-display" style="display:none;" aria-live="polite"></div>
     </div>
 
-    <header class="app-bar" ondblclick="restartTrainingApp()" title="Двойной клик: перезапуск приложения">
-        <img src="favicon.svg" alt="" aria-hidden="true">
-        <h1 class="app-bar-title"><span id="idAppBarTitleText">Календарь тренировок</span><span id="idAppBarTitleVersion" title="Версия приложения"></span></h1>
-    </header>
+    <div id="idTrainingHeadSticky" class="training-head-sticky">
+        <header class="app-bar" ondblclick="restartTrainingApp()" title="Двойной клик: перезапуск приложения">
+            <img src="favicon.svg" alt="" aria-hidden="true">
+            <h1 class="app-bar-title"><span id="idAppBarTitleText">Календарь тренировок</span><span id="idAppBarTitleVersion" title="Версия приложения"></span></h1>
+        </header>
+        <p id="idTrainingScreenAwake" class="training-screen-awake" hidden>Не гасить экран!</p>
+        <p id="idTrainingLiveName" class="training-live-name" hidden aria-live="polite"></p>
+    </div>
     <script>
     (function () {
         /** Версия этого веб-приложения (сборка), не versionName/versionCode Android. */
@@ -713,9 +793,6 @@
             <textarea id="idTextTime"> </textarea>
         </div>
 
-        <div id="idImgTrain" class="training-display" style="display:none;">
-            <img src="" alt="">
-        </div>
 
         <div id="idDivNavigation" class="section-card" style="display:none;box-shadow:none;">
             <strong>Навигация по текущей тренировке</strong>
@@ -724,6 +801,7 @@
             </div>
         </div>
 
+        <div id="idTrainPageSetupLinks" class="train-page-setup-links">
         <details id="idTextToSpeekDetails">
             <summary>Древовидная схема тренировки</summary>
             <textarea id="idTextsToSpeek" style="height:400px;"> </textarea>
@@ -747,6 +825,7 @@
 
         <div class="info-note">Info: Можно в параметр startwith url-ссылки передать имя тренировки, и форма сразу после запуска покажет ее выбранной</div>
         <div class="info-note">Например: http://localhost:63342/TotalCalendarJS/index.html?_ijt=p3hgufvl6ok7084qaistkcbqgu&_ij_reload&amp;startwith=УПРАЖНЕНИЯ НА ШЕЮ</div>
+        </div>
     </section>
 </div>
 
@@ -765,6 +844,36 @@
  var Gl_State = TXT_BTN_NOTSTARTED;
  var Gl_IsFinished =false
  var Gl_BackSpace = "__BCKSPC__"
+
+ /** Тренировка идёт или на паузе — скрываем ссылки на схему/печать. */
+ function isActiveTrainingSession() {
+   return !Gl_IsFinished && (GlIsRunning || Gl_State === TXT_BTN_STARTED || Gl_State === TXT_BTN_PAUSED);
+ }
+
+ function syncTrainPageSetupLinksVisibility() {
+   var active = isActiveTrainingSession();
+   var head = document.getElementById("idTrainingHeadSticky");
+   var awake = document.getElementById("idTrainingScreenAwake");
+   var liveName = document.getElementById("idTrainingLiveName");
+   if (head) head.classList.toggle("training-head-sticky--active", active);
+   if (awake) awake.hidden = !active;
+   if (liveName) {
+     if (active) {
+       var n = String(Gl_currentTrainName || "").replace(/\s+/g, " ").trim();
+       liveName.textContent = n;
+       liveName.hidden = !n;
+     } else {
+       liveName.textContent = "";
+       liveName.hidden = true;
+     }
+   }
+   var links = document.getElementById("idTrainPageSetupLinks");
+   var ext = document.getElementById("externalcall");
+   var appLink = document.getElementById("openAndroidAppLink");
+   if (links) links.style.display = active ? "none" : "";
+   if (ext) ext.style.display = active ? "none" : "block";
+   if (appLink) appLink.style.display = active ? "none" : "";
+ }
  
  var Gl_aFormulas = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]//глобаль для использования в формулах трень
  function fn_place(date){
@@ -1297,6 +1406,7 @@ function finishTrainingPlayback(){
     btnSelectAllTrain.innerHTML = TXT_BTN_FINISHED
   }catch(e){}
 
+  syncTrainPageSetupLinksVisibility()
   scheduleStopTrainingAudioGuard()
 }
 
@@ -1369,6 +1479,7 @@ function pauseTrainingPlayback(){
     btnSelectAllTrain.innerHTML = "Продолжить"
   }catch(e){}
 
+  syncTrainPageSetupLinksVisibility()
   stopTrainingAudioGuard()
   stopCurrentSpeech()
   return true
@@ -1395,6 +1506,7 @@ function resumeTrainingPlayback(){
     btnSelectAllTrain.innerHTML = "Пауза"
   }catch(e){}
 
+  syncTrainPageSetupLinksVisibility()
   startTrainingAudioGuard()
   if (!Gl_SayInterval)
     Gl_SayInterval = setInterval(fSayInTime,10)
@@ -4891,9 +5003,8 @@ END:VEVENT\n`
        document.getElementById("btnRecalcCal").style.display ='none'
        document.getElementById("btnImportCal").style.display ='none'
        document.getElementById("idDivActionCalendar").style.display ='none'
-       document.getElementById("btnPrint").style.display ='none'
        document.getElementById("idDivAllTrain").style.display ='none'
-       document.getElementById("idTextsToSpeek").style.display ='none'
+       syncTrainPageSetupLinksVisibility()
        document.getElementById("idDivNavigation").style.display ='block'
        document.getElementById("idDivTextTime").style.display ='block'
        document.getElementById("selectedCalendars").style.display ='none'
@@ -4980,6 +5091,7 @@ END:VEVENT\n`
 
     //== Проговаривание тренировки по массиву
     Gl_State = TXT_BTN_STARTED
+    syncTrainPageSetupLinksVisibility()
     if (1==1) //(button.firstChild.data == TXT_BTN_NOTSTARTED)
     {
 
