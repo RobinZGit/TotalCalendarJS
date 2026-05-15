@@ -457,23 +457,30 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         }
     }
 
+    /** Экран и CPU не засыпают на всё время тренировки (не только в режиме «без звука»). */
     private void updateTrainingScreenWakeLock() {
-        if (trainingGuardActive && noSoundMode) {
+        if (trainingGuardActive) {
             acquireTrainingScreenWakeLock();
         } else {
             releaseTrainingScreenWakeLock();
         }
     }
 
+    @SuppressLint({"WakelockTimeout", "InvalidWakeLockTag"})
     private void acquireTrainingScreenWakeLock() {
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+        }
         if (trainingScreenWakeLock == null) {
             PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
             if (powerManager == null) {
                 return;
             }
             trainingScreenWakeLock = powerManager.newWakeLock(
-                    PowerManager.SCREEN_BRIGHT_WAKE_LOCK,
-                    "TotalCalendar:NoSoundScreen"
+                    PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                    "TotalCalendar:TrainingScreen"
             );
             trainingScreenWakeLock.setReferenceCounted(false);
         }
@@ -484,6 +491,10 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     }
 
     private void releaseTrainingScreenWakeLock() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(false);
+            setTurnScreenOn(false);
+        }
         if (trainingScreenWakeLock != null && trainingScreenWakeLock.isHeld()) {
             trainingScreenWakeLock.release();
         }
