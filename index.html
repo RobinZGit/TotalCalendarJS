@@ -586,6 +586,25 @@
             width: calc(100% - 32px);
         }
 
+        .train-editor-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            list-style: none;
+        }
+
+        .train-editor-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .train-editor-copy-btn {
+            flex-shrink: 0;
+            padding: 8px 14px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
         .info-note {
             margin-top: 12px;
             padding: 12px 14px;
@@ -850,9 +869,17 @@
 
         <div id="idTrainPageSetupLinks" class="train-page-setup-links">
         <details id="idTrainEditorDetails" class="train-editor-details">
-            <summary>Редактор тренировки</summary>
+            <summary class="train-editor-summary">
+                <span>Редактор тренировки</span>
+                <button id="btnCopyTrainToNew" type="button" class="secondary-btn train-editor-copy-btn" onclick="copyTrainToNewTrain(event)">Копировать</button>
+            </summary>
             <textarea id="idTrainEditor" class="train-editor-textarea" spellcheck="false"></textarea>
             <button id="btnSaveTrainEditor" type="button" class="primary-btn train-editor-save-btn" style="display:none" onclick="saveTrainEditor()">Сохранить</button>
+        </details>
+        <details id="idNewTrainDetails" class="train-editor-details">
+            <summary>Новая тренировка</summary>
+            <textarea id="idNewTrainEditor" class="train-editor-textarea" spellcheck="false"></textarea>
+            <button id="btnSaveNewTrain" type="button" class="primary-btn train-editor-save-btn" style="display:none" onclick="saveNewTrain()">Сохранить</button>
         </details>
         <textarea id="idTextsToSpeek" style="display:none" aria-hidden="true"> </textarea>
 
@@ -944,6 +971,8 @@
  var Gl_suppressEmergencySave = false;
  var Gl_trainEditorBaseline = "";
  var Gl_trainEditorIndex = -1;
+ var Gl_newTrainBaseline = "";
+ var Gl_newTrainSuppressTemplateLoad = false;
 
  function sanitizeTrainFilename(name){
    var s = String(name || "training").replace(/\s+/g, " ").trim();
@@ -5620,6 +5649,194 @@ END:VEVENT\n`
     alert("Тренировка сохранена в общем списке.");
   }
 
+  var TCJS_DEFAULT_NEW_TRAIN_NAME = "НОВАЯ ТРЕНИРОВКА";
+
+  function buildMinimalNewTrainingEntry(){
+    var d = new Date();
+    var n = TCJS_DEFAULT_NEW_TRAIN_NAME;
+    return [
+      [],
+      [
+        "<" + n + ">=<ШАГ1>;<ШАГ2>",
+        "<ШАГ1>=<Начало тренировки>;<#3 [СЕК]#>",
+        "<ШАГ2>=<Завершение>;<#2 [СЕК]#>",
+        "//",
+        "[BEGIN EVAL PARAMETERS]",
+        "[END EVAL PARAMETERS]",
+      ],
+      [
+        [d],
+        [
+          "<КАЛЕНДАРЬ " + n + ">=1000<РАСПИСАНИЕ>",
+          "<РАСПИСАНИЕ>=<" + n + ">;<#1 [СУТ]#>",
+          "[BEGIN EVAL PARAMETERS]",
+          "[END EVAL PARAMETERS]",
+        ],
+      ],
+    ];
+  }
+
+  function buildMinimalNewTrainingTemplateText(){
+    return serializeOneMetaRithmEntry(buildMinimalNewTrainingEntry());
+  }
+
+  function cloneMetaRithmEntry(entry){
+    var out = [[]];
+    for (var j = 1; j < entry.length; j++) {
+      if (entry[j][0] && Array.isArray(entry[j][0]) && entry[j][0][0] instanceof Date) {
+        var d = entry[j][0][0];
+        var block = [[new Date(d.getTime())], entry[j][1].slice()];
+        for (var k = 2; k < entry[j].length; k++)
+          block.push(entry[j][k]);
+        out.push(block);
+      } else {
+        out.push(entry[j].slice());
+      }
+    }
+    return out;
+  }
+
+  function renameTrainingEntryName(entry, newBaseName){
+    var oldBase = getTrainingDisplayNameFromEntry(entry);
+    if (!oldBase || !newBaseName)
+      return entry;
+    var oldTag = "<" + oldBase + ">";
+    var newTag = "<" + newBaseName + ">";
+    function mapStr(s){
+      return String(s).split(oldTag).join(newTag);
+    }
+    for (var i = 0; i < entry[1].length; i++)
+      entry[1][i] = mapStr(entry[1][i]);
+    if (entry[2] && entry[2][1])
+      for (var j = 0; j < entry[2][1].length; j++)
+        entry[2][1][j] = mapStr(entry[2][1][j]);
+    return entry;
+  }
+
+  function buildTrainingCopyEntry(trainIdx){
+    if (trainIdx < 0 || !Gl_aMetaRithm[trainIdx])
+      return null;
+    var baseName = getTrainingDisplayNameFromEntry(Gl_aMetaRithm[trainIdx]);
+    if (!baseName)
+      return null;
+    var copyName = baseName + "_kopiya";
+    var entry = cloneMetaRithmEntry(Gl_aMetaRithm[trainIdx]);
+    renameTrainingEntryName(entry, copyName);
+    return entry;
+  }
+
+  function copyTrainToNewTrain(ev){
+    if (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+    }
+    var trainIdx = Gl_trainEditorIndex >= 0 ? Gl_trainEditorIndex : getCurrentTrainingMetaIndex();
+    if (trainIdx < 0) {
+      alert("Сначала выберите тренировку в списке.");
+      return;
+    }
+    var entry = buildTrainingCopyEntry(trainIdx);
+    if (!entry) {
+      alert("Не удалось скопировать тренировку.");
+      return;
+    }
+    var taNew = document.getElementById("idNewTrainEditor");
+    var detNew = document.getElementById("idNewTrainDetails");
+    if (!taNew || !detNew)
+      return;
+    Gl_newTrainSuppressTemplateLoad = true;
+    Gl_newTrainBaseline = buildMinimalNewTrainingTemplateText();
+    taNew.value = serializeOneMetaRithmEntry(entry);
+    syncNewTrainDirtyState();
+    detNew.open = true;
+    taNew.focus();
+  }
+
+  function getTrainingDisplayNameFromEntry(entry){
+    try {
+      return entry[1][0].split("=")[0].trim().replace(/^<|>$/g, "");
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function appendTrainingCalendarToSelection(entry){
+    try {
+      if (!entry[2] || entry[2].length < 2)
+        return;
+      Gl_aMetaMetaCalendar.push(entry[2]);
+      Gl_aMetaMetaCalendarSelected.push(true);
+      onSelectCalendar(-1);
+    } catch (e) {}
+  }
+
+  function syncNewTrainDirtyState(){
+    var btn = document.getElementById("btnSaveNewTrain");
+    var ta = document.getElementById("idNewTrainEditor");
+    if (!btn || !ta)
+      return;
+    var dirty = Gl_newTrainBaseline !== "" && Gl_newTrainBaseline !== ta.value;
+    btn.style.display = dirty ? "block" : "none";
+  }
+
+  function loadNewTrainTemplateIntoEditor(){
+    var ta = document.getElementById("idNewTrainEditor");
+    if (!ta)
+      return;
+    var text = buildMinimalNewTrainingTemplateText();
+    ta.value = text;
+    Gl_newTrainBaseline = text;
+    syncNewTrainDirtyState();
+  }
+
+  function initNewTrainUi(){
+    var ta = document.getElementById("idNewTrainEditor");
+    if (!ta || ta._tcjsNewTrainBound)
+      return;
+    ta._tcjsNewTrainBound = true;
+    ta.addEventListener("input", syncNewTrainDirtyState);
+    var det = document.getElementById("idNewTrainDetails");
+    if (det)
+      det.addEventListener("toggle", function(){
+        if (!det.open)
+          return;
+        if (Gl_newTrainSuppressTemplateLoad) {
+          Gl_newTrainSuppressTemplateLoad = false;
+          return;
+        }
+        loadNewTrainTemplateIntoEditor();
+      });
+  }
+
+  function saveNewTrain(){
+    var ta = document.getElementById("idNewTrainEditor");
+    if (!ta)
+      return;
+    if (Gl_newTrainBaseline === ta.value) {
+      alert("Измените шаблон перед сохранением.");
+      return;
+    }
+    var parsed;
+    try {
+      parsed = parseTrainingEntryFromEditor(ta.value);
+    } catch (e) {
+      alert("Не удалось сохранить.\n\n" + (e.message || e));
+      return;
+    }
+    Gl_aMetaRithm.push(parsed);
+    var newIdx = Gl_aMetaRithm.length - 1;
+    appendTrainingCalendarToSelection(parsed);
+    persistTrainingsGenallToLocal();
+    var trainName = getTrainingDisplayNameFromEntry(parsed);
+    readFilteredListOfTrainings("", trainName || null);
+    execTrain1(newIdx, "Act");
+    loadNewTrainTemplateIntoEditor();
+    var det = document.getElementById("idNewTrainDetails");
+    if (det)
+      det.open = false;
+    alert("Тренировка добавлена в конец списка и выбрана.");
+  }
+
   function fillForm(loadTrain=null)
   {
     //GlTest+=1;
@@ -5637,6 +5854,7 @@ END:VEVENT\n`
     //собираем все календари в один:
     Gl_aMultiCalendar = stus(Gl_aMetaMetaCalendar, 'paint')
     initTrainEditorUi();
+    initNewTrainUi();
     refreshTrainEditorFromSelection();
   }
 
