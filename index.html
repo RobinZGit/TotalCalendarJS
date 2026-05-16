@@ -5847,9 +5847,29 @@ END:VEVENT\n`
     var targetIdx = -1;
     var isNew = false;
     var origName = Gl_trainEditorOriginalName || "";
+    var sourceIdx = Gl_trainEditorSourceIndex;
+    var nameChanged = newName !== origName;
 
-    if (newName === origName && Gl_trainEditorSourceIndex >= 0) {
-      targetIdx = Gl_trainEditorSourceIndex;
+    if (!nameChanged && sourceIdx >= 0) {
+      targetIdx = sourceIdx;
+      Gl_aMetaRithm[targetIdx] = parsed;
+    } else if (nameChanged && sourceIdx >= 0) {
+      var matchIdx = findTrainIndexByDisplayName(newName);
+      if (matchIdx >= 0) {
+        Gl_aMetaRithm[matchIdx] = parsed;
+        targetIdx = matchIdx;
+        if (sourceIdx !== matchIdx) {
+          Gl_aMetaRithm.splice(sourceIdx, 1);
+          if (sourceIdx < targetIdx)
+            targetIdx--;
+        }
+      } else {
+        Gl_aMetaRithm.splice(sourceIdx, 1);
+        Gl_aMetaRithm.push(parsed);
+        targetIdx = Gl_aMetaRithm.length - 1;
+        isNew = true;
+        appendTrainingCalendarToSelection(parsed);
+      }
     } else {
       targetIdx = findTrainIndexByDisplayName(newName);
       if (targetIdx < 0) {
@@ -5857,11 +5877,10 @@ END:VEVENT\n`
         targetIdx = Gl_aMetaRithm.length - 1;
         isNew = true;
         appendTrainingCalendarToSelection(parsed);
+      } else {
+        Gl_aMetaRithm[targetIdx] = parsed;
       }
     }
-
-    if (!isNew)
-      Gl_aMetaRithm[targetIdx] = parsed;
 
     Gl_trainEditorSourceIndex = targetIdx;
     Gl_trainEditorIndex = targetIdx;
