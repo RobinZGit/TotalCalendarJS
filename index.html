@@ -900,11 +900,78 @@
    return header + lines.join("\n");
  }
 
+ function readTrainingUiSettings(){
+   var ns = document.getElementById("idNoSound");
+   var rateEl = document.getElementById("inputRate");
+   var stopChk = document.getElementById("idStopSpeakIfNext");
+   var stopSpeak = stopChk ? !!stopChk.checked : !!Gl_StopSpeakIfNext;
+   Gl_StopSpeakIfNext = stopSpeak;
+   return {
+     noSound: !!(ns && ns.checked),
+     speechRate: rateEl ? String(rateEl.value || "1.5") : "1.5",
+     stopSpeakIfNext: stopSpeak
+   };
+ }
+
+ function applyTrainingUiSettingsFromSnap(snap){
+   if (!snap) return;
+   var ui = readTrainingUiSettings();
+   var noSound = snap.noSound != null ? !!snap.noSound : ui.noSound;
+   var speechRate = snap.speechRate != null && String(snap.speechRate) !== "" ? String(snap.speechRate) : ui.speechRate;
+   var stopSpeakIfNext = snap.stopSpeakIfNext != null ? !!snap.stopSpeakIfNext : ui.stopSpeakIfNext;
+   try {
+     var ns = document.getElementById("idNoSound");
+     if (ns) ns.checked = noSound;
+     syncAndroidNoSoundMode();
+   } catch (e) {}
+   try {
+     var rateEl = document.getElementById("inputRate");
+     if (rateEl) rateEl.value = speechRate;
+   } catch (e) {}
+   try {
+     var stopChk = document.getElementById("idStopSpeakIfNext");
+     if (stopChk) {
+       stopChk.checked = stopSpeakIfNext;
+       Gl_StopSpeakIfNext = stopSpeakIfNext;
+     }
+   } catch (e) {}
+   try { syncNoSoundTextTrainLayout(); } catch (e) {}
+ }
+
+ function bindTrainingSettingsAutoSave(){
+   function onSettingsChanged(){
+     if (shouldAutoSaveLastTrainingCheckpoint() || (Gl_resumeFromHistoryOnRun && Gl_aRithmLisp && Gl_aRithmLisp.length))
+       scheduleAutoSaveLastTrainingCheckpoint("settings");
+   }
+   try {
+     var ns = document.getElementById("idNoSound");
+     if (ns && !ns._tcjsSettingsSaveBound) {
+       ns._tcjsSettingsSaveBound = true;
+       ns.addEventListener("change", onSettingsChanged);
+     }
+   } catch (e) {}
+   try {
+     var rateEl = document.getElementById("inputRate");
+     if (rateEl && !rateEl._tcjsSettingsSaveBound) {
+       rateEl._tcjsSettingsSaveBound = true;
+       rateEl.addEventListener("change", onSettingsChanged);
+       rateEl.addEventListener("input", onSettingsChanged);
+     }
+   } catch (e) {}
+   try {
+     var stopChk = document.getElementById("idStopSpeakIfNext");
+     if (stopChk && !stopChk._tcjsSettingsSaveBound) {
+       stopChk._tcjsSettingsSaveBound = true;
+       stopChk.addEventListener("change", onSettingsChanged);
+     }
+   } catch (e) {}
+ }
+
  function collectTrainingSessionSnapshotObject(){
    var panel = typeof getTrainingNavPanel === "function" ? getTrainingNavPanel() : null;
-   var rateEl = document.getElementById("inputRate");
+   var ui = readTrainingUiSettings();
    return {
-     v: 1,
+     v: 2,
      savedAt: Date.now(),
      GltxtSpeek: GltxtSpeek ? GltxtSpeek.value : "",
      Gl_aRithmLisp: Gl_aRithmLisp,
@@ -922,9 +989,9 @@
      Gl_flBegWord: Gl_flBegWord,
      Gl_PauseStartedAt: Gl_PauseStartedAt ? Gl_PauseStartedAt.getTime() : null,
      selectAllTrainIndex: selectAllTrain ? selectAllTrain.selectedIndex : -1,
-     noSound: !!(docNoSound && docNoSound.checked),
-     stopSpeakIfNext: !!Gl_StopSpeakIfNext,
-     speechRate: rateEl ? rateEl.value : "1.5",
+     noSound: ui.noSound,
+     stopSpeakIfNext: ui.stopSpeakIfNext,
+     speechRate: ui.speechRate,
      textTrain: docTextTrain ? docTextTrain.value : "",
      textTime: txtTextTime ? txtTextTime.value : "",
      navScrollTop: panel ? panel.scrollTop : 0,
@@ -1069,19 +1136,7 @@
      if (typeof snap.selectAllTrainIndex === "number" && snap.selectAllTrainIndex >= 0 && selectAllTrain.options.length > snap.selectAllTrainIndex)
        selectAllTrain.selectedIndex = snap.selectAllTrainIndex;
    } catch (e) {}
-   try {
-     if (docNoSound) docNoSound.checked = !!snap.noSound;
-     syncAndroidNoSoundMode();
-   } catch (e) {}
-   try {
-     var rateEl = document.getElementById("inputRate");
-     if (rateEl && snap.speechRate != null) rateEl.value = snap.speechRate;
-     var stopChk = document.getElementById("idStopSpeakIfNext");
-     if (stopChk) {
-       stopChk.checked = !!snap.stopSpeakIfNext;
-       Gl_StopSpeakIfNext = stopChk.checked;
-     }
-   } catch (e) {}
+   applyTrainingUiSettingsFromSnap(snap);
    try {
      document.getElementById("trainPage").style.display = "block";
      document.getElementById("checkTrainPage").checked = true;
@@ -1333,19 +1388,7 @@
      if (typeof snap.selectAllTrainIndex === "number" && snap.selectAllTrainIndex >= 0 && selectAllTrain.options.length > snap.selectAllTrainIndex)
        selectAllTrain.selectedIndex = snap.selectAllTrainIndex;
    } catch (e) {}
-   try {
-     if (docNoSound) docNoSound.checked = !!snap.noSound;
-     syncAndroidNoSoundMode();
-   } catch (e) {}
-   try {
-     var rateEl = document.getElementById("inputRate");
-     if (rateEl && snap.speechRate != null) rateEl.value = snap.speechRate;
-     var stopChk = document.getElementById("idStopSpeakIfNext");
-     if (stopChk) {
-       stopChk.checked = !!snap.stopSpeakIfNext;
-       Gl_StopSpeakIfNext = stopChk.checked;
-     }
-   } catch (e) {}
+   applyTrainingUiSettingsFromSnap(snap);
    if (txtTextTime && snap.textTime) txtTextTime.value = snap.textTime;
    if (docTextTrain && snap.textTrain) docTextTrain.value = snap.textTrain;
 
@@ -1903,6 +1946,8 @@ function onNoSoundCheckboxClick() {
   var ns = document.getElementById("idNoSound");
   if (ns && ns.checked) stopCurrentSpeech();
   syncNoSoundTextTrainLayout();
+  if (shouldAutoSaveLastTrainingCheckpoint() || (Gl_resumeFromHistoryOnRun && Gl_aRithmLisp && Gl_aRithmLisp.length))
+    scheduleAutoSaveLastTrainingCheckpoint("settings");
 }
 
 function initAndroidHeartRateUi(){
@@ -4352,6 +4397,7 @@ END:VEVENT\n`
     updateLastTrainingButtonVisibility()
 
     initEmergencySaveWatchers()
+    bindTrainingSettingsAutoSave()
 
     initAndroidHeartRateUi()
 
