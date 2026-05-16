@@ -586,22 +586,22 @@
             width: calc(100% - 32px);
         }
 
-        .train-editor-summary {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            list-style: none;
+        .train-editor-details {
+            scroll-margin-top: 12px;
         }
 
-        .train-editor-summary::-webkit-details-marker {
-            display: none;
+        .train-editor-summary-inner {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 6px;
+            vertical-align: middle;
         }
 
         .train-editor-copy-btn {
             flex-shrink: 0;
-            padding: 8px 14px;
-            font-size: 14px;
+            padding: 5px 12px;
+            font-size: 13px;
             font-weight: 600;
         }
 
@@ -870,8 +870,10 @@
         <div id="idTrainPageSetupLinks" class="train-page-setup-links">
         <details id="idTrainEditorDetails" class="train-editor-details">
             <summary class="train-editor-summary">
-                <span>Редактор тренировки</span>
-                <button id="btnCopyTrainToNew" type="button" class="secondary-btn train-editor-copy-btn" onclick="copyTrainToNewTrain(event)">Копировать</button>
+                <span class="train-editor-summary-inner">
+                    Редактор тренировки
+                    <button id="btnCopyTrainToNew" type="button" class="secondary-btn train-editor-copy-btn" onmousedown="event.preventDefault(); event.stopPropagation();" onclick="copyTrainToNewTrain(event)">Копировать</button>
+                </span>
             </summary>
             <textarea id="idTrainEditor" class="train-editor-textarea" spellcheck="false"></textarea>
             <button id="btnSaveTrainEditor" type="button" class="primary-btn train-editor-save-btn" style="display:none" onclick="saveTrainEditor()">Сохранить</button>
@@ -5725,6 +5727,20 @@ END:VEVENT\n`
     return entry;
   }
 
+  function scrollDetailsBlockIntoView(det){
+    if (!det)
+      return;
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        try {
+          det.scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch (e) {
+          det.scrollIntoView(true);
+        }
+      });
+    });
+  }
+
   function copyTrainToNewTrain(ev){
     if (ev) {
       ev.preventDefault();
@@ -5749,6 +5765,8 @@ END:VEVENT\n`
     taNew.value = serializeOneMetaRithmEntry(entry);
     syncNewTrainDirtyState();
     detNew.open = true;
+    scrollDetailsBlockIntoView(detNew);
+    setTimeout(function(){ scrollDetailsBlockIntoView(detNew); }, 120);
     taNew.focus();
   }
 
