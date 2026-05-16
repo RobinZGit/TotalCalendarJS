@@ -62,25 +62,5 @@ jobs:
           path: TotalCalendar.apk
           if-no-files-found: error
 
-      # Доставка НА psl1@mail.ru. Пароль Mail.ru не нужен — любой SMTP-реле (ниже Brevo, бесплатно).
-      # Секреты: SMTP_USER, SMTP_PASSWORD, SMTP_FROM
-      # Brevo: https://www.brevo.com → SMTP & API → SMTP key; логин = email аккаунта Brevo.
-      # SMTP_FROM — любой подтверждённый отправитель в Brevo (не обязан быть @mail.ru).
-      - name: Send APK to email
-        uses: dawidd6/action-send-mail@v17
-        with:
-          server_address: smtp-relay.brevo.com
-          server_port: 587
-          secure: false
-          username: ${{ secrets.SMTP_USER }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: Total Calendar APK — run ${{ github.run_number }}
-          to: psl1@mail.ru
-          from: ${{ secrets.SMTP_FROM }}
-          body: |
-            Собран подписанный release APK workflow «Build Android APK».
-            Run: ${{ github.run_number }}
-            Ref: ${{ github.ref_name }}
-            SHA: ${{ github.sha }}
-            Trigger: ${{ github.event_name }}
-          attachments: TotalCalendar.apk
+      # Отправка APK на почту отключена, чтобы CI не падал без SMTP-секретов.
+      # Готовый вариант с Brevo: contrib/build-android-apk-with-email.yml
