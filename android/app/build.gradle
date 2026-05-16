@@ -23,7 +23,7 @@ if (rootBuildTxt) {
     versionCodeFromFile = Integer.parseInt(rootBuildTxt)
 }
 def versionCodeFromCi = effectiveTcjsRun ? Integer.parseInt(effectiveTcjsRun) : 0
-def versionCodeFinal = Math.max(versionCodeFromFile, versionCodeFromCi, 1)
+def versionCodeFinal = [versionCodeFromFile, versionCodeFromCi, 1].max()
 def versionNameFinal = "1.0.${versionCodeFinal}"
 
 def keystoreProperties = new Properties()
