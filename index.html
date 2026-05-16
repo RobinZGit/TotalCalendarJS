@@ -1662,6 +1662,10 @@ var Gl_BackgroundAudioUrl = null
 var Gl_SayInterval = null
 var Gl_PauseStartedAt = null
 
+function shouldKeepTrainingScreenAwake(){
+  return Gl_WakeLockWanted && GlIsRunning && !Gl_IsFinished
+}
+
 function createTrainingBackgroundAudioUrl(){
   var sampleRate = 8000
   var seconds = 20
@@ -2697,7 +2701,7 @@ function restartTrainingApp(){
 }
 
 async function requestTrainingWakeLock(){
-  if (!Gl_WakeLockWanted || !("wakeLock" in navigator) || document.visibilityState !== "visible")
+  if (!shouldKeepTrainingScreenAwake() || !("wakeLock" in navigator) || document.visibilityState !== "visible")
     return
 
   try{
@@ -2705,7 +2709,7 @@ async function requestTrainingWakeLock(){
       Gl_WakeLock = await navigator.wakeLock.request("screen")
       Gl_WakeLock.addEventListener("release", function(){
         Gl_WakeLock = null
-        if (Gl_WakeLockWanted && document.visibilityState === "visible")
+        if (shouldKeepTrainingScreenAwake() && document.visibilityState === "visible")
           setTimeout(requestTrainingWakeLock, 1000)
       }, { once: true })
     }
