@@ -26,7 +26,10 @@ import android.print.PrintDocumentAdapter;
 import android.print.PrintManager;
 import android.speech.tts.TextToSpeech;
 import android.view.WindowManager;
+import android.text.InputType;
+import android.widget.EditText;
 import android.widget.Toast;
+import android.content.SharedPreferences;
 import android.webkit.JavascriptInterface;
 import android.webkit.JsResult;
 import android.webkit.ValueCallback;
@@ -52,11 +55,15 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private static final int TRAINING_NOTIFICATION_ID = 1001;
     private static final String TRAINING_NOTIFICATION_CHANNEL_ID = "training_status";
     private static final int MAX_PENDING_SPEECH_ITEMS = 20;
+    private static final String PREFS_TCJS = "tcjs_prefs";
+    private static final String PREF_EXPORT_EMAIL = "export_email";
 
     private WebView webView;
     private WebView printWebView;
     private ValueCallback<Uri[]> filePathCallback;
     private String pendingSaveFileText;
+    private String pendingSaveFileFilename;
+    private boolean pendingSaveOfferEmail;
     private TextToSpeech textToSpeech;
     private PowerManager.WakeLock trainingWakeLock;
     private PowerManager.WakeLock trainingScreenWakeLock;
@@ -253,8 +260,10 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         }
     }
 
-    private void saveTextFileOnUiThread(String text, String filename, String mimeType) {
+    private void saveTextFileOnUiThread(String text, String filename, String mimeType, boolean offerEmailAfterSave) {
         pendingSaveFileText = text == null ? "" : text;
+        pendingSaveFileFilename = sanitizeFilename(filename);
+        pendingSaveOfferEmail = offerEmailAfterSave;
 
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -265,6 +274,8 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
             startActivityForResult(intent, SAVE_FILE_REQUEST_CODE);
         } catch (ActivityNotFoundException exception) {
             pendingSaveFileText = null;
+            pendingSaveFileFilename = null;
+            pendingSaveOfferEmail = false;
             new AlertDialog.Builder(this)
                     .setMessage("Не удалось открыть диалог сохранения файла.")
                     .setPositiveButton(android.R.string.ok, null)
@@ -291,14 +302,20 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private void writePendingSaveFile(Uri uri) {
         if (uri == null || pendingSaveFileText == null) {
             pendingSaveFileText = null;
+            pendingSaveFileFilename = null;
+            pendingSaveOfferEmail = false;
             return;
         }
 
+        String savedFilename = pendingSaveFileFilename;
+        boolean offerEmail = pendingSaveOfferEmail;
+        boolean success = false;
         try (OutputStream outputStream = getContentResolver().openOutputStream(uri)) {
             if (outputStream == null) {
                 throw new IOException("Output stream is unavailable");
             }
             outputStream.write(pendingSaveFileText.getBytes(StandardCharsets.UTF_8));
+            success = true;
         } catch (IOException exception) {
             new AlertDialog.Builder(this)
                     .setMessage("Не удалось сохранить файл: " + exception.getMessage())
@@ -306,6 +323,70 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
                     .show();
         } finally {
             pendingSaveFileText = null;
+            pendingSaveFileFilename = null;
+            pendingSaveOfferEmail = false;
+        }
+        if (success && offerEmail) {
+            offerEmailShareForSavedFile(uri, savedFilename);
+        }
+    }
+
+    private SharedPreferences tcjsPrefs() {
+        return getSharedPreferences(PREFS_TCJS, MODE_PRIVATE);
+    }
+
+    private void offerEmailShareForSavedFile(Uri uri, String filename) {
+        String displayName = filename == null || filename.trim().isEmpty()
+                ? "файл"
+                : filename;
+        new AlertDialog.Builder(this)
+                .setMessage("Отправить файл «" + displayName + "» по электронной почте?")
+                .setPositiveButton("Да", (dialog, which) -> promptEmailAndShare(uri, displayName))
+                .setNegativeButton("Нет", null)
+                .show();
+    }
+
+    private void promptEmailAndShare(Uri uri, String filename) {
+        EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        input.setText(tcjsPrefs().getString(PREF_EXPORT_EMAIL, ""));
+        new AlertDialog.Builder(this)
+                .setTitle("Адрес e-mail получателя")
+                .setView(input)
+                .setPositiveButton("Отправить", (dialog, which) -> {
+                    String email = input.getText().toString().trim();
+                    if (!isValidExportEmail(email)) {
+                        new AlertDialog.Builder(this)
+                                .setMessage("Некорректный адрес e-mail.")
+                                .setPositiveButton(android.R.string.ok, null)
+                                .show();
+                        return;
+                    }
+                    tcjsPrefs().edit().putString(PREF_EXPORT_EMAIL, email).apply();
+                    shareFileViaEmail(uri, filename, email);
+                })
+                .setNegativeButton("Отмена", null)
+                .show();
+    }
+
+    private boolean isValidExportEmail(String email) {
+        return email != null && email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+    }
+
+    private void shareFileViaEmail(Uri uri, String filename, String email) {
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_EMAIL, new String[]{email});
+        intent.putExtra(Intent.EXTRA_SUBJECT, "Total Calendar: " + filename);
+        intent.putExtra(Intent.EXTRA_STREAM, uri);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            startActivity(Intent.createChooser(intent, "Отправить по почте"));
+        } catch (ActivityNotFoundException exception) {
+            new AlertDialog.Builder(this)
+                    .setMessage("Не найдено приложение для отправки почты.")
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
         }
     }
 
@@ -652,6 +733,8 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
                 writePendingSaveFile(data.getData());
             } else {
                 pendingSaveFileText = null;
+                pendingSaveFileFilename = null;
+                pendingSaveOfferEmail = false;
             }
             return;
         }
@@ -847,6 +930,8 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
             filePathCallback = null;
         }
         pendingSaveFileText = null;
+        pendingSaveFileFilename = null;
+        pendingSaveOfferEmail = false;
 
         if (heartRateBleManager != null) {
             heartRateBleManager.destroy();
@@ -896,7 +981,12 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
 
         @JavascriptInterface
         public void saveTextFile(String text, String filename, String mimeType) {
-            runOnUiThread(() -> saveTextFileOnUiThread(text, filename, mimeType));
+            runOnUiThread(() -> saveTextFileOnUiThread(text, filename, mimeType, false));
+        }
+
+        @JavascriptInterface
+        public void saveTextFileWithEmailOffer(String text, String filename, String mimeType) {
+            runOnUiThread(() -> saveTextFileOnUiThread(text, filename, mimeType, true));
         }
 
         /** Чекпоинты тренировки — без диалога «Сохранить как», в training-checkpoints/. */

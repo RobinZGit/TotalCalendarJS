@@ -1020,6 +1020,8 @@
  var TCJS_LAST_TRAINING_MAX = 10;
  /** Локальная копия экспорта .genall (календари + Gl_aMetaRithm). */
  var TCJS_LOCAL_TRAININGS_KEY = "tcjs_trainings_genall_v1";
+ /** Последний e-mail для отправки экспортированных файлов. */
+ var TCJS_EXPORT_EMAIL_KEY = "tcjs_export_email_v1";
  var Gl_savedTrainingsBrowseIndex = 0;
  var Gl_resumeFromHistoryOnRun = false;
  var Gl_historyPreviewSnap = null;
@@ -4577,7 +4579,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   //var Gl_CountOfGenCalendarRtm = 0
   
   function btnImportTrainInGenOnClick(){
-    download(GltxtSpeek.value, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+selectAllTrain.value+'_train.gen', 'text/plain')
+    download(GltxtSpeek.value, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+selectAllTrain.value+'_train.gen', 'text/plain', true)
   }
 
   function loadFromGen(input){
@@ -4780,7 +4782,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
 
   function downloadTrainAndCalFromFile(input){
     var sDownload = buildFullGenallScript();
-    download(sDownload, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+'GenTrainsAndCalendarFromTotalCalendarJS.genall', 'text/plain')
+    download(sDownload, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+'GenTrainsAndCalendarFromTotalCalendarJS.genall', 'text/plain', true)
   }
   function changePageCalendar(isCheck){
     if (isCheck)
@@ -4839,15 +4841,74 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
         }
   }
 
-  function download(text,filename, type) {
-      // В приложении диалог «Сохранить как» — только для явного экспорта пользователем.
+  function getStoredExportEmail() {
+    try { return localStorage.getItem(TCJS_EXPORT_EMAIL_KEY) || ""; } catch (e) { return ""; }
+  }
+
+  function setStoredExportEmail(email) {
+    try {
+      if (email) localStorage.setItem(TCJS_EXPORT_EMAIL_KEY, String(email).trim());
+    } catch (e) {}
+  }
+
+  function isValidExportEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+  }
+
+  function offerEmailForExportedFile(text, filename, mimeType) {
+    if (!confirm("Отправить файл «" + filename + "» по электронной почте?"))
+      return;
+    var email = prompt("Адрес e-mail получателя:", getStoredExportEmail());
+    if (email == null) return;
+    email = String(email).trim();
+    if (!email) return;
+    if (!isValidExportEmail(email)) {
+      alert("Некорректный адрес e-mail.");
+      return;
+    }
+    setStoredExportEmail(email);
+    if (tryShareExportedFileByEmail(text, filename, mimeType))
+      return;
+    openMailtoForExport(email, filename);
+  }
+
+  function tryShareExportedFileByEmail(text, filename, mimeType) {
+    if (typeof File === "undefined" || !navigator.share) return false;
+    try {
+      var file = new File([text], filename, { type: mimeType || "text/plain" });
+      if (navigator.canShare && !navigator.canShare({ files: [file] }))
+        return false;
+      navigator.share({ files: [file], title: filename }).catch(function () {});
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function openMailtoForExport(email, filename) {
+    var subject = encodeURIComponent("Total Calendar: " + filename);
+    var body = encodeURIComponent(
+      "Файл «" + filename + "» сохранён на устройстве.\n\n" +
+      "Приложите его из папки «Загрузки» или из выбранного места сохранения.\n\n" +
+      "— Total Calendar JS"
+    );
+    window.location.href = "mailto:" + encodeURIComponent(email) + "?subject=" + subject + "&body=" + body;
+  }
+
+  function download(text, filename, type, offerEmailAfterSave) {
+      var mimeType = type || "text/plain";
+      var offerEmail = !!offerEmailAfterSave;
+      // В приложении диалог «Сохранить как»; после сохранения — предложение отправить по почте (Android).
       if (isAndroidTrainingApp() && typeof window.AndroidTraining.saveTextFile === "function") {
-        callAndroidTraining("saveTextFile", String(text), String(filename), String(type || "text/plain"))
-        return
+        if (offerEmail && typeof window.AndroidTraining.saveTextFileWithEmailOffer === "function")
+          callAndroidTraining("saveTextFileWithEmailOffer", String(text), String(filename), String(mimeType));
+        else
+          callAndroidTraining("saveTextFile", String(text), String(filename), String(mimeType));
+        return;
       }
 
       var element = document.createElement('a');
-      element.setAttribute('href', 'data:' + (type || 'text/plain') + ';charset=utf-8,' + encodeURIComponent(text));
+      element.setAttribute('href', 'data:' + mimeType + ';charset=utf-8,' + encodeURIComponent(text));
       element.setAttribute('download', filename);
 
       element.style.display = 'none';
@@ -4856,6 +4917,8 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
       element.click();
 
       document.body.removeChild(element);
+      if (offerEmail)
+        offerEmailForExportedFile(text, filename, mimeType);
   }
 
   function openCalendarIcsInWeb(icsText){
@@ -4971,7 +5034,7 @@ END:VEVENT\n`
       //Gl_aRithmLisp=aRithmLisp.slice() //!!!!!!!!!!!
 
       var sText = buildRtmTextFromArithmLisp(aRithmLisp, Gl_currentTrainName);
-      download(sText, sanitizeTrainFilename(Gl_currentTrainName) + '.rtm', 'text/plain')
+      download(sText, sanitizeTrainFilename(Gl_currentTrainName) + '.rtm', 'text/plain', true)
   }
 
 
@@ -5896,6 +5959,7 @@ END:VEVENT\n`
     syncTrainEditorDirtyState();
     readFilteredListOfTrainings("", newName);
     execTrain1(targetIdx, "Act");
+    hideTrainEditorPanel();
     alert(isNew ? "Тренировка добавлена в конец списка и выбрана." : "Тренировка сохранена в общем списке.");
   }
 
