@@ -5505,34 +5505,44 @@ END:VEVENT\n`
     return isFinite(idx) ? idx : -1;
   }
 
+  function extractBacktickStrings(s){
+    var out = [];
+    var re = /`((?:\\`|[^`])*)`/gs;
+    var m;
+    while ((m = re.exec(s)) !== null)
+      out.push(m[1].replace(/\\`/g, "`"));
+    return out;
+  }
+
+  /** Без eval: скобки ( ) в тексте тренировки не ломают разбор. */
   function parseTrainingEntryFromEditor(text){
     var s = String(text || "").trim();
     if (!s)
       throw new Error("Текст пуст. Ожидается фрагмент вида:\n[  [],\n    [\n    `строка определения`,\n    ],\n  ],");
-    var parsed;
-    try {
-      parsed = eval("(" + s + ")");
-    } catch (e) {
-      throw new Error("Синтаксическая ошибка: " + (e.message || e) +
-        "\n\nПроверьте скобки, запятые и обратные кавычки ` вокруг строк.");
+
+    if (!/\[\s*\]/.test(s))
+      throw new Error("В начале должен быть пустой блок [  [], ...");
+
+    var calIdx = s.search(/\[\s*\[\s*new\s+Date\s*\(/i);
+    var mainPart = calIdx >= 0 ? s.slice(0, calIdx) : s;
+    var calPart = calIdx >= 0 ? s.slice(calIdx) : "";
+
+    var mainStrings = extractBacktickStrings(mainPart);
+    if (!mainStrings.length)
+      throw new Error("Не найдено ни одной строки в обратных кавычках ` ... `.\n\nКаждая строка определения должна быть в `кавычках`, как в экспорте .genall.");
+
+    var entry = [[], mainStrings];
+
+    if (calPart) {
+      var dm = calPart.match(/new\s+Date\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
+      if (!dm)
+        throw new Error("Блок календаря: ожидается [[new Date(год,месяц,день,час,мин,сек)], ...");
+      var d = new Date(+dm[1], +dm[2], +dm[3], +dm[4], +dm[5], +dm[6]);
+      var calStrings = extractBacktickStrings(calPart);
+      entry.push([[d], calStrings]);
     }
-    if (!Array.isArray(parsed))
-      throw new Error("Корень должен быть массивом [  [], [ ... ], ].");
-    if (parsed.length < 2)
-      throw new Error("Мало элементов: нужны как минимум [ ], и массив строк тренировки.");
-    if (!Array.isArray(parsed[0]))
-      throw new Error("Первый элемент [0] должен быть массивом (обычно пустым []).");
-    if (!Array.isArray(parsed[1]) || parsed[1].length === 0)
-      throw new Error("Второй элемент [1] — непустой массив строк определения (в `обратных кавычках`).");
-    for (var i = 0; i < parsed[1].length; i++) {
-      if (typeof parsed[1][i] !== "string")
-        throw new Error("Строка [" + i + "] в определении тренировки должна быть текстом в `кавычках`.");
-    }
-    for (var j = 2; j < parsed.length; j++) {
-      if (!Array.isArray(parsed[j]))
-        throw new Error("Элемент [" + j + "] должен быть массивом (календарь тренировки или доп. блок).");
-    }
-    return parsed;
+
+    return entry;
   }
 
   function syncTrainEditorDirtyState(){
