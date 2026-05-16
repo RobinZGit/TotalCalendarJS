@@ -673,11 +673,11 @@
             <div class="button-row">
                 <button id="btnSelectAllTrain" class="success-btn" type="button">Начать тренировку</button>
                 <button id="btnExit" class="danger-btn" type="button" onclick="exitTrainingApp()">Завершить тренировку</button>
-                <button id="btnLastTraining" class="secondary-btn" type="button" onclick="resumeLastSavedTraining()" disabled title="Нет сохранённой тренировки">Прошлая тренировка</button>
             </div>
             <div class="button-row" style="margin-top:14px">
-                <button id="btnPrev" class="secondary-btn" type="button" onclick="prev()">&lt;&lt; предыдущее упражнение</button>
-                <button id="btnNext" class="secondary-btn" type="button" onclick="next()">следующее упражнение &gt;&gt;</button>
+                <button id="btnPrev" class="secondary-btn" type="button" onclick="prev()">&lt;&lt;</button>
+                <button id="btnLastTraining" class="secondary-btn" type="button" onclick="resumeLastSavedTraining()" disabled title="Нет сохранённой тренировки">Прошлые тренировки</button>
+                <button id="btnNext" class="secondary-btn" type="button" onclick="next()">&gt;&gt;</button>
             </div>
             <div class="option-grid">
                 <label class="option-card checkbox-line" for="idNoSound">
@@ -869,8 +869,6 @@
    if (links) links.style.display = active ? "none" : "";
    if (ext) ext.style.display = active ? "none" : "block";
    if (appLink) appLink.style.display = active ? "none" : "";
-   var btnLast = document.getElementById("btnLastTraining");
-   if (btnLast) btnLast.style.display = active ? "none" : "";
    syncPrevNextNavButtons();
  }
 
@@ -991,9 +989,33 @@
    return isActiveTrainingSession() || Gl_State === TXT_BTN_PAUSED;
  }
 
+ function truncateTrainingTitle(name, maxLen){
+   maxLen = maxLen || 26;
+   var s = String(name || "").replace(/\s+/g, " ").trim();
+   if (!s) return "";
+   if (s.length <= maxLen) return s;
+   return s.slice(0, maxLen - 1) + "…";
+ }
+
+ function getCurrentSavedTrainingTitle(){
+   var list = loadSavedTrainingsList();
+   if (!list.length) return "";
+   var p = list[Gl_savedTrainingsBrowseIndex] || list[0];
+   if (!p || !p.snap) return "";
+   return String(p.snap.Gl_currentTrainName || "").trim();
+ }
+
+ function updateLastTrainingCenterButtonLabel(){
+   var btn = document.getElementById("btnLastTraining");
+   if (!btn) return;
+   var short = truncateTrainingTitle(getCurrentSavedTrainingTitle(), 26);
+   btn.textContent = short ? ("Прошлые тренировки (" + short + ")") : "Прошлые тренировки";
+ }
+
  function syncPrevNextNavButtons(){
    var prevBtn = document.getElementById("btnPrev");
    var nextBtn = document.getElementById("btnNext");
+   var centerBtn = document.getElementById("btnLastTraining");
    if (!prevBtn || !nextBtn) return;
    if (isTrainingExerciseNavMode()) {
      prevBtn.innerHTML = "&lt;&lt; предыдущее упражнение";
@@ -1002,17 +1024,20 @@
      nextBtn.disabled = false;
      prevBtn.title = "";
      nextBtn.title = "";
+     if (centerBtn) centerBtn.style.display = "none";
      return;
    }
-   prevBtn.innerHTML = "&lt;&lt; предыдущая тренировка";
-   nextBtn.innerHTML = "следующая тренировка &gt;&gt;";
+   if (centerBtn) centerBtn.style.display = "";
+   prevBtn.innerHTML = "&lt;&lt;";
+   nextBtn.innerHTML = "&gt;&gt;";
    var list = loadSavedTrainingsList();
    var i = Gl_savedTrainingsBrowseIndex;
    prevBtn.disabled = !list.length || i >= list.length - 1;
    nextBtn.disabled = !list.length || i <= 0;
    var pos = list.length ? " (" + (i + 1) + " из " + list.length + ")" : "";
-   prevBtn.title = list.length ? "Более старая сохранённая тренировка" + pos : "Нет сохранённых тренировок";
-   nextBtn.title = list.length ? "Более новая сохранённая тренировка" + pos : "Нет сохранённых тренировок";
+   prevBtn.title = list.length ? "Предыдущая сохранённая тренировка" + pos : "Нет сохранённых тренировок";
+   nextBtn.title = list.length ? "Следующая сохранённая тренировка" + pos : "Нет сохранённых тренировок";
+   updateLastTrainingCenterButtonLabel();
  }
 
  function updateLastTrainingButtonVisibility(){
@@ -1020,12 +1045,13 @@
    if (!btn) return;
    if (isTrainingExerciseNavMode()) {
      btn.style.display = "none";
+     syncPrevNextNavButtons();
      return;
    }
    btn.style.display = "";
    var has = hasLastSavedTraining();
    btn.disabled = !has;
-   btn.title = has ? "Продолжить выбранную сохранённую тренировку с того же упражнения" : "Нет сохранённой тренировки";
+   btn.title = has ? "Загрузить выбранную сохранённую тренировку и продолжить с того же упражнения" : "Нет сохранённой тренировки";
    syncPrevNextNavButtons();
  }
 
