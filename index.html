@@ -4510,6 +4510,12 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
     }
   }
 
+  function clearLocalTrainingsGenall(){
+    try {
+      localStorage.removeItem(TCJS_LOCAL_TRAININGS_KEY);
+    } catch (e) {}
+  }
+
   function applyGenallScript(scriptText){
     if (!scriptText || !String(scriptText).trim())
       return false;
@@ -4534,13 +4540,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
     }
   }
 
-  function loadTrainingsDataThen(done){
-    done = done || function(){};
-    var local = readLocalTrainingsGenall();
-    if (local && applyGenallScript(local)) {
-      done(true);
-      return;
-    }
+  function fetchTrainingsGenallFromNetwork(done){
     var url = getRemoteTrainingsGenallUrl();
     fetch(url, { cache: "no-store" }).then(function(r){
       if (!r.ok)
@@ -4552,6 +4552,22 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
       console.log("Remote trainings .genall:", e);
       done(false);
     });
+  }
+
+  function loadTrainingsDataThen(done){
+    done = done || function(){};
+    var local = readLocalTrainingsGenall();
+    if (local && String(local).trim()) {
+      if (applyGenallScript(local)) {
+        done(true);
+        return;
+      }
+      console.log("Local trainings data failed, loading from network");
+      clearLocalTrainingsGenall();
+      fetchTrainingsGenallFromNetwork(done);
+      return;
+    }
+    fetchTrainingsGenallFromNetwork(done);
   }
 
   function loadTrainAndCalFromFile(input){
