@@ -539,7 +539,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         }
 
         Intent intent = new Intent(this, MainActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
 
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 this,
@@ -695,9 +695,25 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        stopTrainingGuardOnUiThread();
-        if (webView != null) {
-            webView.loadUrl(getLaunchUrl(intent));
+
+        Uri data = intent == null ? null : intent.getData();
+        if (data != null && "totalcalendarjs".equals(data.getScheme())) {
+            if (webView != null) {
+                webView.loadUrl(getLaunchUrl(intent));
+            }
+            return;
+        }
+
+        if (trainingGuardActive) {
+            startTrainingGuardOnUiThread();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (trainingGuardActive) {
+            startTrainingGuardOnUiThread();
         }
     }
 
