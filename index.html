@@ -607,38 +607,52 @@
             resize: vertical;
         }
 
-        .train-editor-details .train-editor-textarea {
+        .train-editor-block {
+            margin-top: 18px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: var(--surface-soft);
+            scroll-margin-top: 12px;
+            overflow: hidden;
+        }
+
+        .train-editor-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 12px 14px;
+        }
+
+        .train-editor-toolbar .secondary-btn {
+            flex: 1 1 160px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .train-editor-panel {
+            border-top: 1px solid var(--border);
+        }
+
+        .train-editor-panel[hidden] {
+            display: none !important;
+        }
+
+        .train-editor-panel .train-editor-textarea {
             width: 100%;
             min-height: 320px;
             font-family: ui-monospace, Consolas, monospace;
             font-size: 13px;
             line-height: 1.45;
             box-sizing: border-box;
+            border: 0;
+            border-radius: 0;
+            resize: vertical;
         }
 
         .train-editor-save-btn {
             display: none;
             margin: 12px 16px 16px;
             width: calc(100% - 32px);
-        }
-
-        .train-editor-details {
-            scroll-margin-top: 12px;
-        }
-
-        .train-editor-summary-inner {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            margin-left: 6px;
-            vertical-align: middle;
-        }
-
-        .train-editor-copy-btn {
-            flex-shrink: 0;
-            padding: 5px 12px;
-            font-size: 13px;
-            font-weight: 600;
         }
 
         .info-note {
@@ -917,17 +931,17 @@
         </div>
 
         <div id="idTrainPageSetupLinks" class="train-page-setup-links">
-        <details id="idTrainEditorDetails" class="train-editor-details">
-            <summary class="train-editor-summary">
-                <span class="train-editor-summary-inner">
-                    Редактировать тренировку
-                    <button id="btnCopyTrainToNew" type="button" class="secondary-btn train-editor-copy-btn" onmousedown="event.preventDefault(); event.stopPropagation();" onclick="copyTrainIntoEditor(event)">Копировать в новую</button>
-                    <button id="btnNewTrainTemplate" type="button" class="secondary-btn train-editor-copy-btn" onmousedown="event.preventDefault(); event.stopPropagation();" onclick="openNewTrainTemplateInEditor(event)">Новый новый шаблон</button>
-                </span>
-            </summary>
-            <textarea id="idTrainEditor" class="train-editor-textarea" spellcheck="false"></textarea>
-            <button id="btnSaveTrainEditor" type="button" class="primary-btn train-editor-save-btn" style="display:none" onclick="saveTrainEditor()">Сохранить</button>
-        </details>
+        <div id="idTrainEditorBlock" class="train-editor-block">
+            <div class="train-editor-toolbar">
+                <button id="btnEditCurrentTrain" type="button" class="secondary-btn" onclick="editCurrentTrainInEditor(event)">Редактировать тренировку</button>
+                <button id="btnCopyTrainToNew" type="button" class="secondary-btn" onclick="copyTrainIntoEditor(event)">Копировать в новую</button>
+                <button id="btnNewTrainTemplate" type="button" class="secondary-btn" onclick="openNewTrainTemplateInEditor(event)">Новая шаблон</button>
+            </div>
+            <div id="idTrainEditorPanel" class="train-editor-panel" hidden>
+                <textarea id="idTrainEditor" class="train-editor-textarea" spellcheck="false"></textarea>
+                <button id="btnSaveTrainEditor" type="button" class="primary-btn train-editor-save-btn" style="display:none" onclick="saveTrainEditor()">Сохранить</button>
+            </div>
+        </div>
         <textarea id="idTextsToSpeek" style="display:none" aria-hidden="true"> </textarea>
 
         <button id="btnPrintTextToPrinter" class="secondary-btn print-text-button" type="button" style="display:none" onclick="printTrainingText()">
@@ -1020,7 +1034,6 @@
  var Gl_trainEditorIndex = -1;
  var Gl_trainEditorSourceIndex = -1;
  var Gl_trainEditorOriginalName = "";
- var Gl_trainEditorSuppressRefresh = false;
 
  function sanitizeTrainFilename(name){
    var s = String(name || "training").replace(/\s+/g, " ").trim();
@@ -5750,13 +5763,32 @@ END:VEVENT\n`
       return;
     ta._tcjsEditorBound = true;
     ta.addEventListener("input", syncTrainEditorDirtyState);
-    var det = document.getElementById("idTrainEditorDetails");
-    if (det)
-      det.addEventListener("toggle", function(){
-        if (!det.open || Gl_trainEditorSuppressRefresh)
-          return;
-        refreshTrainEditorFromSelection();
-      });
+  }
+
+  function isTrainEditorPanelOpen(){
+    var panel = document.getElementById("idTrainEditorPanel");
+    return !!(panel && !panel.hidden);
+  }
+
+  function showTrainEditorPanel(){
+    var panel = document.getElementById("idTrainEditorPanel");
+    if (panel)
+      panel.hidden = false;
+    revealTrainEditorBlock();
+  }
+
+  function editCurrentTrainInEditor(ev){
+    if (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+    }
+    var trainIdx = getCurrentTrainingMetaIndex();
+    if (trainIdx < 0) {
+      alert("Сначала выберите тренировку в списке.");
+      return;
+    }
+    loadTrainEditorForIndex(trainIdx);
+    showTrainEditorPanel();
   }
 
   function scrollTrainEditorTextToTop(){
@@ -5771,24 +5803,17 @@ END:VEVENT\n`
   }
 
   function revealTrainEditorBlock(){
-    var det = document.getElementById("idTrainEditorDetails");
+    var block = document.getElementById("idTrainEditorBlock");
     scrollTrainEditorTextToTop();
-    scrollDetailsBlockIntoView(det);
+    scrollDetailsBlockIntoView(block);
     requestAnimationFrame(function(){
       scrollTrainEditorTextToTop();
-      scrollDetailsBlockIntoView(det);
+      scrollDetailsBlockIntoView(block);
     });
     setTimeout(function(){
       scrollTrainEditorTextToTop();
-      scrollDetailsBlockIntoView(det);
+      scrollDetailsBlockIntoView(block);
     }, 120);
-  }
-
-  function openTrainEditorDetails(){
-    var det = document.getElementById("idTrainEditorDetails");
-    if (det)
-      det.open = true;
-    revealTrainEditorBlock();
     var ta = document.getElementById("idTrainEditor");
     if (ta) {
       try {
@@ -5796,7 +5821,6 @@ END:VEVENT\n`
       } catch (e) {
         ta.focus();
       }
-      scrollTrainEditorTextToTop();
     }
   }
 
@@ -5957,10 +5981,8 @@ END:VEVENT\n`
     }
     var copyName = getTrainingDisplayNameFromEntry(entry);
     var text = serializeOneMetaRithmEntry(entry);
-    Gl_trainEditorSuppressRefresh = true;
     setTrainEditorState(text, -1, copyName, buildMinimalNewTrainingTemplateText());
-    openTrainEditorDetails();
-    setTimeout(function(){ Gl_trainEditorSuppressRefresh = false; }, 0);
+    showTrainEditorPanel();
   }
 
   function openNewTrainTemplateInEditor(ev){
@@ -5971,10 +5993,8 @@ END:VEVENT\n`
     var text = buildMinimalNewTrainingTemplateText();
     var name = TCJS_DEFAULT_NEW_TRAIN_NAME;
     var existingIdx = findTrainIndexByDisplayName(name);
-    Gl_trainEditorSuppressRefresh = true;
     setTrainEditorState(text, existingIdx, name, text);
-    openTrainEditorDetails();
-    setTimeout(function(){ Gl_trainEditorSuppressRefresh = false; }, 0);
+    showTrainEditorPanel();
   }
 
   function getTrainingDisplayNameFromEntry(entry){
@@ -6857,7 +6877,8 @@ END:VEVENT\n`
       btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
 
       getText2Print(Gl_currentTrainName)
-      loadTrainEditorForIndex(typeof value === "number" ? value : getCurrentTrainingMetaIndex());
+      if (isTrainEditorPanelOpen())
+        loadTrainEditorForIndex(typeof value === "number" ? value : getCurrentTrainingMetaIndex());
       return
     } else if (sMode=="Run"){
       //null..
