@@ -150,11 +150,6 @@
             margin-bottom: 8px;
         }
 
-        .training-head-sticky--active .app-bar-title,
-        .training-head-sticky--active .app-bar-title #idAppBarTitleVersion {
-            color: #dc2626;
-        }
-
         .training-screen-awake {
             margin: 0 10px 8px;
             padding: 10px 14px;
@@ -874,7 +869,169 @@
    if (ext) ext.style.display = active ? "none" : "block";
    if (appLink) appLink.style.display = active ? "none" : "";
  }
- 
+
+ var TCJS_TRAINING_SESSION_KEY = "tcjs_active_training_v1";
+ var Gl_trainingSessionSaveTimer = null;
+
+ function shouldPersistTrainingSession(){
+   return (isActiveTrainingSession() || Gl_State === TXT_BTN_PAUSED) && !Gl_IsFinished
+     && Gl_aRithmLisp && Gl_aRithmLisp.length > 0;
+ }
+
+ function saveTrainingSessionSnapshot(){
+   if (!shouldPersistTrainingSession()) return;
+   var panel = typeof getTrainingNavPanel === "function" ? getTrainingNavPanel() : null;
+   var snap = {
+     v: 1,
+     savedAt: Date.now(),
+     GltxtSpeek: GltxtSpeek ? GltxtSpeek.value : "",
+     Gl_aRithmLisp: Gl_aRithmLisp,
+     GlnInd: GlnInd,
+     GlnDelta: GlnDelta,
+     GlBegTime: GlBegTime ? GlBegTime.getTime() : null,
+     GldPrev: GldPrev ? GldPrev.getTime() : null,
+     GlflSayIntro: GlflSayIntro,
+     GlflSayIntro2: GlflSayIntro2,
+     Gl_State: Gl_State,
+     GlIsRunning: GlIsRunning,
+     Gl_IsFinished: Gl_IsFinished,
+     Gl_currentTrainName: Gl_currentTrainName,
+     Gl_trainTime: Gl_trainTime,
+     Gl_flBegWord: Gl_flBegWord,
+     Gl_PauseStartedAt: Gl_PauseStartedAt ? Gl_PauseStartedAt.getTime() : null,
+     selectAllTrainIndex: selectAllTrain ? selectAllTrain.selectedIndex : -1,
+     noSound: !!(docNoSound && docNoSound.checked),
+     textTrain: docTextTrain ? docTextTrain.value : "",
+     textTime: txtTextTime ? txtTextTime.value : "",
+     navScrollTop: panel ? panel.scrollTop : 0
+   };
+   try { sessionStorage.setItem(TCJS_TRAINING_SESSION_KEY, JSON.stringify(snap)); } catch (e) {}
+ }
+
+ function scheduleSaveTrainingSessionSnapshot(){
+   if (!shouldPersistTrainingSession()) return;
+   if (Gl_trainingSessionSaveTimer) return;
+   Gl_trainingSessionSaveTimer = setTimeout(function(){
+     Gl_trainingSessionSaveTimer = null;
+     saveTrainingSessionSnapshot();
+   }, 250);
+ }
+
+ function clearTrainingSessionSnapshot(){
+   try { sessionStorage.removeItem(TCJS_TRAINING_SESSION_KEY); } catch (e) {}
+ }
+
+ function applyTrainingRunChrome(){
+   document.getElementById("idDivCalendar").style.display = "none";
+   document.getElementById("btnRecalcCal").style.display = "none";
+   document.getElementById("btnImportCal").style.display = "none";
+   document.getElementById("idDivActionCalendar").style.display = "none";
+   document.getElementById("idDivAllTrain").style.display = "none";
+   document.getElementById("idDivNavigation").style.display = "block";
+   document.getElementById("idDivTextTime").style.display = "block";
+   document.getElementById("selectedCalendars").style.display = "none";
+   document.getElementById("checkPage").style.display = "none";
+   document.getElementById("idImpExpAll").style.display = "none";
+   document.getElementById("idImpExp").style.display = "none";
+   syncTrainPageSetupLinksVisibility();
+   initTrainingNavScrollGuard();
+   try { btnSelectAllTrain.setAttribute("onclick", 'execTrain1(0,"Run")'); } catch (e) {}
+ }
+
+ function buildTrainingNavigationList(){
+   currentT.innerHTML = "";
+   var nId = "";
+   var prevId = "*";
+   var prevText = "";
+   var nRepeat = 1;
+   for (var i = 1; i < Gl_aRithmLisp.length; i += 2) {
+     var sDelta = Gl_aRithmLisp[i - 1];
+     try { if (!(sDelta.indexOf("[") >= 0)) sDelta += " [МСЕК]"; } catch (e) { sDelta = sDelta.toString() + " [МСЕК]"; }
+     if ((Gl_aRithmLisp[i] == prevText) && (prevId != "*")) {
+       nRepeat += 1;
+       nId = addAction("currentTShort", currentT, sDelta + "   ," + Gl_aRithmLisp[i], i, false, false, "width:100%", false, prevId, nRepeat);
+     } else {
+       nId = addAction("currentT", currentT, sDelta + "   ," + Gl_aRithmLisp[i], i, false, false, "width:100%", false);
+       nRepeat = 1;
+     }
+     prevId = nId;
+     prevText = Gl_aRithmLisp[i];
+   }
+ }
+
+ function restoreTrainingSessionFromSnapshot(snap){
+   GltxtSpeek.value = snap.GltxtSpeek || "";
+   Gl_aRithmLisp = snap.Gl_aRithmLisp;
+   Gl_IsGenerated = true;
+   GlnInd = snap.GlnInd;
+   GlnDelta = snap.GlnDelta;
+   GlflSayIntro = !!snap.GlflSayIntro;
+   GlflSayIntro2 = !!snap.GlflSayIntro2;
+   Gl_State = snap.Gl_State || TXT_BTN_STARTED;
+   GlIsRunning = !!snap.GlIsRunning;
+   Gl_IsFinished = !!snap.Gl_IsFinished;
+   Gl_currentTrainName = snap.Gl_currentTrainName || "";
+   Gl_trainTime = snap.Gl_trainTime;
+   Gl_flBegWord = !!snap.Gl_flBegWord;
+   GlBegTime = snap.GlBegTime ? new Date(snap.GlBegTime) : new Date();
+   GldPrev = snap.GldPrev ? new Date(snap.GldPrev) : new Date();
+   Gl_PauseStartedAt = snap.Gl_PauseStartedAt ? new Date(snap.Gl_PauseStartedAt) : null;
+   try {
+     if (typeof snap.selectAllTrainIndex === "number" && snap.selectAllTrainIndex >= 0 && selectAllTrain.options.length > snap.selectAllTrainIndex)
+       selectAllTrain.selectedIndex = snap.selectAllTrainIndex;
+   } catch (e) {}
+   try {
+     if (docNoSound) docNoSound.checked = !!snap.noSound;
+     syncAndroidNoSoundMode();
+   } catch (e) {}
+   if (txtTextTime && snap.textTime) txtTextTime.value = snap.textTime;
+   if (docTextTrain && snap.textTrain) docTextTrain.value = snap.textTrain;
+
+   applyTrainingRunChrome();
+   buildTrainingNavigationList();
+   paintTrainingNavProgress(GlnInd);
+
+   if (Gl_IsFinished) {
+     try { btnSelectAllTrain.innerHTML = TXT_BTN_FINISHED; } catch (e) {}
+     syncTrainPageSetupLinksVisibility();
+     scheduleStopTrainingAudioGuard();
+   } else if (Gl_State === TXT_BTN_PAUSED) {
+     GlIsRunning = false;
+     try { btnSelectAllTrain.innerHTML = "Продолжить"; } catch (e) {}
+     syncTrainPageSetupLinksVisibility();
+   } else {
+     Gl_IsFinished = false;
+     try { btnSelectAllTrain.innerHTML = "Пауза"; } catch (e) {}
+     startTrainingAudioGuard();
+     if (!Gl_SayInterval)
+       Gl_SayInterval = setInterval(fSayInTime, 10);
+   }
+
+   var panel = getTrainingNavPanel();
+   if (panel && typeof snap.navScrollTop === "number")
+     panel.scrollTop = snap.navScrollTop;
+   syncNoSoundTextTrainLayout();
+   return true;
+ }
+
+ function tryRestoreTrainingSessionSnapshot(){
+   var raw;
+   try { raw = sessionStorage.getItem(TCJS_TRAINING_SESSION_KEY); } catch (e) { return false; }
+   if (!raw) return false;
+   var snap;
+   try { snap = JSON.parse(raw); } catch (e) { clearTrainingSessionSnapshot(); return false; }
+   if (!snap || snap.v !== 1 || !snap.Gl_aRithmLisp || !snap.Gl_aRithmLisp.length) return false;
+   if (Date.now() - (snap.savedAt || 0) > 12 * 60 * 60 * 1000) {
+     clearTrainingSessionSnapshot();
+     return false;
+   }
+   if (snap.Gl_IsFinished) {
+     clearTrainingSessionSnapshot();
+     return false;
+   }
+   return restoreTrainingSessionFromSnapshot(snap);
+ }
+
  var Gl_aFormulas = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]//глобаль для использования в формулах трень
  function fn_place(date){
    switch ((date).getDate()%8){
@@ -1375,7 +1532,8 @@ function syncNoSoundTextTrainLayout() {
     ta.style.maxHeight = vh + "px";
   }
 
-  ta.scrollTop = 0;
+  if (!isActiveTrainingSession())
+    ta.scrollTop = 0;
 }
 
 function onNoSoundCheckboxClick() {
@@ -1422,6 +1580,7 @@ function scheduleStopTrainingAudioGuard(){
 function finishTrainingPlayback(){
   Gl_IsFinished = true
   GlIsRunning = false
+  clearTrainingSessionSnapshot()
 
   try{
     btnSelectAllTrain.innerHTML = TXT_BTN_FINISHED
@@ -1511,6 +1670,7 @@ function pauseTrainingPlayback(){
     clearInterval(Gl_SayInterval)
     Gl_SayInterval = null
   }
+  saveTrainingSessionSnapshot()
   return true
 }
 
@@ -1540,6 +1700,7 @@ function resumeTrainingPlayback(){
   if (!Gl_SayInterval)
     Gl_SayInterval = setInterval(fSayInTime,10)
 
+  scheduleSaveTrainingSessionSnapshot()
   return true
 }
 
@@ -1552,6 +1713,7 @@ function restartTrainingApp(){
   Gl_IsFinished = true
   Gl_State = TXT_BTN_FINISHED
   Gl_PauseStartedAt = null
+  clearTrainingSessionSnapshot()
 
   stopTrainingAudioGuard()
   stopCurrentSpeech()
@@ -1579,6 +1741,8 @@ async function requestTrainingWakeLock(){
 }
 
 document.addEventListener("visibilitychange", function(){
+  if (document.visibilityState === "hidden")
+    saveTrainingSessionSnapshot()
   if (!Gl_WakeLockWanted)
     return
   if (document.visibilityState === "visible"){
@@ -3383,10 +3547,15 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   var Gl_decodeExternalCallValue=""
   
   try {
-    window.addEventListener("resize", function () {
+    function onTrainingViewportChange(){
       if (Gl_NoSoundLayoutTimer) clearTimeout(Gl_NoSoundLayoutTimer);
       Gl_NoSoundLayoutTimer = setTimeout(syncNoSoundTextTrainLayout, 140);
-    });
+      scheduleSaveTrainingSessionSnapshot();
+    }
+    window.addEventListener("resize", onTrainingViewportChange);
+    if (window.visualViewport)
+      window.visualViewport.addEventListener("resize", onTrainingViewportChange);
+    window.addEventListener("pagehide", function(){ saveTrainingSessionSnapshot(); });
     setTimeout(syncNoSoundTextTrainLayout, 0);
   } catch (e) {}
 
@@ -3791,6 +3960,8 @@ END:VEVENT\n`
       Gl_decodeExternalCallValue=''
     fillForm(decodeURIComponent(startWithValue))
 
+    tryRestoreTrainingSessionSnapshot()
+
     initAndroidHeartRateUi()
 
     //GltxtSpeek.value += "\n\n Для изменения тренировки необходимо редактировать запускаемый файл html.\n";
@@ -4075,6 +4246,7 @@ END:VEVENT\n`
                      syncOnlineWallClockFromTrainingStart()
                      Gl_aRithmLisp[GlnInd+1]= calcEval("N",String(Gl_aRithmLisp[GlnInd+1]),true) //!!!String
                      GlnInd+=2;
+                     scheduleSaveTrainingSessionSnapshot();
               }
             } else {
                 GlnInd+=2;
@@ -4268,9 +4440,7 @@ END:VEVENT\n`
            dCurrPrev = new Date(dCurr)
            dCurr = new Date(ret_aMultiCalendar[i-1]);
            if (!((dCurr.getFullYear()==dCurrPrev.getFullYear())&&(dCurr.getMonth()==dCurrPrev.getMonth())&&(dCurr.getDate()==dCurrPrev.getDate())))  fl=!fl
-            if ((dCurr.getFullYear()==now.getFullYear())&&(dCurr.getMonth()==now.getMonth())&&(dCurr.getDate()==now.getDate()))
-              sStyle ="width:100%;height:40px;color:red;"
-            else sStyle ="width:100%;height:40px";
+            sStyle ="width:100%;height:40px";
              addAction("calendar",calendar,dCurr.toLocaleString()  //!! преобразовать от даты + ...
                                 +'   :    '+ret_aMultiCalendar[i] ,i,false,false,sStyle,fl);
         }
@@ -4987,6 +5157,7 @@ END:VEVENT\n`
      GlnDelta = 3000;// Number(Gl_aRithmLisp[i-1]);
      GlnInd =i;
      scrollTrainingNavToProgress(true);
+     scheduleSaveTrainingSessionSnapshot();
   }
 
 
@@ -5093,10 +5264,8 @@ END:VEVENT\n`
        document.getElementById("idDivActionCalendar").style.display ='none'
        document.getElementById("idDivAllTrain").style.display ='none'
        syncTrainPageSetupLinksVisibility()
-       document.getElementById("idDivNavigation").style.display ='block'
-       initTrainingNavScrollGuard();
+       applyTrainingRunChrome()
        setTimeout(function(){ scrollTrainingNavToProgress(false); }, 0);
-       document.getElementById("idDivTextTime").style.display ='block'
        document.getElementById("selectedCalendars").style.display ='none'
        document.getElementById("checkPage").style.display ='none'
        document.getElementById("idImpExpAll").style.display ='none'
@@ -5156,26 +5325,7 @@ END:VEVENT\n`
 
     if (!Gl_IsGenerated) return
 
-    //=========НАЧИТКА СПИСКА ДЕЛ ДЛЯ НАВИГАЦИИ===========
-    currentT.innerHTML = '';
-    var nId=''
-    var prevId = '*'
-    var prevText = '';//Gl_aRithmLisp[1]
-    var nRepeat = 1
-    for(var i=1; i<Gl_aRithmLisp.length; i+=2) {
-        var sDelta = Gl_aRithmLisp[i-1]
-        try{if (!(sDelta.indexOf('[')>=0)) sDelta+=' [МСЕК]';}catch(e){sDelta = sDelta.toString()+' [МСЕК]'}  //try-ПРОБЛЕМА С ИНТЕРВАЛОМ ПРИ СТУСОВЫВАНИ
-        if ((Gl_aRithmLisp[i]==prevText)&&(prevId!='*')){
-          nRepeat+=1
-          nId=addAction("currentTShort",currentT,sDelta+"   ,"+Gl_aRithmLisp[i],i,false,false,"width:100%",false,prevId,nRepeat)
-        }else{
-            nId=addAction("currentT",currentT,sDelta+"   ,"+Gl_aRithmLisp[i],i,false,false,"width:100%",false)
-            nRepeat = 1
-        }
-        prevId=nId
-        prevText=Gl_aRithmLisp[i]
-    }
-    initTrainingNavScrollGuard();
+    buildTrainingNavigationList();
 
     //== Вывод  тренировки в текстовом виде
     if (sMode!="Run") fgetTextToPrint()
@@ -5202,6 +5352,7 @@ END:VEVENT\n`
         {
             if (!Gl_SayInterval)
               Gl_SayInterval = setInterval(fSayInTime,10);  //цикл с задержками по 10 мс
+            scheduleSaveTrainingSessionSnapshot();
         }
     //##################################################################################
 
