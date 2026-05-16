@@ -4547,10 +4547,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
         throw new Error("HTTP " + r.status);
       return r.text();
     }).then(function(text){
-      var ok = applyGenallScript(text);
-      if (ok)
-        saveLocalTrainingsGenall(text);
-      done(!!ok);
+      done(!!applyGenallScript(text));
     }).catch(function(e){
       console.log("Remote trainings .genall:", e);
       done(false);
@@ -4619,7 +4616,6 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
       sDownload+='  ],\n'
     }
     sDownload+=']\n'
-    saveLocalTrainingsGenall(sDownload);
     download(sDownload, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+'GenTrainsAndCalendarFromTotalCalendarJS.genall', 'text/plain')
   }
   function changePageCalendar(isCheck){
