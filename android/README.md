@@ -22,8 +22,23 @@ Open this `android/` directory in Android Studio, or build from a machine with
 Gradle and the Android SDK installed:
 
 ```sh
-gradle :app:assembleDebug
+gradle :app:assembleRelease
 ```
+
+APK: `app/build/outputs/apk/release/app-release.apk`
+
+### Подпись и обновление поверх старой версии
+
+Все сборки (CI и локальные) подписываются одним ключом из `keystore/upload.jks`
+(см. `keystore.properties`). Так Android принимает **обновление** без удаления
+приложения.
+
+Если раньше стояла сборка с **другой** подписью (старый debug APK с GitHub или
+с ПК), один раз удалите приложение и установите новый APK. Дальнейшие обновления
+поверх установленной версии должны проходить без конфликта.
+
+`versionCode` = max(`app-build.txt`, `GITHUB_RUN_NUMBER`) — номер версии только
+растёт.
 
 The Android Gradle Plugin version in this project requires Gradle 9.4.1 or
 newer and Android SDK 36.

@@ -17,6 +17,21 @@ String readRootAppBuildTxt() {
 
 def effectiveTcjsRun = tcjsGithubRun ?: readRootAppBuildTxt()
 
+def versionCodeFromFile = 1
+def rootBuildTxt = readRootAppBuildTxt()
+if (rootBuildTxt) {
+    versionCodeFromFile = Integer.parseInt(rootBuildTxt)
+}
+def versionCodeFromCi = effectiveTcjsRun ? Integer.parseInt(effectiveTcjsRun) : 0
+def versionCodeFinal = Math.max(versionCodeFromFile, versionCodeFromCi, 1)
+def versionNameFinal = "1.0.${versionCodeFinal}"
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace 'com.totalcalendarjs.app'
     compileSdk 36
@@ -25,8 +40,27 @@ android {
         applicationId 'com.totalcalendarjs.app'
         minSdk 23
         targetSdk 36
-        versionCode (effectiveTcjsRun ? Integer.parseInt(effectiveTcjsRun) : 1)
-        versionName (effectiveTcjsRun ? "1.0.${effectiveTcjsRun}" : "1.0")
+        versionCode versionCodeFinal
+        versionName versionNameFinal
+    }
+
+    signingConfigs {
+        upload {
+            storeFile rootProject.file(keystoreProperties.getProperty('storeFile', 'keystore/upload.jks'))
+            storePassword keystoreProperties.getProperty('storePassword', 'totalcalendar')
+            keyAlias keystoreProperties.getProperty('keyAlias', 'upload')
+            keyPassword keystoreProperties.getProperty('keyPassword', 'totalcalendar')
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.upload
+        }
+        release {
+            signingConfig signingConfigs.upload
+            minifyEnabled false
+        }
     }
 
     compileOptions {

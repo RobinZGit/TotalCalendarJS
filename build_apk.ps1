@@ -57,13 +57,13 @@ if (-not $env:ANDROID_HOME -and -not $env:ANDROID_SDK_ROOT) {
   Write-Warning "ANDROID_HOME / ANDROID_SDK_ROOT is not set. If build fails, install Android SDK and set ANDROID_SDK_ROOT."
 }
 
-Write-Host "Building Android debug APK..."
-& $GradleExe -p $AndroidProjectDir ":app:assembleDebug" --no-daemon
+Write-Host "Building signed Android release APK..."
+& $GradleExe -p $AndroidProjectDir ":app:assembleRelease" --no-daemon
 if ($LASTEXITCODE -ne 0) {
   throw "Gradle build failed with exit code $LASTEXITCODE."
 }
 
-$BuiltApk = Join-Path $AndroidProjectDir "app\\build\\outputs\\apk\\debug\\app-debug.apk"
+$BuiltApk = Join-Path $AndroidProjectDir "app\\build\\outputs\\apk\\release\\app-release.apk"
 if (!(Test-Path -LiteralPath $BuiltApk)) {
   throw "APK not found after build: $BuiltApk"
 }
