@@ -785,9 +785,9 @@
                 <button id="btnSelectAllTrain" class="success-btn" type="button">Начать тренировку</button>
                 <button id="btnExit" class="danger-btn" type="button" onclick="exitTrainingApp()">Завершить тренировку</button>
             </div>
-            <div class="button-row" style="margin-top:14px">
+            <div id="idTrainingNavRow" class="button-row" style="margin-top:14px;display:none">
                 <button id="btnPrev" class="secondary-btn" type="button" onclick="prev()">&lt;&lt;</button>
-                <button id="btnLastTraining" class="secondary-btn" type="button" onclick="resumeLastSavedTraining()" disabled title="Нет сохранённой тренировки">Прошлые тренировки</button>
+                <button id="btnLastTraining" class="secondary-btn" type="button" onclick="resumeLastSavedTraining()" title="Загрузить выбранную сохранённую тренировку">Прошлые тренировки</button>
                 <button id="btnNext" class="secondary-btn" type="button" onclick="next()">&gt;&gt;</button>
             </div>
             <div class="option-grid">
@@ -1223,42 +1223,55 @@
    var prevBtn = document.getElementById("btnPrev");
    var nextBtn = document.getElementById("btnNext");
    var centerBtn = document.getElementById("btnLastTraining");
+   var navRow = document.getElementById("idTrainingNavRow");
    if (!prevBtn || !nextBtn) return;
-   if (isTrainingExerciseNavMode()) {
+
+   var active = isActiveTrainingSession();
+   var hasHistory = hasLastSavedTraining();
+
+   if (!active && !hasHistory) {
+     if (navRow) navRow.style.display = "none";
+     prevBtn.style.display = "none";
+     nextBtn.style.display = "none";
+     if (centerBtn) centerBtn.style.display = "none";
+     return;
+   }
+
+   if (navRow) navRow.style.display = "";
+
+   if (active) {
+     prevBtn.style.display = "";
+     nextBtn.style.display = "";
+     if (centerBtn) centerBtn.style.display = "none";
      prevBtn.innerHTML = "&lt;&lt; предыдущее упражнение";
      nextBtn.innerHTML = "следующее упражнение &gt;&gt;";
      prevBtn.disabled = false;
      nextBtn.disabled = false;
      prevBtn.title = "";
      nextBtn.title = "";
-     if (centerBtn) centerBtn.style.display = "none";
      return;
    }
-   if (centerBtn) centerBtn.style.display = "";
+
+   prevBtn.style.display = "";
+   nextBtn.style.display = "";
+   if (centerBtn) {
+     centerBtn.style.display = "";
+     centerBtn.disabled = false;
+     centerBtn.title = "Загрузить выбранную сохранённую тренировку и продолжить с того же упражнения";
+     updateLastTrainingCenterButtonLabel();
+   }
    prevBtn.innerHTML = "&lt;&lt;";
    nextBtn.innerHTML = "&gt;&gt;";
    var list = loadSavedTrainingsList();
    var i = Gl_savedTrainingsBrowseIndex;
-   prevBtn.disabled = !list.length || i >= list.length - 1;
-   nextBtn.disabled = !list.length || i <= 0;
-   var pos = list.length ? " (" + (i + 1) + " из " + list.length + ")" : "";
-   prevBtn.title = list.length ? "Предыдущая сохранённая тренировка" + pos : "Нет сохранённых тренировок";
-   nextBtn.title = list.length ? "Следующая сохранённая тренировка" + pos : "Нет сохранённых тренировок";
-   updateLastTrainingCenterButtonLabel();
+   prevBtn.disabled = i >= list.length - 1;
+   nextBtn.disabled = i <= 0;
+   var pos = " (" + (i + 1) + " из " + list.length + ")";
+   prevBtn.title = "Предыдущая сохранённая тренировка" + pos;
+   nextBtn.title = "Следующая сохранённая тренировка" + pos;
  }
 
  function updateLastTrainingButtonVisibility(){
-   var btn = document.getElementById("btnLastTraining");
-   if (!btn) return;
-   if (isTrainingExerciseNavMode()) {
-     btn.style.display = "none";
-     syncPrevNextNavButtons();
-     return;
-   }
-   btn.style.display = "";
-   var has = hasLastSavedTraining();
-   btn.disabled = !has;
-   btn.title = has ? "Загрузить выбранную сохранённую тренировку и продолжить с того же упражнения" : "Нет сохранённой тренировки";
    syncPrevNextNavButtons();
  }
 
