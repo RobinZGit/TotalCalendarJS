@@ -906,6 +906,7 @@
    if (ext) ext.style.display = active ? "none" : "block";
    if (appLink) appLink.style.display = active ? "none" : "";
    syncPrevNextNavButtons();
+   try { syncHeartRateChartVisibility(); } catch (e) {}
  }
 
  var TCJS_TRAINING_SESSION_KEY = "tcjs_active_training_v1";
@@ -1224,6 +1225,10 @@
      else
        callAndroidTraining("saveTextFile", rtmText, rtmFilename, "text/plain");
    } catch (e) {}
+   try {
+     if (hasHeartRateLogData())
+       saveHeartRateLogFile({ download: withDownload, reason: opts.reason || "" });
+   } catch (eHr) {}
    updateLastTrainingButtonVisibility();
    return true;
  }
@@ -1377,7 +1382,6 @@
    document.getElementById("checkPage").style.display = "none";
    document.getElementById("idImpExpAll").style.display = "none";
    document.getElementById("idImpExp").style.display = "none";
-   try { document.getElementById("idHeartRateChartSection").style.display = "none"; } catch (e) {}
    syncTrainPageSetupLinksVisibility();
    initTrainingNavScrollGuard();
    try { btnSelectAllTrain.setAttribute("onclick", 'execTrain1(0,"Run")'); } catch (e) {}
@@ -1829,7 +1833,64 @@ var HR_CHART_MAX_POINTS = 1200
 var Gl_hrChartRedrawTimer = null
 var Gl_hrChartResizeBound = false
 
+function isHeartRateLogEnabled(){
+  try{
+    return isActiveTrainingSession()
+  }catch(e){
+    return false
+  }
+}
+
+function hasHeartRateLogData(){
+  return !!(Gl_hrChartPoints && Gl_hrChartPoints.length)
+}
+
+function buildHeartRateLogText(){
+  if (!hasHeartRateLogData())
+    return ""
+  var lines = []
+  lines.push("# TotalCalendarJS pulse log")
+  lines.push("# training: " + String(Gl_currentTrainName || "").trim())
+  if (GlBegTime)
+    lines.push("# started: " + new Date(GlBegTime).toISOString())
+  lines.push("# saved: " + new Date().toISOString())
+  lines.push("timestamp_ms,elapsed_sec,bpm")
+  var t0 = Gl_hrChartStartedAt || Gl_hrChartPoints[0].t
+  for (var i = 0; i < Gl_hrChartPoints.length; i++){
+    var p = Gl_hrChartPoints[i]
+    var elapsed = ((p.t - t0) / 1000).toFixed(1)
+    lines.push(p.t + "," + elapsed + "," + p.bpm)
+  }
+  return lines.join("\n")
+}
+
+/** opts.download=true — файл с меткой времени; false — перезапись *_pulse_last.csv (аварийное). */
+function saveHeartRateLogFile(opts){
+  opts = opts || {}
+  if (!hasHeartRateLogData())
+    return false
+  var text = buildHeartRateLogText()
+  if (!text)
+    return false
+  var withDownload = opts.download !== false
+  var base = sanitizeTrainFilename(Gl_currentTrainName)
+  var filename = withDownload
+    ? (base + "_pulse_" + new Date().yyyymmddhhmmss("_") + ".csv")
+    : (base + "_pulse_last.csv")
+  try{
+    if (withDownload)
+      download(text, filename, "text/csv")
+    else
+      callAndroidTraining("saveTextFile", text, filename, "text/csv")
+  }catch(e){
+    return false
+  }
+  return true
+}
+
 function shouldShowHeartRateChart(){
+  if (!isHeartRateLogEnabled())
+    return false
   return isHeartRateSensorConnected()
     && typeof Gl_lastHeartRateBpm !== "undefined"
     && Gl_lastHeartRateBpm > 0
@@ -1864,6 +1925,8 @@ function resetHeartRateChart(){
 }
 
 function recordHeartRateChartPoint(bpm){
+  if (!isHeartRateLogEnabled())
+    return
   var v = Math.round(Number(bpm))
   if (!isFinite(v) || v <= 0)
     return
@@ -1915,6 +1978,8 @@ function formatHeartRateChartClock(ms){
 }
 
 function drawHeartRateChart(){
+  if (!shouldShowHeartRateChart())
+    return
   var canvas = document.getElementById("idHeartRateChartCanvas")
   var cap = document.getElementById("idHeartRateChartCaption")
   if (!canvas)
@@ -2264,6 +2329,11 @@ function finishTrainingPlayback(){
     btnSelectAllTrain.innerHTML = TXT_BTN_FINISHED
   }catch(e){}
 
+  try {
+    if (hasHeartRateLogData())
+      saveHeartRateLogFile({ download: true, reason: "finish" });
+  } catch (eHr) {}
+  try { resetHeartRateChart() } catch (eHr2) {}
   syncTrainPageSetupLinksVisibility()
   scheduleStopTrainingAudioGuard()
 }
@@ -2400,6 +2470,8 @@ function restartTrainingApp(){
   Gl_resumeFromHistoryOnRun = false
   Gl_historyPreviewSnap = null
   clearTrainingSessionSnapshot()
+  try { resetHeartRateChart() } catch (eHr) {}
+  try { syncHeartRateChartVisibility() } catch (eHr2) {}
 
   stopTrainingAudioGuard()
   stopCurrentSpeech()
@@ -4869,7 +4941,6 @@ END:VEVENT\n`
      var wasConnected = Gl_lastHeartRateBpm >= 0
      if (!isFinite(n) || n < 0){
        Gl_lastHeartRateBpm = -1
-       try{ resetHeartRateChart() }catch(eHr){}
      } else {
        Gl_lastHeartRateBpm = Math.round(n)
        Gl_hadHeartRateDuringTraining = true
@@ -5980,6 +6051,7 @@ END:VEVENT\n`
        Gl_IsFinished=false
        Gl_PauseStartedAt=null
        Gl_hadHeartRateDuringTraining = false
+       try { resetHeartRateChart() } catch (eHr0) {}
        startTrainingAudioGuard()
        btnSelectAllTrain.innerHTML = 'Пауза'
 
@@ -5996,7 +6068,7 @@ END:VEVENT\n`
        document.getElementById("checkPage").style.display ='none'
        document.getElementById("idImpExpAll").style.display ='none'
        document.getElementById("idImpExp").style.display ='none'
-       try { document.getElementById("idHeartRateChartSection").style.display = 'none'; } catch (e) {}
+       try { syncHeartRateChartVisibility() } catch (eHr1) {}
 
 
        //document.getElementById("idTextTrain").style.display ='block'
