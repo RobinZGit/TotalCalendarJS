@@ -893,6 +893,10 @@
  //----------------------------------
  var GlnInd=0;
  var GlnDelta=0;
+ var Gl_navUserBrowsing = false;
+ var Gl_navBrowseTimer = null;
+ var Gl_navScrollGuardReady = false;
+ var Gl_navProgrammaticScroll = false;
  var Gl_flBegWord = false;
  var Gl_aRithmLisp;
  var GldPrev = new Date();
@@ -4042,6 +4046,7 @@ END:VEVENT\n`
                      try{
                        document.getElementById('buttonCurrentTr' + GlnInd).style.background='green'
                      } catch(e){}
+                     scrollTrainingNavToProgress(true);
                      //NEW !! ДОБАВИТЬ СЮДА АНАЛИЗ ДЕЛА С ВЫБОРОМ ДЕЛ С ПОДТВЕРЖДЕНИЕМ ПОЛЬЗОВАТЕЛЯ
                      //на форму добавить невидимый блок, в котором будут отрисовываться кнопки дел к выбору
                      //...
@@ -4892,6 +4897,74 @@ END:VEVENT\n`
 
 
 
+  function getTrainingNavPanel(){
+    var nav = document.getElementById('idDivNavigation');
+    if (!nav) return null;
+    return nav.querySelector('.navigation-panel');
+  }
+
+  function clearTrainingNavUserBrowse(){
+    Gl_navUserBrowsing = false;
+    if (Gl_navBrowseTimer) {
+      clearTimeout(Gl_navBrowseTimer);
+      Gl_navBrowseTimer = null;
+    }
+  }
+
+  function initTrainingNavScrollGuard(){
+    if (Gl_navScrollGuardReady) return;
+    var panel = getTrainingNavPanel();
+    if (!panel) return;
+    Gl_navScrollGuardReady = true;
+    function onUserNavBrowse(){
+      if (Gl_navProgrammaticScroll) return;
+      Gl_navUserBrowsing = true;
+      if (Gl_navBrowseTimer) clearTimeout(Gl_navBrowseTimer);
+      Gl_navBrowseTimer = setTimeout(function(){
+        Gl_navUserBrowsing = false;
+        Gl_navBrowseTimer = null;
+        scrollTrainingNavToProgress(true);
+      }, 2000);
+    }
+    panel.addEventListener('scroll', onUserNavBrowse, { passive: true });
+    panel.addEventListener('touchstart', onUserNavBrowse, { passive: true });
+    panel.addEventListener('wheel', onUserNavBrowse, { passive: true });
+    panel.addEventListener('mousedown', onUserNavBrowse);
+  }
+
+  function scrollTrainingNavToProgress(smooth){
+    if (Gl_navUserBrowsing) return;
+    var panel = getTrainingNavPanel();
+    if (!panel || panel.offsetParent === null) return;
+    var ind = GlnInd;
+    var anchor = document.getElementById('buttonCurrentTr' + ind);
+    if (ind > 1) {
+      var prevBtn = document.getElementById('buttonCurrentTr' + (ind - 2));
+      if (prevBtn) anchor = prevBtn;
+    }
+    if (!anchor) return;
+    var panelRect = panel.getBoundingClientRect();
+    var anchorRect = anchor.getBoundingClientRect();
+    var target = Math.max(0, anchorRect.top - panelRect.top + panel.scrollTop - panel.clientHeight * 0.18);
+    Gl_navProgrammaticScroll = true;
+    if (smooth && typeof panel.scrollTo === 'function') {
+      panel.scrollTo({ top: target, behavior: 'smooth' });
+      setTimeout(function(){ Gl_navProgrammaticScroll = false; }, 500);
+    } else {
+      panel.scrollTop = target;
+      Gl_navProgrammaticScroll = false;
+    }
+  }
+
+  function paintTrainingNavProgress(activeIndex){
+    for (var j = 0; j < activeIndex; j++) {
+      try { document.getElementById('buttonCurrentTr' + j).style.background = 'green'; } catch (e) {}
+    }
+    for (var k = activeIndex; k < Gl_aRithmLisp.length; k++) {
+      try { document.getElementById('buttonCurrentTr' + k).style.background = 'yellow'; } catch (e) {}
+    }
+  }
+
   function next(){ // перейти на следующее упражнение
     var i= GlnInd
     while ((i<Gl_aRithmLisp.length-3)&&(Gl_aRithmLisp[i+2]==Gl_aRithmLisp[i]))  i+=2
@@ -4909,19 +4982,11 @@ END:VEVENT\n`
      if (Gl_decodeExternalCallValue.length=0)
          alert ("Будет произведен переход на дело '"+Gl_aRithmLisp[i]+"'")
      stopCurrentSpeech()
-
-     for(var j=0; j<i;j++){
-        try{
-          document.getElementById('buttonCurrentTr' + j).style.background='green'
-        } catch(e) {}
-     }
-     for(var k=i; k<Gl_aRithmLisp.length;k++){
-        try{
-          document.getElementById('buttonCurrentTr' + k).style.background='yellow'
-        } catch(e) {}
-     }
+     clearTrainingNavUserBrowse();
+     paintTrainingNavProgress(i);
      GlnDelta = 3000;// Number(Gl_aRithmLisp[i-1]);
-     GlnInd =i
+     GlnInd =i;
+     scrollTrainingNavToProgress(true);
   }
 
 
@@ -5029,6 +5094,8 @@ END:VEVENT\n`
        document.getElementById("idDivAllTrain").style.display ='none'
        syncTrainPageSetupLinksVisibility()
        document.getElementById("idDivNavigation").style.display ='block'
+       initTrainingNavScrollGuard();
+       setTimeout(function(){ scrollTrainingNavToProgress(false); }, 0);
        document.getElementById("idDivTextTime").style.display ='block'
        document.getElementById("selectedCalendars").style.display ='none'
        document.getElementById("checkPage").style.display ='none'
@@ -5108,6 +5175,7 @@ END:VEVENT\n`
         prevId=nId
         prevText=Gl_aRithmLisp[i]
     }
+    initTrainingNavScrollGuard();
 
     //== Вывод  тренировки в текстовом виде
     if (sMode!="Run") fgetTextToPrint()
