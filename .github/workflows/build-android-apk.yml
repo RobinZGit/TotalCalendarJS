@@ -44,15 +44,15 @@ jobs:
           echo "GRADLE_HOME=${GITHUB_WORKSPACE}/gradle-9.4.1" >> "$GITHUB_ENV"
           echo "${GITHUB_WORKSPACE}/gradle-9.4.1/bin" >> "$GITHUB_PATH"
 
-      - name: Build debug APK
+      - name: Build signed release APK
         run: |
           set -euo pipefail
-          gradle -p android :app:assembleDebug --no-daemon --stacktrace
+          gradle -p android :app:assembleRelease --no-daemon --stacktrace
 
       - name: Copy APK to repo root name
         run: |
           set -euo pipefail
-          cp -f android/app/build/outputs/apk/debug/app-debug.apk TotalCalendar.apk
+          cp -f android/app/build/outputs/apk/release/app-release.apk TotalCalendar.apk
           ls -la TotalCalendar.apk
 
       - name: Upload APK artifact
@@ -61,3 +61,26 @@ jobs:
           name: TotalCalendar-apk
           path: TotalCalendar.apk
           if-no-files-found: error
+
+      # Доставка НА psl1@mail.ru. Пароль Mail.ru не нужен — любой SMTP-реле (ниже Brevo, бесплатно).
+      # Секреты: SMTP_USER, SMTP_PASSWORD, SMTP_FROM
+      # Brevo: https://www.brevo.com → SMTP & API → SMTP key; логин = email аккаунта Brevo.
+      # SMTP_FROM — любой подтверждённый отправитель в Brevo (не обязан быть @mail.ru).
+      - name: Send APK to email
+        uses: dawidd6/action-send-mail@v4
+        with:
+          server_address: smtp-relay.brevo.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: Total Calendar APK — run ${{ github.run_number }}
+          to: psl1@mail.ru
+          from: ${{ secrets.SMTP_FROM }}
+          body: |
+            Собран подписанный release APK workflow «Build Android APK».
+            Run: ${{ github.run_number }}
+            Ref: ${{ github.ref_name }}
+            SHA: ${{ github.sha }}
+            Trigger: ${{ github.event_name }}
+          attachments: TotalCalendar.apk
