@@ -5481,7 +5481,7 @@ END:VEVENT\n`
       } else {
         s += "    [\n";
         for (var k2 = 0; k2 < entry[j].length; k2++)
-          s += "    `" + escapeTrainEditorBacktick(entry[j][k2]) + "`,\n";
+          s += "    `" + entry[j][k2] + "`,\n";
         s += "    ],\n";
       }
     }
