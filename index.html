@@ -571,6 +571,21 @@
             resize: vertical;
         }
 
+        .train-editor-details .train-editor-textarea {
+            width: 100%;
+            min-height: 320px;
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 13px;
+            line-height: 1.45;
+            box-sizing: border-box;
+        }
+
+        .train-editor-save-btn {
+            display: none;
+            margin: 12px 16px 16px;
+            width: calc(100% - 32px);
+        }
+
         .info-note {
             margin-top: 12px;
             padding: 12px 14px;
@@ -834,10 +849,12 @@
         </div>
 
         <div id="idTrainPageSetupLinks" class="train-page-setup-links">
-        <details id="idTextToSpeekDetails">
-            <summary>Древовидная схема тренировки</summary>
-            <textarea id="idTextsToSpeek" style="height:400px;"> </textarea>
+        <details id="idTrainEditorDetails" class="train-editor-details">
+            <summary>Редактор тренировки</summary>
+            <textarea id="idTrainEditor" class="train-editor-textarea" spellcheck="false"></textarea>
+            <button id="btnSaveTrainEditor" type="button" class="primary-btn train-editor-save-btn" style="display:none" onclick="saveTrainEditor()">Сохранить</button>
         </details>
+        <textarea id="idTextsToSpeek" style="display:none" aria-hidden="true"> </textarea>
 
         <button id="btnPrintTextToPrinter" class="secondary-btn print-text-button" type="button" style="display:none" onclick="printTrainingText()">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -925,6 +942,8 @@
  var Gl_batteryLowSaveDone = false;
  /** Блокирует аварийные сохранения при штатном «Завершить» (Android onPause иначе снова открывает диалог). */
  var Gl_suppressEmergencySave = false;
+ var Gl_trainEditorBaseline = "";
+ var Gl_trainEditorIndex = -1;
 
  function sanitizeTrainFilename(name){
    var s = String(name || "training").replace(/\s+/g, " ").trim();
@@ -1183,6 +1202,7 @@
      document.getElementById("checkTrainPage").checked = true;
    } catch (e) {}
    try { loadHeartRatePreviewFromPayload(payload) } catch (eHr) {}
+   try { refreshTrainEditorFromSelection() } catch (eHrEd) {}
    return true;
  }
 
@@ -4593,45 +4613,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
 
 
   function downloadTrainAndCalFromFile(input){
-    var sDownload= ""
-    sDownload+= "//===== КАЛЕНДАРИ ================================\n"
-    sDownload+= "Gl_aMetaMetaCalendar = \n"
-    sDownload+='[\n'
-    for(var i =0;i<Gl_aMetaMetaCalendar.length;i++){
-      sDownload+='  [' +'[new Date('+Gl_aMetaMetaCalendar[i][0][0].getFullYear()+','
-                                    +Gl_aMetaMetaCalendar[i][0][0].getMonth()+','
-                                    +Gl_aMetaMetaCalendar[i][0][0].getDate()+','
-                                    +Gl_aMetaMetaCalendar[i][0][0].getHours()+','
-                                    +Gl_aMetaMetaCalendar[i][0][0].getMinutes()+','
-                                    +Gl_aMetaMetaCalendar[i][0][0].getSeconds()
-                                    +')],\n'
-      for(var j =1;j<Gl_aMetaMetaCalendar[i].length;j++){
-        sDownload+='    [\n'
-        for(var k =0;k<Gl_aMetaMetaCalendar[i][j].length;k++){
-          sDownload+='    `'+Gl_aMetaMetaCalendar[i][j][k]+'`,\n'
-        }
-        sDownload+='    ],\n'
-      }
-      sDownload+='  ],\n'
-    }
-    sDownload+=']\n\n\n'
-
-    //
-    sDownload+= "//===== ТРЕНИРОВКИ ==============================\n"
-    sDownload+= "Gl_aMetaRithm = \n"
-    sDownload+='[\n'
-    for(var i =0;i<Gl_aMetaRithm.length;i++){
-      sDownload+='[  [],\n'
-      for(var j =1;j<Gl_aMetaRithm[i].length;j++){
-        sDownload+='    [\n'
-        for(var k =0;k<Gl_aMetaRithm[i][j].length;k++){
-          sDownload+='    `'+Gl_aMetaRithm[i][j][k]+'`,\n'
-        }
-        sDownload+='    ],\n'
-      }
-      sDownload+='  ],\n'
-    }
-    sDownload+=']\n'
+    var sDownload = buildFullGenallScript();
     download(sDownload, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+'GenTrainsAndCalendarFromTotalCalendarJS.genall', 'text/plain')
   }
   function changePageCalendar(isCheck){
@@ -5446,6 +5428,188 @@ END:VEVENT\n`
     return ret_aMultiCalendar.slice()
   }
 
+  function buildFullGenallScript(){
+    var sDownload = "";
+    sDownload += "//===== КАЛЕНДАРИ ================================\n";
+    sDownload += "Gl_aMetaMetaCalendar = \n";
+    sDownload += "[\n";
+    for (var i = 0; i < Gl_aMetaMetaCalendar.length; i++) {
+      sDownload += "  [" + "[new Date(" + Gl_aMetaMetaCalendar[i][0][0].getFullYear() + "," +
+        Gl_aMetaMetaCalendar[i][0][0].getMonth() + "," +
+        Gl_aMetaMetaCalendar[i][0][0].getDate() + "," +
+        Gl_aMetaMetaCalendar[i][0][0].getHours() + "," +
+        Gl_aMetaMetaCalendar[i][0][0].getMinutes() + "," +
+        Gl_aMetaMetaCalendar[i][0][0].getSeconds() + ")],\n";
+      for (var j = 1; j < Gl_aMetaMetaCalendar[i].length; j++) {
+        sDownload += "    [\n";
+        for (var k = 0; k < Gl_aMetaMetaCalendar[i][j].length; k++)
+          sDownload += "    `" + Gl_aMetaMetaCalendar[i][j][k] + "`,\n";
+        sDownload += "    ],\n";
+      }
+      sDownload += "  ],\n";
+    }
+    sDownload += "]\n\n\n";
+    sDownload += "//===== ТРЕНИРОВКИ ==============================\n";
+    sDownload += "Gl_aMetaRithm = \n";
+    sDownload += "[\n";
+    for (var ti = 0; ti < Gl_aMetaRithm.length; ti++)
+      sDownload += serializeOneMetaRithmEntry(Gl_aMetaRithm[ti]);
+    sDownload += "]\n";
+    return sDownload;
+  }
+
+  function persistTrainingsGenallToLocal(){
+    try {
+      saveLocalTrainingsGenall(buildFullGenallScript());
+    } catch (e) {}
+  }
+
+  function serializeOneMetaRithmEntry(entry){
+    var s = "[  [],\n";
+    for (var j = 1; j < entry.length; j++) {
+      if (entry[j][0] && Array.isArray(entry[j][0]) && entry[j][0][0] instanceof Date) {
+        var d = entry[j][0][0];
+        s += "    [[new Date(" + d.getFullYear() + "," + d.getMonth() + "," + d.getDate() + "," +
+          d.getHours() + "," + d.getMinutes() + "," + d.getSeconds() + ")],\n";
+        for (var jj = 1; jj < entry[j].length; jj++) {
+          s += "    [\n";
+          for (var k = 0; k < entry[j][jj].length; k++)
+            s += "    `" + entry[j][jj][k] + "`,\n";
+          s += "    ],\n";
+        }
+        s += "    ],\n";
+      } else {
+        s += "    [\n";
+        for (var k2 = 0; k2 < entry[j].length; k2++)
+          s += "    `" + escapeTrainEditorBacktick(entry[j][k2]) + "`,\n";
+        s += "    ],\n";
+      }
+    }
+    s += "  ],\n";
+    return s;
+  }
+
+  function serializeTrainingEntryForEditor(trainIdx){
+    if (trainIdx < 0 || !Gl_aMetaRithm[trainIdx])
+      return "";
+    return serializeOneMetaRithmEntry(Gl_aMetaRithm[trainIdx]);
+  }
+
+  function getCurrentTrainingMetaIndex(){
+    if (!selectAllTrain || selectAllTrain.selectedIndex < 0)
+      return -1;
+    var opt = selectAllTrain.options[selectAllTrain.selectedIndex];
+    if (!opt)
+      return -1;
+    var idx = Number(opt.value);
+    return isFinite(idx) ? idx : -1;
+  }
+
+  function parseTrainingEntryFromEditor(text){
+    var s = String(text || "").trim();
+    if (!s)
+      throw new Error("Текст пуст. Ожидается фрагмент вида:\n[  [],\n    [\n    `строка определения`,\n    ],\n  ],");
+    var parsed;
+    try {
+      parsed = eval("(" + s + ")");
+    } catch (e) {
+      throw new Error("Синтаксическая ошибка: " + (e.message || e) +
+        "\n\nПроверьте скобки, запятые и обратные кавычки ` вокруг строк.");
+    }
+    if (!Array.isArray(parsed))
+      throw new Error("Корень должен быть массивом [  [], [ ... ], ].");
+    if (parsed.length < 2)
+      throw new Error("Мало элементов: нужны как минимум [ ], и массив строк тренировки.");
+    if (!Array.isArray(parsed[0]))
+      throw new Error("Первый элемент [0] должен быть массивом (обычно пустым []).");
+    if (!Array.isArray(parsed[1]) || parsed[1].length === 0)
+      throw new Error("Второй элемент [1] — непустой массив строк определения (в `обратных кавычках`).");
+    for (var i = 0; i < parsed[1].length; i++) {
+      if (typeof parsed[1][i] !== "string")
+        throw new Error("Строка [" + i + "] в определении тренировки должна быть текстом в `кавычках`.");
+    }
+    for (var j = 2; j < parsed.length; j++) {
+      if (!Array.isArray(parsed[j]))
+        throw new Error("Элемент [" + j + "] должен быть массивом (календарь тренировки или доп. блок).");
+    }
+    return parsed;
+  }
+
+  function syncTrainEditorDirtyState(){
+    var btn = document.getElementById("btnSaveTrainEditor");
+    var ta = document.getElementById("idTrainEditor");
+    if (!btn || !ta)
+      return;
+    var dirty = Gl_trainEditorIndex >= 0 && Gl_trainEditorBaseline !== ta.value;
+    btn.style.display = dirty ? "block" : "none";
+  }
+
+  function loadTrainEditorForIndex(trainIdx){
+    var ta = document.getElementById("idTrainEditor");
+    if (!ta)
+      return;
+    Gl_trainEditorIndex = trainIdx;
+    if (trainIdx < 0 || !Gl_aMetaRithm[trainIdx]) {
+      ta.value = "";
+      Gl_trainEditorBaseline = "";
+      syncTrainEditorDirtyState();
+      return;
+    }
+    var text = serializeTrainingEntryForEditor(trainIdx);
+    ta.value = text;
+    Gl_trainEditorBaseline = text;
+    syncTrainEditorDirtyState();
+  }
+
+  function refreshTrainEditorFromSelection(){
+    loadTrainEditorForIndex(getCurrentTrainingMetaIndex());
+  }
+
+  function initTrainEditorUi(){
+    var ta = document.getElementById("idTrainEditor");
+    if (!ta || ta._tcjsEditorBound)
+      return;
+    ta._tcjsEditorBound = true;
+    ta.addEventListener("input", syncTrainEditorDirtyState);
+    var det = document.getElementById("idTrainEditorDetails");
+    if (det)
+      det.addEventListener("toggle", function(){
+        if (det.open)
+          refreshTrainEditorFromSelection();
+      });
+  }
+
+  function saveTrainEditor(){
+    var trainIdx = Gl_trainEditorIndex;
+    if (trainIdx < 0)
+      trainIdx = getCurrentTrainingMetaIndex();
+    if (trainIdx < 0) {
+      alert("Сначала выберите тренировку в списке.");
+      return;
+    }
+    var ta = document.getElementById("idTrainEditor");
+    if (!ta)
+      return;
+    var parsed;
+    try {
+      parsed = parseTrainingEntryFromEditor(ta.value);
+    } catch (e) {
+      alert("Не удалось сохранить.\n\n" + (e.message || e));
+      return;
+    }
+    Gl_aMetaRithm[trainIdx] = parsed;
+    persistTrainingsGenallToLocal();
+    Gl_trainEditorBaseline = ta.value;
+    syncTrainEditorDirtyState();
+    var trainName = "";
+    try {
+      trainName = parsed[1][0].split("=")[0].trim();
+    } catch (e2) {}
+    readFilteredListOfTrainings("", trainName ? trainName.replace(/^<|>$/g, "") : null);
+    execTrain1(trainIdx, "Act");
+    alert("Тренировка сохранена в общем списке.");
+  }
+
   function fillForm(loadTrain=null)
   {
     //GlTest+=1;
@@ -5462,6 +5626,8 @@ END:VEVENT\n`
 
     //собираем все календари в один:
     Gl_aMultiCalendar = stus(Gl_aMetaMetaCalendar, 'paint')
+    initTrainEditorUi();
+    refreshTrainEditorFromSelection();
   }
 
   //поиск тренировки в глобальном массиве по наименованию (в угловых скобках)
@@ -6306,6 +6472,7 @@ END:VEVENT\n`
       btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
 
       getText2Print(Gl_currentTrainName)
+      loadTrainEditorForIndex(typeof value === "number" ? value : getCurrentTrainingMetaIndex());
       return
     } else if (sMode=="Run"){
       //null..
