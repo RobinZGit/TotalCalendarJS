@@ -5741,6 +5741,31 @@ END:VEVENT\n`
     });
   }
 
+  function scrollNewTrainTextToTop(){
+    var ta = document.getElementById("idNewTrainEditor");
+    if (!ta)
+      return;
+    ta.scrollTop = 0;
+    ta.scrollLeft = 0;
+    try {
+      ta.setSelectionRange(0, 0);
+    } catch (e) {}
+  }
+
+  function revealNewTrainBlock(){
+    var det = document.getElementById("idNewTrainDetails");
+    scrollNewTrainTextToTop();
+    scrollDetailsBlockIntoView(det);
+    requestAnimationFrame(function(){
+      scrollNewTrainTextToTop();
+      scrollDetailsBlockIntoView(det);
+    });
+    setTimeout(function(){
+      scrollNewTrainTextToTop();
+      scrollDetailsBlockIntoView(det);
+    }, 120);
+  }
+
   function copyTrainToNewTrain(ev){
     if (ev) {
       ev.preventDefault();
@@ -5765,9 +5790,13 @@ END:VEVENT\n`
     taNew.value = serializeOneMetaRithmEntry(entry);
     syncNewTrainDirtyState();
     detNew.open = true;
-    scrollDetailsBlockIntoView(detNew);
-    setTimeout(function(){ scrollDetailsBlockIntoView(detNew); }, 120);
-    taNew.focus();
+    revealNewTrainBlock();
+    try {
+      taNew.focus({ preventScroll: true });
+    } catch (e2) {
+      taNew.focus();
+    }
+    scrollNewTrainTextToTop();
   }
 
   function getTrainingDisplayNameFromEntry(entry){
@@ -5820,9 +5849,11 @@ END:VEVENT\n`
           return;
         if (Gl_newTrainSuppressTemplateLoad) {
           Gl_newTrainSuppressTemplateLoad = false;
+          revealNewTrainBlock();
           return;
         }
         loadNewTrainTemplateIntoEditor();
+        revealNewTrainBlock();
       });
   }
 
