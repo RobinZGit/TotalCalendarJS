@@ -1178,6 +1178,7 @@
      document.getElementById("trainPage").style.display = "block";
      document.getElementById("checkTrainPage").checked = true;
    } catch (e) {}
+   try { loadHeartRatePreviewFromPayload(payload) } catch (eHr) {}
    return true;
  }
 
@@ -1218,6 +1219,12 @@
      rtmText: rtmText,
      rtmFilename: rtmFilename
    };
+   if (hasHeartRateLogData()) {
+     payload.pulseLogText = buildHeartRateLogText();
+     payload.pulseFilename = withDownload
+       ? (base + "_pulse_" + new Date().yyyymmddhhmmss("_") + ".csv")
+       : (base + "_pulse_last.csv");
+   }
    try { pushSavedTrainingToHistory(payload); } catch (e) { return false; }
    try {
      if (withDownload)
@@ -1350,6 +1357,7 @@
    GldPrev = new Date();
 
    var ex = snap.stoppedAtExercise || (Gl_aRithmLisp[GlnInd] ? String(Gl_aRithmLisp[GlnInd]) : "");
+   try { loadHeartRatePreviewFromPayload(payload) } catch (eHr) {}
    if (ex)
      alert("Загружена прошлая тренировка. Упражнение: " + ex + "\nНажмите «Продолжить», чтобы продолжить с этого места.");
    else
@@ -1828,6 +1836,7 @@ function updateHeartRateConnectButtonIcon(){
 
 var Gl_hrChartPoints = []
 var Gl_hrChartStartedAt = 0
+var Gl_hrChartPreviewMode = false
 var HR_CHART_WINDOW_MS = 10 * 60 * 1000
 var HR_CHART_MAX_POINTS = 1200
 var Gl_hrChartRedrawTimer = null
@@ -1888,7 +1897,55 @@ function saveHeartRateLogFile(opts){
   return true
 }
 
+function parseHeartRateLogText(text){
+  var points = []
+  if (!text)
+    return points
+  var lines = String(text).split(/\r?\n/)
+  for (var i = 0; i < lines.length; i++){
+    var line = lines[i].trim()
+    if (!line || line.charAt(0) === "#")
+      continue
+    if (/^timestamp_ms/i.test(line))
+      continue
+    var parts = line.split(",")
+    if (parts.length < 2)
+      continue
+    var bpm = Math.round(Number(parts[parts.length - 1]))
+    var t = Number(parts[0])
+    if (!isFinite(t) || !isFinite(bpm) || bpm <= 0)
+      continue
+    points.push({ t: t, bpm: bpm })
+  }
+  return points
+}
+
+function loadHeartRatePreviewFromPayload(payload){
+  if (!payload || !payload.pulseLogText){
+    if (!isHeartRateLogEnabled())
+      resetHeartRateChart()
+    else
+      syncHeartRateChartVisibility()
+    return false
+  }
+  var pts = parseHeartRateLogText(payload.pulseLogText)
+  if (!pts.length){
+    if (!isHeartRateLogEnabled())
+      resetHeartRateChart()
+    else
+      syncHeartRateChartVisibility()
+    return false
+  }
+  Gl_hrChartPoints = pts
+  Gl_hrChartStartedAt = pts[0].t
+  Gl_hrChartPreviewMode = true
+  syncHeartRateChartVisibility()
+  return true
+}
+
 function shouldShowHeartRateChart(){
+  if (Gl_hrChartPreviewMode && hasHeartRateLogData())
+    return true
   if (!isHeartRateLogEnabled())
     return false
   return isHeartRateSensorConnected()
@@ -1911,6 +1968,7 @@ function syncHeartRateChartVisibility(){
 function resetHeartRateChart(){
   Gl_hrChartPoints = []
   Gl_hrChartStartedAt = 0
+  Gl_hrChartPreviewMode = false
   var cap = document.getElementById("idHeartRateChartCaption")
   if (cap)
     cap.textContent = ""
@@ -1927,6 +1985,8 @@ function resetHeartRateChart(){
 function recordHeartRateChartPoint(bpm){
   if (!isHeartRateLogEnabled())
     return
+  if (Gl_hrChartPreviewMode)
+    Gl_hrChartPreviewMode = false
   var v = Math.round(Number(bpm))
   if (!isFinite(v) || v <= 0)
     return
@@ -2002,10 +2062,16 @@ function drawHeartRateChart(){
   var pts = Gl_hrChartPoints
   var now = Date.now()
   var tMax = now
-  var tMin = Math.max((Gl_hrChartStartedAt || now) - HR_CHART_WINDOW_MS, tMax - HR_CHART_WINDOW_MS)
-  if (pts.length){
-    tMin = Math.max(tMin, pts[0].t - 1000)
-    tMax = Math.max(tMax, pts[pts.length - 1].t)
+  var tMin
+  if (Gl_hrChartPreviewMode && pts.length){
+    tMin = pts[0].t - 1000
+    tMax = pts[pts.length - 1].t
+  } else {
+    tMin = Math.max((Gl_hrChartStartedAt || now) - HR_CHART_WINDOW_MS, tMax - HR_CHART_WINDOW_MS)
+    if (pts.length){
+      tMin = Math.max(tMin, pts[0].t - 1000)
+      tMax = Math.max(tMax, pts[pts.length - 1].t)
+    }
   }
   if (tMax - tMin < 60000)
     tMin = tMax - 60000
@@ -2086,7 +2152,10 @@ function drawHeartRateChart(){
 
   if (cap){
     var lastBpm = pts.length ? pts[pts.length - 1].bpm : Gl_lastHeartRateBpm
-    cap.textContent = "Сейчас: " + lastBpm + " уд/мин · окно " + Math.round((tMax - tMin) / 60000) + " мин"
+    if (Gl_hrChartPreviewMode)
+      cap.textContent = "Сохранённый пульс · " + pts.length + " точек · последнее: " + lastBpm + " уд/мин"
+    else
+      cap.textContent = "Сейчас: " + lastBpm + " уд/мин · окно " + Math.round((tMax - tMin) / 60000) + " мин"
   }
 }
 
@@ -6051,7 +6120,12 @@ END:VEVENT\n`
        Gl_IsFinished=false
        Gl_PauseStartedAt=null
        Gl_hadHeartRateDuringTraining = false
-       try { resetHeartRateChart() } catch (eHr0) {}
+       try {
+         if (Gl_hrChartPreviewMode && hasHeartRateLogData())
+           Gl_hrChartPreviewMode = false
+         else
+           resetHeartRateChart()
+       } catch (eHr0) {}
        startTrainingAudioGuard()
        btnSelectAllTrain.innerHTML = 'Пауза'
 
