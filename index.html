@@ -913,6 +913,8 @@
  var TCJS_LAST_TRAINING_KEY = "tcjs_last_training_v1";
  var TCJS_LAST_TRAININGS_KEY = "tcjs_last_trainings_v1";
  var TCJS_LAST_TRAINING_MAX = 10;
+ /** Локальная копия экспорта .genall (календари + Gl_aMetaRithm). */
+ var TCJS_LOCAL_TRAININGS_KEY = "tcjs_trainings_genall_v1";
  var Gl_savedTrainingsBrowseIndex = 0;
  var Gl_resumeFromHistoryOnRun = false;
  var Gl_historyPreviewSnap = null;
@@ -4486,6 +4488,75 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
         };
   }
 
+  function getRemoteTrainingsGenallUrl(){
+    try {
+      return new URL("GenTrainsAndCalendarFromTotalCalendarJS.genall", document.baseURI || window.location.href).href;
+    } catch (e) {}
+    return "https://robinzgit.github.io/TotalCalendarJS/GenTrainsAndCalendarFromTotalCalendarJS.genall";
+  }
+
+  function saveLocalTrainingsGenall(text){
+    try {
+      if (text && String(text).trim())
+        localStorage.setItem(TCJS_LOCAL_TRAININGS_KEY, String(text));
+    } catch (e) {}
+  }
+
+  function readLocalTrainingsGenall(){
+    try {
+      return localStorage.getItem(TCJS_LOCAL_TRAININGS_KEY);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function applyGenallScript(scriptText){
+    if (!scriptText || !String(scriptText).trim())
+      return false;
+    try {
+      eval(String(scriptText));
+      if (!Gl_aMetaRithm || !Gl_aMetaRithm.length)
+        return false;
+      Gl_aMetaMetaCalendarSelected = [];
+      return true;
+    } catch (e) {
+      console.log("applyGenallScript:", e);
+      return false;
+    }
+  }
+
+  function mergeTrainingCalendarsFromRithm(){
+    for (var i = 0; i < Gl_aMetaRithm.length; i++) {
+      try {
+        if (Gl_aMetaRithm[i][2] != undefined && Gl_aMetaRithm[i][2].length > 1)
+          Gl_aMetaMetaCalendar.push(Gl_aMetaRithm[i][2]);
+      } catch (e) {}
+    }
+  }
+
+  function loadTrainingsDataThen(done){
+    done = done || function(){};
+    var local = readLocalTrainingsGenall();
+    if (local && applyGenallScript(local)) {
+      done(true);
+      return;
+    }
+    var url = getRemoteTrainingsGenallUrl();
+    fetch(url, { cache: "no-store" }).then(function(r){
+      if (!r.ok)
+        throw new Error("HTTP " + r.status);
+      return r.text();
+    }).then(function(text){
+      var ok = applyGenallScript(text);
+      if (ok)
+        saveLocalTrainingsGenall(text);
+      done(!!ok);
+    }).catch(function(e){
+      console.log("Remote trainings .genall:", e);
+      done(false);
+    });
+  }
+
   function loadTrainAndCalFromFile(input){
       let file = input.files[0];
       let reader = new FileReader();
@@ -4493,8 +4564,10 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
       reader.onload = function() {
           try{
             var str = reader.result
-            eval(str)
-            loadTrainData()
+            if (!applyGenallScript(str))
+              throw new Error("invalid genall");
+            saveLocalTrainingsGenall(str);
+            loadTrainDataWeb(true);
             alert('Загружен календарь и список тренировок')
           } catch(e){
             alert('Не удалось прочитать данные, проверьте формат файла. Должен быть js формат (без var!): "Gl-aMetaMetaCalendar=...;Gl_aMetaRithm=...;')
@@ -4546,6 +4619,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
       sDownload+='  ],\n'
     }
     sDownload+=']\n'
+    saveLocalTrainingsGenall(sDownload);
     download(sDownload, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+'GenTrainsAndCalendarFromTotalCalendarJS.genall', 'text/plain')
   }
   function changePageCalendar(isCheck){
@@ -4791,13 +4865,18 @@ END:VEVENT\n`
 
   //Выводим данные на форму при загрузке страницы
   function loadTrainData() {
-    if (tryOpenAndroidAppFromStartLink(loadTrainDataWeb))
+    if (tryOpenAndroidAppFromStartLink(function(){ loadTrainDataAfterSources(); }))
       return
-
-    loadTrainDataWeb()
+    loadTrainDataAfterSources();
   }
 
-  function loadTrainDataWeb() {
+  function loadTrainDataAfterSources(){
+    loadTrainingsDataThen(function(fromExternal){
+      loadTrainDataWeb(!!fromExternal);
+    });
+  }
+
+  function loadTrainDataWeb(fromExternal) {
     document.getElementById('externalcall').style.display='none';
     if (!window.AndroidTraining){
       setTimeout(function () {
@@ -4807,9 +4886,8 @@ END:VEVENT\n`
           document.getElementById('externalcall').style.display='none';
       }, 5500);
     }
-    //добавим в общий календарь календари из массива тренировок
-    for(var i=0;i<Gl_aMetaRithm.length;i++)
-      try {if (Gl_aMetaRithm[i][2]!=undefined) if(Gl_aMetaRithm[i][2].length>1) Gl_aMetaMetaCalendar.push(Gl_aMetaRithm[i][2]);} catch(e) {}
+    if (!fromExternal)
+      mergeTrainingCalendarsFromRithm();
     //
     if (Gl_aMetaMetaCalendarSelected.length==0){
       //alert('сброс выбора календарей')
