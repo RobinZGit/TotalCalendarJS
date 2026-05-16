@@ -9,8 +9,13 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
+import android.content.BroadcastReceiver;
+import android.content.ComponentCallbacks2;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.os.BatteryManager;
 import android.net.Uri;
 import android.media.AudioAttributes;
 import android.os.Build;
@@ -60,6 +65,8 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private final ArrayDeque<SpeechRequest> pendingSpeech = new ArrayDeque<>();
     private HeartRateBleManager heartRateBleManager;
     private boolean pendingHeartRateScanAfterPermission;
+    private BroadcastReceiver batteryEmergencyReceiver;
+    private long lastBatteryPercentFlushMs;
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
@@ -89,11 +96,70 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
             }
         });
 
+        registerBatteryEmergencyReceiver();
+
         if (savedInstanceState == null) {
             webView.loadUrl(getLaunchUrl(getIntent()));
         } else {
             webView.restoreState(savedInstanceState);
         }
+    }
+
+    private void registerBatteryEmergencyReceiver() {
+        if (batteryEmergencyReceiver != null) {
+            return;
+        }
+        batteryEmergencyReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (intent == null || !trainingGuardActive) {
+                    return;
+                }
+                String action = intent.getAction();
+                if (Intent.ACTION_BATTERY_LOW.equals(action)) {
+                    flushWebLastTrainingCheckpoint("battery_low");
+                    return;
+                }
+                if (!Intent.ACTION_BATTERY_CHANGED.equals(action)) {
+                    return;
+                }
+                int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                if (level < 0 || scale <= 0) {
+                    return;
+                }
+                float pct = level / (float) scale;
+                long now = System.currentTimeMillis();
+                if (pct <= 0.05f) {
+                    if (now - lastBatteryPercentFlushMs >= 15000L) {
+                        lastBatteryPercentFlushMs = now;
+                        flushWebLastTrainingCheckpoint("battery_critical");
+                    }
+                } else if (pct <= 0.12f && now - lastBatteryPercentFlushMs >= 60000L) {
+                    lastBatteryPercentFlushMs = now;
+                    flushWebLastTrainingCheckpoint("battery_12pct");
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_BATTERY_LOW);
+        filter.addAction(Intent.ACTION_BATTERY_CHANGED);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(batteryEmergencyReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(batteryEmergencyReceiver, filter);
+        }
+    }
+
+    private void unregisterBatteryEmergencyReceiver() {
+        if (batteryEmergencyReceiver == null) {
+            return;
+        }
+        try {
+            unregisterReceiver(batteryEmergencyReceiver);
+        } catch (IllegalArgumentException ignored) {
+        }
+        batteryEmergencyReceiver = null;
     }
 
     private String getLaunchUrl(Intent intent) {
@@ -687,8 +753,24 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
+        flushWebLastTrainingCheckpoint("save_state");
         super.onSaveInstanceState(outState);
         webView.saveState(outState);
+    }
+
+    @Override
+    public void onLowMemory() {
+        flushWebLastTrainingCheckpoint("low_memory");
+        super.onLowMemory();
+    }
+
+    @Override
+    public void onTrimMemory(int level) {
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL
+                || level == ComponentCallbacks2.TRIM_MEMORY_COMPLETE) {
+            flushWebLastTrainingCheckpoint("trim_memory");
+        }
+        super.onTrimMemory(level);
     }
 
     @Override
@@ -710,11 +792,34 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     }
 
     @Override
+    protected void onPause() {
+        flushWebLastTrainingCheckpoint("android_pause");
+        super.onPause();
+    }
+
+    @Override
+    protected void onStop() {
+        flushWebLastTrainingCheckpoint("android_stop");
+        super.onStop();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         if (trainingGuardActive) {
             startTrainingGuardOnUiThread();
         }
+    }
+
+    private void flushWebLastTrainingCheckpoint(String reason) {
+        if (!trainingGuardActive || webView == null) {
+            return;
+        }
+        String r = reason != null ? reason : "android";
+        r = r.replace("\\", "\\\\").replace("'", "\\'");
+        String js = "try{if(typeof flushAutoSaveLastTrainingCheckpoint==='function')"
+                + "flushAutoSaveLastTrainingCheckpoint('" + r + "');}catch(e){}";
+        webView.post(() -> webView.evaluateJavascript(js, null));
     }
 
     @Override
@@ -728,6 +833,8 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
 
     @Override
     protected void onDestroy() {
+        flushWebLastTrainingCheckpoint("android_destroy");
+        unregisterBatteryEmergencyReceiver();
         trainingGuardActive = false;
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         releaseTrainingScreenWakeLock();

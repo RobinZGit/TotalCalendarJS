@@ -874,6 +874,10 @@
  var TCJS_TRAINING_SESSION_KEY = "tcjs_active_training_v1";
  var TCJS_LAST_TRAINING_KEY = "tcjs_last_training_v1";
  var Gl_trainingSessionSaveTimer = null;
+ var Gl_lastTrainingAutoSaveTimer = null;
+ var Gl_lastTrainingPeriodicTimer = null;
+ var Gl_hadHeartRateDuringTraining = false;
+ var Gl_batteryLowSaveDone = false;
 
  function sanitizeTrainFilename(name){
    var s = String(name || "training").replace(/\s+/g, " ").trim();
@@ -945,18 +949,115 @@
    btn.title = has ? "Продолжить последнюю сохранённую тренировку с того же упражнения" : "Нет сохранённой тренировки";
  }
 
- function saveLastTrainingCheckpoint(){
+ function shouldAutoSaveLastTrainingCheckpoint(){
+   if (!Gl_aRithmLisp || !Gl_aRithmLisp.length || Gl_IsFinished) return false;
+   return isActiveTrainingSession() || Gl_State === TXT_BTN_PAUSED || GlflSayIntro;
+ }
+
+ /** opts.download=true — при «Завершить» (файл с меткой времени); false — аварийное (тот же *_last.rtm). */
+ function saveLastTrainingCheckpoint(opts){
+   opts = opts || {};
+   var withDownload = opts.download !== false;
+   if (!withDownload && !shouldAutoSaveLastTrainingCheckpoint()) return false;
    if (!Gl_aRithmLisp || !Gl_aRithmLisp.length) return false;
    var snap = collectTrainingSessionSnapshotObject();
    var rtmText = buildRtmTextFromArithmLisp(Gl_aRithmLisp, Gl_currentTrainName);
    if (!rtmText) return false;
-   var stamp = new Date().yyyymmddhhmmss("_");
-   var rtmFilename = sanitizeTrainFilename(Gl_currentTrainName) + "_last_" + stamp + ".rtm";
-   var payload = { v: 1, savedAt: Date.now(), snap: snap, rtmText: rtmText, rtmFilename: rtmFilename };
+   var base = sanitizeTrainFilename(Gl_currentTrainName);
+   var rtmFilename = withDownload
+     ? (base + "_last_" + new Date().yyyymmddhhmmss("_") + ".rtm")
+     : (base + "_last.rtm");
+   var payload = {
+     v: 1,
+     savedAt: Date.now(),
+     saveReason: opts.reason || (withDownload ? "finish" : "auto"),
+     snap: snap,
+     rtmText: rtmText,
+     rtmFilename: rtmFilename
+   };
    try { localStorage.setItem(TCJS_LAST_TRAINING_KEY, JSON.stringify(payload)); } catch (e) { return false; }
-   try { download(rtmText, rtmFilename, "text/plain"); } catch (e) {}
+   try {
+     if (withDownload)
+       download(rtmText, rtmFilename, "text/plain");
+     else
+       callAndroidTraining("saveTextFile", rtmText, rtmFilename, "text/plain");
+   } catch (e) {}
    updateLastTrainingButtonVisibility();
    return true;
+ }
+
+ function scheduleAutoSaveLastTrainingCheckpoint(reason){
+   if (!shouldAutoSaveLastTrainingCheckpoint()) return;
+   if (Gl_lastTrainingAutoSaveTimer) clearTimeout(Gl_lastTrainingAutoSaveTimer);
+   Gl_lastTrainingAutoSaveTimer = setTimeout(function(){
+     Gl_lastTrainingAutoSaveTimer = null;
+     saveLastTrainingCheckpoint({ download: false, reason: reason || "auto" });
+   }, 800);
+ }
+
+ function flushAutoSaveLastTrainingCheckpoint(reason){
+   if (Gl_lastTrainingAutoSaveTimer) {
+     clearTimeout(Gl_lastTrainingAutoSaveTimer);
+     Gl_lastTrainingAutoSaveTimer = null;
+   }
+   if (shouldAutoSaveLastTrainingCheckpoint())
+     saveLastTrainingCheckpoint({ download: false, reason: reason || "flush" });
+ }
+
+ function startLastTrainingPeriodicAutoSave(){
+   stopLastTrainingPeriodicAutoSave();
+   Gl_lastTrainingPeriodicTimer = setInterval(function(){
+     if (shouldAutoSaveLastTrainingCheckpoint())
+       saveLastTrainingCheckpoint({ download: false, reason: "interval" });
+   }, 45000);
+ }
+
+ function stopLastTrainingPeriodicAutoSave(){
+   if (Gl_lastTrainingPeriodicTimer) {
+     clearInterval(Gl_lastTrainingPeriodicTimer);
+     Gl_lastTrainingPeriodicTimer = null;
+   }
+ }
+
+ function initEmergencySaveWatchers(){
+   try {
+     if (navigator.getBattery) {
+       navigator.getBattery().then(function(bat){
+         function onBatteryRisk(){
+           if (!shouldAutoSaveLastTrainingCheckpoint()) return;
+           var level = bat.level;
+           var charging = bat.charging;
+           if (charging || level > 0.2) {
+             Gl_batteryLowSaveDone = false;
+             return;
+           }
+           if (level <= 0.05) {
+             flushAutoSaveLastTrainingCheckpoint("battery_critical");
+             return;
+           }
+           if (level <= 0.15 && !Gl_batteryLowSaveDone) {
+             Gl_batteryLowSaveDone = true;
+             flushAutoSaveLastTrainingCheckpoint("battery_low");
+           }
+         }
+         bat.addEventListener("levelchange", onBatteryRisk);
+         bat.addEventListener("chargingchange", onBatteryRisk);
+         onBatteryRisk();
+       }).catch(function(){});
+     }
+   } catch (e) {}
+
+   try {
+     document.addEventListener("freeze", function(){
+       flushAutoSaveLastTrainingCheckpoint("freeze");
+     });
+   } catch (e) {}
+
+   try {
+     window.addEventListener("blur", function(){
+       scheduleAutoSaveLastTrainingCheckpoint("blur");
+     });
+   } catch (e) {}
  }
 
  function resumeLastSavedTraining(){
@@ -1019,6 +1120,7 @@
    Gl_trainingSessionSaveTimer = setTimeout(function(){
      Gl_trainingSessionSaveTimer = null;
      saveTrainingSessionSnapshot();
+     scheduleAutoSaveLastTrainingCheckpoint("periodic");
    }, 250);
  }
 
@@ -1400,7 +1502,7 @@ function onWebBleHrDisconnected(){
     }
   }catch(e){}
   Gl_WebBleHrDevice = null
-  onAndroidHeartRate(-1)
+  onAndroidHeartRate(-1, "ble_disconnect")
 }
 
 function webBleHeartRateStop(){
@@ -1419,7 +1521,7 @@ function webBleHeartRateStop(){
     }
   }catch(e){}
   Gl_WebBleHrDevice = null
-  onAndroidHeartRate(-1)
+  onAndroidHeartRate(-1, "ble_stop")
 }
 
 async function webBleHeartRateStart(){
@@ -1679,6 +1781,7 @@ function startTrainingAudioGuard(){
   startTrainingBackgroundAudio()
   resumeTrainingAudio()
   startTrainingKeepAliveTimers()
+  startLastTrainingPeriodicAutoSave()
 }
 
 function scheduleStopTrainingAudioGuard(){
@@ -1718,6 +1821,7 @@ function stopTrainingAudioGuard(){
   }
 
   stopTrainingKeepAliveTimers()
+  stopLastTrainingPeriodicAutoSave()
 
   try{
     if (Gl_BackgroundAudio){
@@ -1785,6 +1889,7 @@ function pauseTrainingPlayback(){
     Gl_SayInterval = null
   }
   saveTrainingSessionSnapshot()
+  scheduleAutoSaveLastTrainingCheckpoint("pause")
   return true
 }
 
@@ -1820,7 +1925,7 @@ function resumeTrainingPlayback(){
 
 function exitTrainingApp(){
   if (isActiveTrainingSession() || Gl_State === TXT_BTN_PAUSED || (Gl_aRithmLisp && Gl_aRithmLisp.length && GlflSayIntro)) {
-    if (!saveLastTrainingCheckpoint())
+    if (!saveLastTrainingCheckpoint({ download: true, reason: "finish" }))
       alert("Не удалось сохранить тренировку (ритм .rtm).");
   }
   restartTrainingApp()
@@ -1859,8 +1964,10 @@ async function requestTrainingWakeLock(){
 }
 
 document.addEventListener("visibilitychange", function(){
-  if (document.visibilityState === "hidden")
-    saveTrainingSessionSnapshot()
+  if (document.visibilityState === "hidden") {
+    saveTrainingSessionSnapshot();
+    flushAutoSaveLastTrainingCheckpoint("hidden");
+  }
   if (!Gl_WakeLockWanted)
     return
   if (document.visibilityState === "visible"){
@@ -3673,7 +3780,22 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
     window.addEventListener("resize", onTrainingViewportChange);
     if (window.visualViewport)
       window.visualViewport.addEventListener("resize", onTrainingViewportChange);
-    window.addEventListener("pagehide", function(){ saveTrainingSessionSnapshot(); });
+    window.addEventListener("pagehide", function(){
+      saveTrainingSessionSnapshot();
+      flushAutoSaveLastTrainingCheckpoint("pagehide");
+    });
+    window.addEventListener("beforeunload", function(){
+      flushAutoSaveLastTrainingCheckpoint("beforeunload");
+    });
+    window.addEventListener("offline", function(){
+      scheduleAutoSaveLastTrainingCheckpoint("offline");
+    });
+    window.addEventListener("error", function(){
+      scheduleAutoSaveLastTrainingCheckpoint("error");
+    });
+    window.addEventListener("unhandledrejection", function(){
+      scheduleAutoSaveLastTrainingCheckpoint("unhandledrejection");
+    });
     setTimeout(syncNoSoundTextTrainLayout, 0);
   } catch (e) {}
 
@@ -4078,6 +4200,8 @@ END:VEVENT\n`
 
     updateLastTrainingButtonVisibility()
 
+    initEmergencySaveWatchers()
+
     initAndroidHeartRateUi()
 
     //GltxtSpeek.value += "\n\n Для изменения тренировки необходимо редактировать запускаемый файл html.\n";
@@ -4273,12 +4397,15 @@ END:VEVENT\n`
             return nTime
     }
 
-   function onAndroidHeartRate(bpm){
+   function onAndroidHeartRate(bpm, disconnectReason){
      var n = Number(bpm)
+     var wasConnected = Gl_lastHeartRateBpm >= 0
      if (!isFinite(n) || n < 0)
        Gl_lastHeartRateBpm = -1
-     else
+     else {
        Gl_lastHeartRateBpm = Math.round(n)
+       Gl_hadHeartRateDuringTraining = true
+     }
      _пульс_ = Gl_lastHeartRateBpm
      try{
        if (txtTextTime && typeof Gl_trainTime !== "undefined" && GlBegTime){
@@ -4288,6 +4415,8 @@ END:VEVENT\n`
        }
      }catch(e){}
      updateHeartRateConnectButtonIcon()
+     if (n < 0 && (wasConnected || Gl_hadHeartRateDuringTraining) && shouldAutoSaveLastTrainingCheckpoint())
+       scheduleAutoSaveLastTrainingCheckpoint(disconnectReason || "hr_disconnect")
    }
 
    function formatTrainingTimeLine(dT){
@@ -5370,6 +5499,7 @@ END:VEVENT\n`
        GlIsRunning =true;
        Gl_IsFinished=false
        Gl_PauseStartedAt=null
+       Gl_hadHeartRateDuringTraining = false
        startTrainingAudioGuard()
        btnSelectAllTrain.innerHTML = 'Пауза'
 
