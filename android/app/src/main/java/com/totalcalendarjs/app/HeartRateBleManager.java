@@ -23,6 +23,7 @@ import android.os.Looper;
 import android.os.ParcelUuid;
 import android.util.Log;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -44,6 +45,7 @@ public final class HeartRateBleManager {
 
     private static final long SCAN_DURATION_MS = 8000L;
     private static final int MAX_DEVICES = 40;
+    private static final int MAX_FORCE_ATTEMPTS = 4;
 
     public interface Listener {
         void onHeartRateBpm(int bpm);
@@ -58,6 +60,10 @@ public final class HeartRateBleManager {
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothLeScanner scanner;
     private BluetoothGatt gatt;
+    private BluetoothDevice pendingDevice;
+    private boolean hrNotificationsActive;
+    private int forceAttempt;
+    private Runnable pendingConnectRunnable;
 
     private final Map<String, BluetoothDevice> scanDevices = new LinkedHashMap<>();
     private final Runnable stopScanRunnable = this::endScanAndPickDevice;
@@ -84,45 +90,71 @@ public final class HeartRateBleManager {
     private final BluetoothGattCallback gattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt g, int status, int newState) {
-            if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                mainHandler.post(() -> {
-                    closeGatt();
-                    listener.onSensorDisconnected();
-                });
-            } else if (newState == BluetoothProfile.STATE_CONNECTED) {
-                mainHandler.post(() -> g.discoverServices());
+            if (newState == BluetoothProfile.STATE_CONNECTED) {
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    forceAttempt = 0;
+                    mainHandler.post(() -> g.discoverServices());
+                } else {
+                    mainHandler.post(() -> handleConnectFailure(g.getDevice(), status));
+                }
+            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                if (!hrNotificationsActive && pendingDevice != null
+                        && status != BluetoothGatt.GATT_SUCCESS) {
+                    mainHandler.post(() -> handleConnectFailure(pendingDevice, status));
+                } else {
+                    hrNotificationsActive = false;
+                    mainHandler.post(() -> {
+                        closeGatt();
+                        listener.onSensorDisconnected();
+                    });
+                }
             }
         }
 
         @Override
         public void onServicesDiscovered(BluetoothGatt g, int status) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
-                mainHandler.post(() -> disconnect());
+                mainHandler.post(() -> handleConnectFailure(g.getDevice(), status));
                 return;
             }
             BluetoothGattService hr = g.getService(UUID_HEART_RATE_SERVICE);
             if (hr == null) {
                 Log.w(TAG, "Heart Rate service not found");
-                mainHandler.post(() -> disconnect());
+                mainHandler.post(() -> handleConnectFailure(g.getDevice(), BluetoothGatt.GATT_FAILURE));
                 return;
             }
             BluetoothGattCharacteristic chr = hr.getCharacteristic(UUID_HEART_RATE_MEASUREMENT);
             if (chr == null) {
-                mainHandler.post(() -> disconnect());
+                mainHandler.post(() -> handleConnectFailure(g.getDevice(), BluetoothGatt.GATT_FAILURE));
                 return;
             }
             boolean notifyOk = g.setCharacteristicNotification(chr, true);
             if (!notifyOk) {
-                mainHandler.post(() -> disconnect());
+                mainHandler.post(() -> handleConnectFailure(g.getDevice(), BluetoothGatt.GATT_FAILURE));
                 return;
             }
             BluetoothGattDescriptor cccd = chr.getDescriptor(UUID_CLIENT_CHARACTERISTIC_CONFIG);
             if (cccd == null) {
-                mainHandler.post(() -> disconnect());
+                mainHandler.post(() -> handleConnectFailure(g.getDevice(), BluetoothGatt.GATT_FAILURE));
                 return;
             }
             cccd.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
             g.writeDescriptor(cccd);
+        }
+
+        @Override
+        public void onDescriptorWrite(BluetoothGatt g, BluetoothGattDescriptor descriptor, int status) {
+            if (!UUID_CLIENT_CHARACTERISTIC_CONFIG.equals(descriptor.getUuid())) {
+                return;
+            }
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                hrNotificationsActive = true;
+                forceAttempt = 0;
+                mainHandler.post(() ->
+                        toast("Пульсометр подключён к Total Calendar"));
+            } else {
+                mainHandler.post(() -> handleConnectFailure(g.getDevice(), status));
+            }
         }
 
         @Override
@@ -132,6 +164,7 @@ public final class HeartRateBleManager {
             }
             int bpm = parseHeartRateMeasurement(characteristic.getValue());
             if (bpm > 0) {
+                hrNotificationsActive = true;
                 mainHandler.post(() -> listener.onHeartRateBpm(bpm));
             }
         }
@@ -177,7 +210,9 @@ public final class HeartRateBleManager {
             toast("Включите Bluetooth");
             return;
         }
-        disconnect();
+        cancelPendingConnect();
+        forceAttempt = 0;
+        disconnectQuiet();
         scanner = bluetoothAdapter.getBluetoothLeScanner();
         if (scanner == null) {
             toast("Сканер BLE недоступен");
@@ -189,7 +224,7 @@ public final class HeartRateBleManager {
         ScanSettings settings = new ScanSettings.Builder()
                 .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
                 .build();
-        android.bluetooth.le.ScanFilter filter = new ScanFilter.Builder()
+        ScanFilter filter = new ScanFilter.Builder()
                 .setServiceUuid(new ParcelUuid(UUID_HEART_RATE_SERVICE))
                 .build();
         try {
@@ -238,16 +273,132 @@ public final class HeartRateBleManager {
 
     @SuppressLint("MissingPermission")
     private void connect(BluetoothDevice device) {
+        pendingDevice = device;
+        forceAttempt = 0;
+        hrNotificationsActive = false;
         stopScanOnly();
         closeGatt();
         gatt = device.connectGatt(activity, false, gattCallback, BluetoothDevice.TRANSPORT_LE);
         if (gatt == null) {
-            toast("Не удалось подключиться");
+            handleConnectFailure(device, -1);
+        } else {
+            toast("Подключение к пульсометру…");
+        }
+    }
+
+    private void handleConnectFailure(BluetoothDevice device, int status) {
+        cancelPendingConnect();
+        if (gatt != null) {
+            refreshDeviceCache(gatt);
+        }
+        closeGatt();
+        if (device != null) {
+            pendingDevice = device;
+        }
+        Log.w(TAG, "connect failed status=" + status);
+        showBusyDeviceDialog(status);
+    }
+
+    private void showBusyDeviceDialog(int gattStatus) {
+        BluetoothDevice device = pendingDevice;
+        String name = "пульсометр";
+        if (device != null) {
+            try {
+                String n = device.getName();
+                if (n != null && !n.isEmpty()) {
+                    name = n;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        StringBuilder msg = new StringBuilder();
+        msg.append("Не удалось подключиться к «").append(name).append("».\n\n");
+        msg.append("Чаще всего датчик уже связан с другим телефоном, часами или велокомпьютером. ");
+        msg.append("Удалённо отключить его с того устройства приложение не может.\n\n");
+        msg.append("Нажмите «Переподключить принудительно» — Total Calendar несколько раз ");
+        msg.append("попробует перехватить BLE-соединение (иногда это срабатывает).\n\n");
+        msg.append("Надёжный способ: отключите пульсометр в приложении на том устройстве ");
+        msg.append("или выключите там Bluetooth, затем повторите здесь.");
+        if (gattStatus > 0 && gattStatus != BluetoothGatt.GATT_SUCCESS) {
+            msg.append("\n\nКод ошибки Bluetooth: ").append(gattStatus);
+        }
+
+        new AlertDialog.Builder(activity)
+                .setTitle("Пульсометр занят другим устройством?")
+                .setMessage(msg.toString())
+                .setPositiveButton("Переподключить принудительно", (dialog, which) -> forceConnectToDevice())
+                .setNeutralButton("Выбрать другой", (dialog, which) -> startScanAndPickDevice())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    @SuppressLint("MissingPermission")
+    private void forceConnectToDevice() {
+        if (pendingDevice == null) {
+            toast("Сначала выберите пульсометр");
+            startScanAndPickDevice();
+            return;
+        }
+        forceAttempt++;
+        if (forceAttempt > MAX_FORCE_ATTEMPTS) {
+            forceAttempt = 0;
+            toast("Не удалось перехватить соединение. Отключите пульсометр на другом устройстве.");
+            return;
+        }
+
+        toast("Принудительное подключение… попытка " + forceAttempt + " из " + MAX_FORCE_ATTEMPTS);
+        hrNotificationsActive = false;
+        cancelPendingConnect();
+        stopScanOnly();
+
+        final BluetoothDevice device = pendingDevice;
+        if (gatt != null) {
+            refreshDeviceCache(gatt);
+            try {
+                gatt.disconnect();
+            } catch (Exception ignored) {
+            }
+        }
+        closeGatt();
+
+        long delayMs = 350L + forceAttempt * 400L;
+        pendingConnectRunnable = () -> {
+            pendingConnectRunnable = null;
+            gatt = device.connectGatt(activity, false, gattCallback, BluetoothDevice.TRANSPORT_LE);
+            if (gatt == null) {
+                handleConnectFailure(device, -1);
+            }
+        };
+        mainHandler.postDelayed(pendingConnectRunnable, delayMs);
+    }
+
+    private void cancelPendingConnect() {
+        if (pendingConnectRunnable != null) {
+            mainHandler.removeCallbacks(pendingConnectRunnable);
+            pendingConnectRunnable = null;
+        }
+    }
+
+    private boolean refreshDeviceCache(BluetoothGatt g) {
+        if (g == null) {
+            return false;
+        }
+        try {
+            Method refresh = g.getClass().getMethod("refresh");
+            Object result = refresh.invoke(g);
+            return result instanceof Boolean && (Boolean) result;
+        } catch (Exception e) {
+            Log.w(TAG, "refresh cache failed", e);
+            return false;
         }
     }
 
     @SuppressLint("MissingPermission")
     public void disconnect() {
+        cancelPendingConnect();
+        forceAttempt = 0;
+        hrNotificationsActive = false;
         stopScanOnly();
         if (gatt != null) {
             try {
@@ -261,6 +412,25 @@ public final class HeartRateBleManager {
             gatt = null;
         }
         listener.onSensorDisconnected();
+    }
+
+    /** Disconnect without notifying listener (before new scan). */
+    @SuppressLint("MissingPermission")
+    private void disconnectQuiet() {
+        cancelPendingConnect();
+        hrNotificationsActive = false;
+        stopScanOnly();
+        if (gatt != null) {
+            try {
+                gatt.disconnect();
+            } catch (Exception ignored) {
+            }
+            try {
+                gatt.close();
+            } catch (Exception ignored) {
+            }
+            gatt = null;
+        }
     }
 
     private void closeGatt() {
@@ -280,6 +450,7 @@ public final class HeartRateBleManager {
 
     public void destroy() {
         mainHandler.removeCallbacks(stopScanRunnable);
+        cancelPendingConnect();
         disconnect();
     }
 }

@@ -1713,6 +1713,16 @@ function webBleHeartRateStop(){
   onAndroidHeartRate(-1, "ble_stop")
 }
 
+function showHeartRateBusyMessage(onRetry){
+  var msg = "Не удалось подключиться к пульсометру.\n\n"
+    + "Скорее всего он уже связан с другим телефоном, часами или велокомпьютером. "
+    + "Удалённо отключить его с того устройства нельзя.\n\n"
+    + "Нажмите «ОК» — повторим подключение (иногда удаётся «перехватить» соединение). "
+    + "Надёжнее: отключите пульсометр в приложении на том устройстве или выключите там Bluetooth.";
+  if (confirm(msg))
+    onRetry()
+}
+
 async function webBleHeartRateStart(){
   if (!isWebBluetoothHeartRateAvailable()){
     alert("Пульс по Bluetooth в браузере: нужен Chrome или Edge, страница по HTTPS (или localhost), Bluetooth включён.")
@@ -1734,9 +1744,16 @@ async function webBleHeartRateStart(){
     device.addEventListener("gattserverdisconnected", onWebBleHrDisconnected)
     updateHeartRateConnectButtonIcon()
   }catch(e){
-    if (e && e.name !== "NotFoundError" && e.name !== "AbortError")
-      alert("Bluetooth: " + (e.message || String(e)))
+    if (e && (e.name === "NotFoundError" || e.name === "AbortError")){
+      webBleHeartRateStop()
+      return
+    }
     webBleHeartRateStop()
+    var errText = (e && e.message) ? String(e.message) : String(e)
+    if (/busy|already|connected|gatt|failed|network/i.test(errText))
+      showHeartRateBusyMessage(function(){ webBleHeartRateStart() })
+    else
+      alert("Bluetooth: " + errText + "\n\nЕсли пульсометр занят другим устройством — отключите его там и повторите.")
   }
 }
 
