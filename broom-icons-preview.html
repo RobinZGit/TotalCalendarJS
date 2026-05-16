@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Варианты иконки метлы — Total Calendar</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #fff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --btn: #1e40af;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, Segoe UI, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+    h1 { font-size: 1.35rem; margin: 0 0 8px; }
+    p.lead { margin: 0 0 24px; color: var(--muted); font-size: 0.95rem; }
+    .grid { display: grid; gap: 16px; }
+    .card {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 16px;
+      align-items: center;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--card);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    }
+    .preview {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 88px;
+      height: 88px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--btn);
+    }
+    .preview svg { width: 44px; height: 44px; }
+    .card h2 { margin: 0 0 4px; font-size: 1.1rem; }
+    .card .desc { margin: 0; font-size: 0.88rem; color: var(--muted); }
+    .on-btn {
+      margin-top: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--btn);
+      background: #fff;
+    }
+    .on-btn svg { width: 22px; height: 22px; }
+    .back { margin-top: 28px; font-size: 0.9rem; }
+    .back a { color: var(--btn); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Иконки метлы (варианты A–E)</h1>
+    <p class="lead">Сравните крупно и «как на кнопке» (40×40). Напишите в чат букву варианта.</p>
+    <div class="grid" id="grid"></div>
+    <p class="back"><a href="index.html">← Вернуться в приложение</a></p>
+  </div>
+  <script>
+    var variants = [
+      {
+        id: "A",
+        title: "A — классическая метла сбоку",
+        desc: "Минимализм, хорошо в маленькой кнопке.",
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v11"/><path d="M8.5 20h7"/><path d="M9 13l-2.5 7"/><path d="M11 13l-1 7"/><path d="M13 13l1 7"/><path d="M15 13l2.5 7"/><path d="M10 13h4" stroke-width="1.8"/></svg>'
+      },
+      {
+        id: "B",
+        title: "B — широкая (push broom)",
+        desc: "Похоже на уборку пола / очистку.",
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"><path d="M12 2v9"/><rect x="4" y="11" width="16" height="2.2" rx="0.6" fill="currentColor" stroke="none" opacity="0.25"/><path d="M4 13.5h16"/><path d="M5 13.8v5.5M7.5 13.6v6M10 13.5v6.2M12 13.5v6.2M14 13.5v6.2M16.5 13.6v6M19 13.8v5.5"/><path d="M4 19.2h16" opacity="0.5"/></svg>'
+      },
+      {
+        id: "C",
+        title: "C — с обвязкой и соломой",
+        desc: "Детальнее; в приложении — монохром под currentColor.",
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" opacity="0.9" d="M11.2 2h1.6v10.2h-1.6z"/><ellipse cx="12" cy="12.8" rx="2.2" ry="1.1" fill="currentColor" opacity="0.55"/><path fill="currentColor" opacity="0.35" d="M6 14.5c2-1.2 4-1.8 6-1.8s4 .6 6 1.8l-.8 5.2c-1.6-.9-3.3-1.3-5.2-1.3s-3.6.4-5.2 1.3L6 14.5z"/><path fill="none" stroke="currentColor" stroke-width="0.6" opacity="0.5" d="M7 15.2l-.5 3.8M9.5 14.8l-.3 4.5M12 14.5v5M14.5 14.8l.3 4.5M17 15.2l.5 3.8"/></svg>'
+      },
+      {
+        id: "D",
+        title: "D — силуэт",
+        desc: "Читается в 22px.",
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 2h2v9.2l4.8 10.3a1 1 0 0 1-.9 1.5H9.1a1 1 0 0 1-.9-1.5L13 11.2V2z" opacity="0.35"/><path d="M11.4 2h1.2v10l-3.6 7.8a.85.85 0 0 0 .75 1.2h4.9a.85.85 0 0 0 .75-1.2L12.6 12V2z"/></svg>'
+      },
+      {
+        id: "E",
+        title: "E — под углом",
+        desc: "Динамичная «рабочая» метла.",
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3l-4 14"/><path d="M6 17h12"/><path d="M7 17l1.5-4M9.5 17l1-4.5M12 17l.5-5M14.5 17l-1-4.5M17 17l-1.5-4"/></svg>'
+      }
+    ];
+    var grid = document.getElementById("grid");
+    variants.forEach(function (v) {
+      var card = document.createElement("article");
+      card.className = "card";
+      card.innerHTML =
+        '<div class="preview">' + v.svg + '</div>' +
+        '<div><h2>' + v.title + '</h2><p class="desc">' + v.desc + '</p>' +
+        '<p class="desc">На кнопке:</p><span class="on-btn">' + v.svg + '</span></div>';
+      grid.appendChild(card);
+    });
+  </script>
+</body>
+</html>
