@@ -585,6 +585,28 @@
             text-align: center;
         }
 
+        .heart-rate-zone-legend {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px 10px;
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-muted, #64748b);
+        }
+
+        .heart-rate-zone-legend span {
+            padding: 2px 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(100, 116, 139, 0.2);
+        }
+
+        .hr-zone-120 { background: rgba(187, 247, 208, 0.75); }
+        .hr-zone-130 { background: rgba(254, 249, 195, 0.85); }
+        .hr-zone-140 { background: rgba(254, 215, 170, 0.85); }
+        .hr-zone-150 { background: rgba(254, 202, 202, 0.85); }
+        .hr-zone-160 { background: rgba(233, 213, 255, 0.85); }
+
         details {
             margin-top: 18px;
             border: 1px solid var(--border);
@@ -848,6 +870,13 @@
             <canvas id="idHeartRateChartCanvas" width="800" height="220"></canvas>
         </div>
         <p id="idHeartRateChartCaption" class="heart-rate-chart-caption"></p>
+        <div class="heart-rate-zone-legend" aria-label="Зоны пульса для возраста 50 лет">
+            <span class="hr-zone-120">120–130</span>
+            <span class="hr-zone-130">130–140</span>
+            <span class="hr-zone-140">140–150</span>
+            <span class="hr-zone-150">150–160</span>
+            <span class="hr-zone-160">&gt;160</span>
+        </div>
     </section>
 
     <section id="idImpExpAll" class="section-card">
@@ -1148,6 +1177,7 @@
      textTime: txtTextTime ? txtTextTime.value : "",
      navScrollTop: panel ? panel.scrollTop : 0,
      stoppedAtIndex: GlnInd,
+     pulseLogText: hasHeartRateLogData() ? buildHeartRateLogText() : "",
      stoppedAtExercise: (Gl_aRithmLisp && Gl_aRithmLisp[GlnInd]) ? String(Gl_aRithmLisp[GlnInd]) : ""
    };
  }
@@ -1307,6 +1337,7 @@
      document.getElementById("checkTrainPage").checked = true;
    } catch (e) {}
    try { loadHeartRatePreviewFromPayload(payload) } catch (eHr) {}
+   try { initHeartRateChartWatchers() } catch (eHrW) {}
    try { refreshTrainEditorFromSelection() } catch (eHrEd) {}
    return true;
  }
@@ -1616,7 +1647,10 @@
      clearTrainingSessionSnapshot();
      return false;
    }
-   return restoreTrainingSessionFromSnapshot(snap);
+   var ok = restoreTrainingSessionFromSnapshot(snap);
+   if (ok && snap.pulseLogText)
+     try { loadHeartRatePreviewFromPayload({ pulseLogText: snap.pulseLogText }) } catch (eHr) {}
+   return ok;
  }
 
  var Gl_aFormulas = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]//глобаль для использования в формулах трень
@@ -1994,8 +2028,47 @@ var Gl_hrChartStartedAt = 0
 var Gl_hrChartPreviewMode = false
 var HR_CHART_WINDOW_MS = 10 * 60 * 1000
 var HR_CHART_MAX_POINTS = 1200
+/** Зоны пульса на графике (ориентир: 50 лет). */
+var HR_CHART_ZONES_50 = [
+  { lo: 120, hi: 130, band: "rgba(187, 247, 208, 0.55)", line: "#4ade80" },
+  { lo: 130, hi: 140, band: "rgba(254, 249, 195, 0.6)", line: "#eab308" },
+  { lo: 140, hi: 150, band: "rgba(254, 215, 170, 0.6)", line: "#f97316" },
+  { lo: 150, hi: 160, band: "rgba(254, 202, 202, 0.6)", line: "#ef4444" },
+  { lo: 160, hi: 250, band: "rgba(233, 213, 255, 0.6)", line: "#a855f7" }
+]
 var Gl_hrChartRedrawTimer = null
 var Gl_hrChartResizeBound = false
+
+function heartRateZoneLineColor(bpm){
+  var v = Number(bpm)
+  if (!isFinite(v))
+    return "#64748b"
+  if (v >= 160)
+    return HR_CHART_ZONES_50[4].line
+  if (v >= 150)
+    return HR_CHART_ZONES_50[3].line
+  if (v >= 140)
+    return HR_CHART_ZONES_50[2].line
+  if (v >= 130)
+    return HR_CHART_ZONES_50[1].line
+  if (v >= 120)
+    return HR_CHART_ZONES_50[0].line
+  return "#64748b"
+}
+
+function drawHeartRateChartZoneBands(ctx, yAt, padL, padT, plotW, yMin, yMax){
+  for (var zi = 0; zi < HR_CHART_ZONES_50.length; zi++){
+    var z = HR_CHART_ZONES_50[zi]
+    var zLo = Math.max(z.lo, yMin)
+    var zHi = Math.min(z.hi, yMax)
+    if (zHi <= zLo)
+      continue
+    var yTop = yAt(zHi)
+    var yBot = yAt(zLo)
+    ctx.fillStyle = z.band
+    ctx.fillRect(padL, yTop, plotW, yBot - yTop)
+  }
+}
 
 function isHeartRateLogEnabled(){
   try{
@@ -2077,15 +2150,26 @@ function parseHeartRateLogText(text){
   return points
 }
 
+function getPulseLogTextFromPayload(payload){
+  if (!payload)
+    return ""
+  if (payload.pulseLogText)
+    return String(payload.pulseLogText)
+  if (payload.snap && payload.snap.pulseLogText)
+    return String(payload.snap.pulseLogText)
+  return ""
+}
+
 function loadHeartRatePreviewFromPayload(payload){
-  if (!payload || !payload.pulseLogText){
+  var pulseText = getPulseLogTextFromPayload(payload)
+  if (!pulseText){
     if (!isHeartRateLogEnabled())
       resetHeartRateChart()
     else
       syncHeartRateChartVisibility()
     return false
   }
-  var pts = parseHeartRateLogText(payload.pulseLogText)
+  var pts = parseHeartRateLogText(pulseText)
   if (!pts.length){
     if (!isHeartRateLogEnabled())
       resetHeartRateChart()
@@ -2257,6 +2341,13 @@ function drawHeartRateChart(){
     return padT + plotH - ((bpm - yMin) / (yMax - yMin)) * plotH
   }
 
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(padL, padT, plotW, plotH)
+  ctx.clip()
+  drawHeartRateChartZoneBands(ctx, yAt, padL, padT, plotW, yMin, yMax)
+  ctx.restore()
+
   ctx.strokeStyle = "rgba(100, 116, 139, 0.35)"
   ctx.lineWidth = 1 * dpr
   ctx.font = (11 * dpr) + "px system-ui, sans-serif"
@@ -2286,25 +2377,31 @@ function drawHeartRateChart(){
   }
 
   if (pts.length >= 1){
-    ctx.strokeStyle = "#dc2626"
     ctx.lineWidth = 2 * dpr
     ctx.lineJoin = "round"
     ctx.lineCap = "round"
-    ctx.beginPath()
-    for (var pi = 0; pi < pts.length; pi++){
-      var px = xAt(pts[pi].t)
-      var py = yAt(pts[pi].bpm)
-      if (pi === 0)
-        ctx.moveTo(px, py)
-      else
-        ctx.lineTo(px, py)
+    if (pts.length === 1){
+      var pOnly = pts[0]
+      ctx.fillStyle = heartRateZoneLineColor(pOnly.bpm)
+      ctx.beginPath()
+      ctx.arc(xAt(pOnly.t), yAt(pOnly.bpm), 4 * dpr, 0, Math.PI * 2)
+      ctx.fill()
+    } else {
+      for (var pi = 1; pi < pts.length; pi++){
+        var p0 = pts[pi - 1]
+        var p1 = pts[pi]
+        ctx.strokeStyle = heartRateZoneLineColor((p0.bpm + p1.bpm) / 2)
+        ctx.beginPath()
+        ctx.moveTo(xAt(p0.t), yAt(p0.bpm))
+        ctx.lineTo(xAt(p1.t), yAt(p1.bpm))
+        ctx.stroke()
+      }
+      var last = pts[pts.length - 1]
+      ctx.fillStyle = heartRateZoneLineColor(last.bpm)
+      ctx.beginPath()
+      ctx.arc(xAt(last.t), yAt(last.bpm), 4 * dpr, 0, Math.PI * 2)
+      ctx.fill()
     }
-    ctx.stroke()
-    var last = pts[pts.length - 1]
-    ctx.fillStyle = "#dc2626"
-    ctx.beginPath()
-    ctx.arc(xAt(last.t), yAt(last.bpm), 4 * dpr, 0, Math.PI * 2)
-    ctx.fill()
   }
 
   if (cap){
@@ -2556,9 +2653,8 @@ function finishTrainingPlayback(){
   }catch(e){}
 
   try {
-    if (hasHeartRateLogData())
-      saveHeartRateLogFile({ download: true, reason: "finish" });
-  } catch (eHr) {}
+    saveLastTrainingCheckpoint({ download: true, reason: "finish" })
+  } catch (eCk) {}
   try { resetHeartRateChart() } catch (eHr2) {}
   syncTrainPageSetupLinksVisibility()
   scheduleStopTrainingAudioGuard()
