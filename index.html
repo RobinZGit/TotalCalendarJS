@@ -672,7 +672,8 @@
             <a id="openAndroidAppLink" class="open-android-app-link" href="totalcalendarjs://open">Открыть в приложении</a>
             <div class="button-row">
                 <button id="btnSelectAllTrain" class="success-btn" type="button">Начать тренировку</button>
-                <button id="btnExit" class="danger-btn" type="button" onclick="exitTrainingApp()">Выход</button>
+                <button id="btnExit" class="danger-btn" type="button" onclick="exitTrainingApp()">Завершить тренировку</button>
+                <button id="btnLastTraining" class="secondary-btn" type="button" onclick="resumeLastSavedTraining()" disabled title="Нет сохранённой тренировки">Прошлая тренировка</button>
             </div>
             <div class="button-row" style="margin-top:14px">
                 <button id="btnPrev" class="secondary-btn" type="button" onclick="prev()">&lt;&lt; Previous</button>
@@ -871,17 +872,28 @@
  }
 
  var TCJS_TRAINING_SESSION_KEY = "tcjs_active_training_v1";
+ var TCJS_LAST_TRAINING_KEY = "tcjs_last_training_v1";
  var Gl_trainingSessionSaveTimer = null;
 
- function shouldPersistTrainingSession(){
-   return (isActiveTrainingSession() || Gl_State === TXT_BTN_PAUSED) && !Gl_IsFinished
-     && Gl_aRithmLisp && Gl_aRithmLisp.length > 0;
+ function sanitizeTrainFilename(name){
+   var s = String(name || "training").replace(/\s+/g, " ").trim();
+   s = s.replaceAll("\n", "").replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, "");
+   if (!s) s = "training";
+   return s;
  }
 
- function saveTrainingSessionSnapshot(){
-   if (!shouldPersistTrainingSession()) return;
+ function buildRtmTextFromArithmLisp(aRithmLisp, trainName){
+   var lines = (aRithmLisp || []).slice().map(function(v){ return String(v).replaceAll("\n", ""); });
+   if (!lines.length) return "";
+   var title = sanitizeTrainFilename(trainName);
+   var header = "1000\n " + title + ". Тренировка продлится " + calcTtrainTime(lines) + " минут\n ";
+   return header + lines.join("\n");
+ }
+
+ function collectTrainingSessionSnapshotObject(){
    var panel = typeof getTrainingNavPanel === "function" ? getTrainingNavPanel() : null;
-   var snap = {
+   var rateEl = document.getElementById("inputRate");
+   return {
      v: 1,
      savedAt: Date.now(),
      GltxtSpeek: GltxtSpeek ? GltxtSpeek.value : "",
@@ -901,11 +913,104 @@
      Gl_PauseStartedAt: Gl_PauseStartedAt ? Gl_PauseStartedAt.getTime() : null,
      selectAllTrainIndex: selectAllTrain ? selectAllTrain.selectedIndex : -1,
      noSound: !!(docNoSound && docNoSound.checked),
+     stopSpeakIfNext: !!Gl_StopSpeakIfNext,
+     speechRate: rateEl ? rateEl.value : "1.5",
      textTrain: docTextTrain ? docTextTrain.value : "",
      textTime: txtTextTime ? txtTextTime.value : "",
-     navScrollTop: panel ? panel.scrollTop : 0
+     navScrollTop: panel ? panel.scrollTop : 0,
+     stoppedAtIndex: GlnInd,
+     stoppedAtExercise: (Gl_aRithmLisp && Gl_aRithmLisp[GlnInd]) ? String(Gl_aRithmLisp[GlnInd]) : ""
    };
-   try { sessionStorage.setItem(TCJS_TRAINING_SESSION_KEY, JSON.stringify(snap)); } catch (e) {}
+ }
+
+ function shouldPersistTrainingSession(){
+   return (isActiveTrainingSession() || Gl_State === TXT_BTN_PAUSED) && !Gl_IsFinished
+     && Gl_aRithmLisp && Gl_aRithmLisp.length > 0;
+ }
+
+ function saveTrainingSessionSnapshot(){
+   if (!shouldPersistTrainingSession()) return;
+   try { sessionStorage.setItem(TCJS_TRAINING_SESSION_KEY, JSON.stringify(collectTrainingSessionSnapshotObject())); } catch (e) {}
+ }
+
+ function hasLastSavedTraining(){
+   try { return !!localStorage.getItem(TCJS_LAST_TRAINING_KEY); } catch (e) { return false; }
+ }
+
+ function updateLastTrainingButtonVisibility(){
+   var btn = document.getElementById("btnLastTraining");
+   if (!btn) return;
+   var has = hasLastSavedTraining();
+   btn.disabled = !has;
+   btn.title = has ? "Продолжить последнюю сохранённую тренировку с того же упражнения" : "Нет сохранённой тренировки";
+ }
+
+ function saveLastTrainingCheckpoint(){
+   if (!Gl_aRithmLisp || !Gl_aRithmLisp.length) return false;
+   var snap = collectTrainingSessionSnapshotObject();
+   var rtmText = buildRtmTextFromArithmLisp(Gl_aRithmLisp, Gl_currentTrainName);
+   if (!rtmText) return false;
+   var stamp = new Date().yyyymmddhhmmss("_");
+   var rtmFilename = sanitizeTrainFilename(Gl_currentTrainName) + "_last_" + stamp + ".rtm";
+   var payload = { v: 1, savedAt: Date.now(), snap: snap, rtmText: rtmText, rtmFilename: rtmFilename };
+   try { localStorage.setItem(TCJS_LAST_TRAINING_KEY, JSON.stringify(payload)); } catch (e) { return false; }
+   try { download(rtmText, rtmFilename, "text/plain"); } catch (e) {}
+   updateLastTrainingButtonVisibility();
+   return true;
+ }
+
+ function resumeLastSavedTraining(){
+   var raw;
+   try { raw = localStorage.getItem(TCJS_LAST_TRAINING_KEY); } catch (e) { raw = null; }
+   if (!raw) {
+     alert("Нет сохранённой прошлой тренировки.");
+     return;
+   }
+   var payload;
+   try { payload = JSON.parse(raw); } catch (e) {
+     alert("Не удалось прочитать сохранённую тренировку.");
+     return;
+   }
+   if (!payload || !payload.snap || !payload.snap.Gl_aRithmLisp || !payload.snap.Gl_aRithmLisp.length) {
+     alert("Сохранённая тренировка повреждена или пуста.");
+     return;
+   }
+   stopCurrentSpeech();
+   stopTrainingAudioGuard();
+   clearTrainingSessionSnapshot();
+
+   var snap = payload.snap;
+   snap.Gl_IsFinished = false;
+   snap.Gl_State = TXT_BTN_PAUSED;
+   snap.GlIsRunning = false;
+   snap.GlflSayIntro = true;
+   snap.GlflSayIntro2 = true;
+
+   restoreTrainingSessionFromSnapshot(snap);
+
+   try {
+     document.getElementById("trainPage").style.display = "block";
+     document.getElementById("checkTrainPage").checked = true;
+     document.getElementById("calendarPage").style.display = "none";
+     document.getElementById("checkCalendarPage").checked = false;
+   } catch (e) {}
+
+   var idx = snap.stoppedAtIndex != null ? snap.stoppedAtIndex : snap.GlnInd;
+   if (typeof idx === "number" && idx >= 0) {
+     GlnInd = idx;
+     try {
+       if (idx > 0) GlnDelta = calcMilliseconds(String(Gl_aRithmLisp[idx - 1]));
+     } catch (e) {}
+     paintTrainingNavProgress(GlnInd);
+     scrollTrainingNavToProgress(false);
+   }
+   GldPrev = new Date();
+
+   var ex = snap.stoppedAtExercise || (Gl_aRithmLisp[GlnInd] ? String(Gl_aRithmLisp[GlnInd]) : "");
+   if (ex)
+     alert("Загружена прошлая тренировка. Упражнение: " + ex + "\nНажмите «Продолжить», чтобы продолжить с этого места.");
+   else
+     alert("Загружена прошлая тренировка. Нажмите «Продолжить», чтобы продолжить.");
  }
 
  function scheduleSaveTrainingSessionSnapshot(){
@@ -983,6 +1088,15 @@
    try {
      if (docNoSound) docNoSound.checked = !!snap.noSound;
      syncAndroidNoSoundMode();
+   } catch (e) {}
+   try {
+     var rateEl = document.getElementById("inputRate");
+     if (rateEl && snap.speechRate != null) rateEl.value = snap.speechRate;
+     var stopChk = document.getElementById("idStopSpeakIfNext");
+     if (stopChk) {
+       stopChk.checked = !!snap.stopSpeakIfNext;
+       Gl_StopSpeakIfNext = stopChk.checked;
+     }
    } catch (e) {}
    if (txtTextTime && snap.textTime) txtTextTime.value = snap.textTime;
    if (docTextTrain && snap.textTrain) docTextTrain.value = snap.textTrain;
@@ -1705,6 +1819,10 @@ function resumeTrainingPlayback(){
 }
 
 function exitTrainingApp(){
+  if (isActiveTrainingSession() || Gl_State === TXT_BTN_PAUSED || (Gl_aRithmLisp && Gl_aRithmLisp.length && GlflSayIntro)) {
+    if (!saveLastTrainingCheckpoint())
+      alert("Не удалось сохранить тренировку (ритм .rtm).");
+  }
   restartTrainingApp()
 }
 
@@ -3857,12 +3975,8 @@ END:VEVENT\n`
 
       //Gl_aRithmLisp=aRithmLisp.slice() //!!!!!!!!!!!
 
-      var sText='1000\n '
-                +Gl_currentTrainName.replaceAll('\n','').replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, '')
-                +'. Тренировка продлится ' +calcTtrainTime(aRithmLisp)
-                +' минут\n '
-                +aRithmLisp.join('\n')
-      download(sText, Gl_currentTrainName.replace(/[&\/\\#,+()$~%.'":*?<>{}]/g, '')+'.rtm', 'text/plain')
+      var sText = buildRtmTextFromArithmLisp(aRithmLisp, Gl_currentTrainName);
+      download(sText, sanitizeTrainFilename(Gl_currentTrainName) + '.rtm', 'text/plain')
   }
 
 
@@ -3961,6 +4075,8 @@ END:VEVENT\n`
     fillForm(decodeURIComponent(startWithValue))
 
     tryRestoreTrainingSessionSnapshot()
+
+    updateLastTrainingButtonVisibility()
 
     initAndroidHeartRateUi()
 
