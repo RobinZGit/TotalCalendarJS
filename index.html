@@ -676,8 +676,8 @@
                 <button id="btnLastTraining" class="secondary-btn" type="button" onclick="resumeLastSavedTraining()" disabled title="Нет сохранённой тренировки">Прошлая тренировка</button>
             </div>
             <div class="button-row" style="margin-top:14px">
-                <button id="btnPrev" class="secondary-btn" type="button" onclick="prev()">&lt;&lt; Previous</button>
-                <button id="btnNext" class="secondary-btn" type="button" onclick="next()">Next &gt;&gt;</button>
+                <button id="btnPrev" class="secondary-btn" type="button" onclick="prev()">&lt;&lt; предыдущее упражнение</button>
+                <button id="btnNext" class="secondary-btn" type="button" onclick="next()">следующее упражнение &gt;&gt;</button>
             </div>
             <div class="option-grid">
                 <label class="option-card checkbox-line" for="idNoSound">
@@ -869,10 +869,18 @@
    if (links) links.style.display = active ? "none" : "";
    if (ext) ext.style.display = active ? "none" : "block";
    if (appLink) appLink.style.display = active ? "none" : "";
+   var btnLast = document.getElementById("btnLastTraining");
+   if (btnLast) btnLast.style.display = active ? "none" : "";
+   syncPrevNextNavButtons();
  }
 
  var TCJS_TRAINING_SESSION_KEY = "tcjs_active_training_v1";
  var TCJS_LAST_TRAINING_KEY = "tcjs_last_training_v1";
+ var TCJS_LAST_TRAININGS_KEY = "tcjs_last_trainings_v1";
+ var TCJS_LAST_TRAINING_MAX = 10;
+ var Gl_savedTrainingsBrowseIndex = 0;
+ var Gl_resumeFromHistoryOnRun = false;
+ var Gl_historyPreviewSnap = null;
  var Gl_trainingSessionSaveTimer = null;
  var Gl_lastTrainingAutoSaveTimer = null;
  var Gl_lastTrainingPeriodicTimer = null;
@@ -937,16 +945,132 @@
    try { sessionStorage.setItem(TCJS_TRAINING_SESSION_KEY, JSON.stringify(collectTrainingSessionSnapshotObject())); } catch (e) {}
  }
 
+ function loadSavedTrainingsList(){
+   try {
+     var raw = localStorage.getItem(TCJS_LAST_TRAININGS_KEY);
+     if (raw) {
+       var arr = JSON.parse(raw);
+       if (Array.isArray(arr)) return arr;
+     }
+     var old = localStorage.getItem(TCJS_LAST_TRAINING_KEY);
+     if (old) {
+       var one = JSON.parse(old);
+       if (one && one.snap) {
+         localStorage.setItem(TCJS_LAST_TRAININGS_KEY, JSON.stringify([one]));
+         return [one];
+       }
+     }
+   } catch (e) {}
+   return [];
+ }
+
+ function pushSavedTrainingToHistory(payload){
+   if (!payload || !payload.snap) return;
+   var list = loadSavedTrainingsList();
+   var key = payload.sessionKey || String(payload.savedAt || "");
+   if (list.length && list[0].sessionKey === key) {
+     list[0] = payload;
+   } else {
+     list.unshift(payload);
+     if (list.length > TCJS_LAST_TRAINING_MAX)
+       list = list.slice(0, TCJS_LAST_TRAINING_MAX);
+   }
+   try {
+     localStorage.setItem(TCJS_LAST_TRAININGS_KEY, JSON.stringify(list));
+     localStorage.setItem(TCJS_LAST_TRAINING_KEY, JSON.stringify(list[0]));
+   } catch (e) {}
+   if (Gl_savedTrainingsBrowseIndex >= list.length)
+     Gl_savedTrainingsBrowseIndex = 0;
+ }
+
  function hasLastSavedTraining(){
-   try { return !!localStorage.getItem(TCJS_LAST_TRAINING_KEY); } catch (e) { return false; }
+   return loadSavedTrainingsList().length > 0;
+ }
+
+ function isTrainingExerciseNavMode(){
+   return isActiveTrainingSession() || Gl_State === TXT_BTN_PAUSED;
+ }
+
+ function syncPrevNextNavButtons(){
+   var prevBtn = document.getElementById("btnPrev");
+   var nextBtn = document.getElementById("btnNext");
+   if (!prevBtn || !nextBtn) return;
+   if (isTrainingExerciseNavMode()) {
+     prevBtn.innerHTML = "&lt;&lt; предыдущее упражнение";
+     nextBtn.innerHTML = "следующее упражнение &gt;&gt;";
+     prevBtn.disabled = false;
+     nextBtn.disabled = false;
+     prevBtn.title = "";
+     nextBtn.title = "";
+     return;
+   }
+   prevBtn.innerHTML = "&lt;&lt; предыдущая тренировка";
+   nextBtn.innerHTML = "следующая тренировка &gt;&gt;";
+   var list = loadSavedTrainingsList();
+   var i = Gl_savedTrainingsBrowseIndex;
+   prevBtn.disabled = !list.length || i >= list.length - 1;
+   nextBtn.disabled = !list.length || i <= 0;
+   var pos = list.length ? " (" + (i + 1) + " из " + list.length + ")" : "";
+   prevBtn.title = list.length ? "Более старая сохранённая тренировка" + pos : "Нет сохранённых тренировок";
+   nextBtn.title = list.length ? "Более новая сохранённая тренировка" + pos : "Нет сохранённых тренировок";
  }
 
  function updateLastTrainingButtonVisibility(){
    var btn = document.getElementById("btnLastTraining");
    if (!btn) return;
+   if (isTrainingExerciseNavMode()) {
+     btn.style.display = "none";
+     return;
+   }
+   btn.style.display = "";
    var has = hasLastSavedTraining();
    btn.disabled = !has;
-   btn.title = has ? "Продолжить последнюю сохранённую тренировку с того же упражнения" : "Нет сохранённой тренировки";
+   btn.title = has ? "Продолжить выбранную сохранённую тренировку с того же упражнения" : "Нет сохранённой тренировки";
+   syncPrevNextNavButtons();
+ }
+
+ function applySavedTrainingPreview(payload){
+   if (!payload || !payload.snap || !payload.snap.Gl_aRithmLisp) return false;
+   var snap = payload.snap;
+   GltxtSpeek.value = snap.GltxtSpeek || "";
+   Gl_aRithmLisp = snap.Gl_aRithmLisp;
+   Gl_IsGenerated = true;
+   Gl_currentTrainName = snap.Gl_currentTrainName || "";
+   Gl_resumeFromHistoryOnRun = true;
+   Gl_historyPreviewSnap = JSON.parse(JSON.stringify(snap));
+   GlnInd = snap.stoppedAtIndex != null ? snap.stoppedAtIndex : snap.GlnInd;
+   try {
+     if (typeof snap.selectAllTrainIndex === "number" && snap.selectAllTrainIndex >= 0 && selectAllTrain.options.length > snap.selectAllTrainIndex)
+       selectAllTrain.selectedIndex = snap.selectAllTrainIndex;
+   } catch (e) {}
+   try {
+     if (docNoSound) docNoSound.checked = !!snap.noSound;
+     syncAndroidNoSoundMode();
+   } catch (e) {}
+   try {
+     var rateEl = document.getElementById("inputRate");
+     if (rateEl && snap.speechRate != null) rateEl.value = snap.speechRate;
+     var stopChk = document.getElementById("idStopSpeakIfNext");
+     if (stopChk) {
+       stopChk.checked = !!snap.stopSpeakIfNext;
+       Gl_StopSpeakIfNext = stopChk.checked;
+     }
+   } catch (e) {}
+   try {
+     document.getElementById("trainPage").style.display = "block";
+     document.getElementById("checkTrainPage").checked = true;
+   } catch (e) {}
+   return true;
+ }
+
+ function stepSavedTrainingHistory(delta){
+   var list = loadSavedTrainingsList();
+   if (!list.length) return;
+   var ni = Gl_savedTrainingsBrowseIndex + delta;
+   if (ni < 0 || ni >= list.length) return;
+   Gl_savedTrainingsBrowseIndex = ni;
+   applySavedTrainingPreview(list[ni]);
+   syncPrevNextNavButtons();
  }
 
  function shouldAutoSaveLastTrainingCheckpoint(){
@@ -971,11 +1095,12 @@
      v: 1,
      savedAt: Date.now(),
      saveReason: opts.reason || (withDownload ? "finish" : "auto"),
+     sessionKey: (snap.GlBegTime || Date.now()) + "_" + sanitizeTrainFilename(Gl_currentTrainName),
      snap: snap,
      rtmText: rtmText,
      rtmFilename: rtmFilename
    };
-   try { localStorage.setItem(TCJS_LAST_TRAINING_KEY, JSON.stringify(payload)); } catch (e) { return false; }
+   try { pushSavedTrainingToHistory(payload); } catch (e) { return false; }
    try {
      if (withDownload)
        download(rtmText, rtmFilename, "text/plain");
@@ -1061,17 +1186,12 @@
  }
 
  function resumeLastSavedTraining(){
-   var raw;
-   try { raw = localStorage.getItem(TCJS_LAST_TRAINING_KEY); } catch (e) { raw = null; }
-   if (!raw) {
+   var list = loadSavedTrainingsList();
+   if (!list.length) {
      alert("Нет сохранённой прошлой тренировки.");
      return;
    }
-   var payload;
-   try { payload = JSON.parse(raw); } catch (e) {
-     alert("Не удалось прочитать сохранённую тренировку.");
-     return;
-   }
+   var payload = list[Gl_savedTrainingsBrowseIndex] || list[0];
    if (!payload || !payload.snap || !payload.snap.Gl_aRithmLisp || !payload.snap.Gl_aRithmLisp.length) {
      alert("Сохранённая тренировка повреждена или пуста.");
      return;
@@ -1936,6 +2056,8 @@ function restartTrainingApp(){
   Gl_IsFinished = true
   Gl_State = TXT_BTN_FINISHED
   Gl_PauseStartedAt = null
+  Gl_resumeFromHistoryOnRun = false
+  Gl_historyPreviewSnap = null
   clearTrainingSessionSnapshot()
 
   stopTrainingAudioGuard()
@@ -4196,7 +4318,10 @@ END:VEVENT\n`
       Gl_decodeExternalCallValue=''
     fillForm(decodeURIComponent(startWithValue))
 
-    tryRestoreTrainingSessionSnapshot()
+    if (!tryRestoreTrainingSessionSnapshot()) {
+      var histList = loadSavedTrainingsList();
+      if (histList.length) applySavedTrainingPreview(histList[Gl_savedTrainingsBrowseIndex]);
+    }
 
     updateLastTrainingButtonVisibility()
 
@@ -4513,6 +4638,8 @@ END:VEVENT\n`
   }
 
   function onSelectTrain(nInd, sName){
+     Gl_resumeFromHistoryOnRun = false;
+     Gl_historyPreviewSnap = null;
      var nGlInd = nInd
      if (sName!=undefined)
        nGlInd = getTrainIndexByName(sName)
@@ -5380,17 +5507,25 @@ END:VEVENT\n`
     }
   }
 
-  function next(){ // перейти на следующее упражнение
+  function nextExercise(){
     var i= GlnInd
     while ((i<Gl_aRithmLisp.length-3)&&(Gl_aRithmLisp[i+2]==Gl_aRithmLisp[i]))  i+=2
     navigate(i)
   }
-  function prev(){ // перейти на следующее упражнение
+  function prevExercise(){
     var i= GlnInd
     if (i%2) i-=2
     else i--
     while ((i>3)&&(i<Gl_aRithmLisp.length-3)&&(Gl_aRithmLisp[i-2]==Gl_aRithmLisp[i])) i-=2
     navigate(i)
+  }
+  function next(){
+    if (isTrainingExerciseNavMode()) nextExercise();
+    else stepSavedTrainingHistory(-1);
+  }
+  function prev(){
+    if (isTrainingExerciseNavMode()) prevExercise();
+    else stepSavedTrainingHistory(1);
   }
 
   function navigate(i){ // для навигации по делам текущей трени
@@ -5584,12 +5719,26 @@ END:VEVENT\n`
 
 
     //#####  ѓлавный цикл с задержками по 1 мс  ######################################## 
-      GlnDelta=0;
-      GlnInd=0;
-      if (!Gl_flBegWord){
-           GlnDelta = Number(Gl_aRithmLisp[0]);
-           GlnInd =1;
+      if (Gl_resumeFromHistoryOnRun && Gl_historyPreviewSnap) {
+        var hs = Gl_historyPreviewSnap;
+        GlnInd = hs.stoppedAtIndex != null ? hs.stoppedAtIndex : (hs.GlnInd || 1);
+        try {
+          if (GlnInd > 0) GlnDelta = calcMilliseconds(String(Gl_aRithmLisp[GlnInd - 1]));
+          else GlnDelta = Number(Gl_aRithmLisp[0]) || 0;
+        } catch (e) { GlnDelta = 3000; }
+        GlflSayIntro = true;
+        GlflSayIntro2 = true;
+        Gl_resumeFromHistoryOnRun = false;
+        Gl_historyPreviewSnap = null;
+      } else {
+        GlnDelta=0;
+        GlnInd=0;
+        if (!Gl_flBegWord){
+             GlnDelta = Number(Gl_aRithmLisp[0]);
+             GlnInd =1;
+        }
       }
+      paintTrainingNavProgress(GlnInd);
       //  alert(Gl_aRithmLisp)
       //if (
       //  (button.firstChild.data == TXT_BTN_NOTSTARTED)  ||
