@@ -521,6 +521,34 @@
             background: var(--surface-soft);
         }
 
+        .heart-rate-chart-section {
+            display: none;
+        }
+
+        .heart-rate-chart-wrap {
+            position: relative;
+            width: 100%;
+            height: 220px;
+            margin-top: 10px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: var(--surface-soft);
+            overflow: hidden;
+        }
+
+        #idHeartRateChartCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .heart-rate-chart-caption {
+            margin: 8px 0 0;
+            font-size: 14px;
+            color: var(--text-muted, #64748b);
+            text-align: center;
+        }
+
         details {
             margin-top: 18px;
             border: 1px solid var(--border);
@@ -715,6 +743,14 @@
                 <input id="checkTrainPage" checked="checked" type="checkbox" onclick="changePageTrain(this.checked)">
             </label>
         </div>
+    </section>
+
+    <section id="idHeartRateChartSection" class="section-card heart-rate-chart-section" aria-live="polite">
+        <strong>График пульса</strong>
+        <div class="heart-rate-chart-wrap">
+            <canvas id="idHeartRateChartCanvas" width="800" height="220"></canvas>
+        </div>
+        <p id="idHeartRateChartCaption" class="heart-rate-chart-caption"></p>
     </section>
 
     <section id="idImpExpAll" class="section-card">
@@ -1341,6 +1377,7 @@
    document.getElementById("checkPage").style.display = "none";
    document.getElementById("idImpExpAll").style.display = "none";
    document.getElementById("idImpExp").style.display = "none";
+   try { document.getElementById("idHeartRateChartSection").style.display = "none"; } catch (e) {}
    syncTrainPageSetupLinksVisibility();
    initTrainingNavScrollGuard();
    try { btnSelectAllTrain.setAttribute("onclick", 'execTrain1(0,"Run")'); } catch (e) {}
@@ -1782,6 +1819,221 @@ function updateHeartRateConnectButtonIcon(){
     if (outline)
       outline.style.display = on ? "none" : "inline"
   }catch(e){}
+  try{ syncHeartRateChartVisibility() }catch(e2){}
+}
+
+var Gl_hrChartPoints = []
+var Gl_hrChartStartedAt = 0
+var HR_CHART_WINDOW_MS = 10 * 60 * 1000
+var HR_CHART_MAX_POINTS = 1200
+var Gl_hrChartRedrawTimer = null
+var Gl_hrChartResizeBound = false
+
+function shouldShowHeartRateChart(){
+  return isHeartRateSensorConnected()
+    && typeof Gl_lastHeartRateBpm !== "undefined"
+    && Gl_lastHeartRateBpm > 0
+}
+
+function syncHeartRateChartVisibility(){
+  var sec = document.getElementById("idHeartRateChartSection")
+  if (!sec)
+    return
+  var show = shouldShowHeartRateChart()
+  sec.style.display = show ? "block" : "none"
+  if (!show)
+    return
+  ensureHeartRateChartCanvasSize()
+  drawHeartRateChart()
+}
+
+function resetHeartRateChart(){
+  Gl_hrChartPoints = []
+  Gl_hrChartStartedAt = 0
+  var cap = document.getElementById("idHeartRateChartCaption")
+  if (cap)
+    cap.textContent = ""
+  try{
+    var canvas = document.getElementById("idHeartRateChartCanvas")
+    if (canvas){
+      var ctx = canvas.getContext("2d")
+      if (ctx)
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+    }
+  }catch(e){}
+}
+
+function recordHeartRateChartPoint(bpm){
+  var v = Math.round(Number(bpm))
+  if (!isFinite(v) || v <= 0)
+    return
+  var now = Date.now()
+  if (!Gl_hrChartStartedAt)
+    Gl_hrChartStartedAt = now
+  Gl_hrChartPoints.push({ t: now, bpm: v })
+  var cutoff = now - HR_CHART_WINDOW_MS
+  while (Gl_hrChartPoints.length && Gl_hrChartPoints[0].t < cutoff)
+    Gl_hrChartPoints.shift()
+  if (Gl_hrChartPoints.length > HR_CHART_MAX_POINTS)
+    Gl_hrChartPoints = Gl_hrChartPoints.slice(-HR_CHART_MAX_POINTS)
+  syncHeartRateChartVisibility()
+  scheduleHeartRateChartRedraw()
+}
+
+function scheduleHeartRateChartRedraw(){
+  if (Gl_hrChartRedrawTimer)
+    return
+  Gl_hrChartRedrawTimer = requestAnimationFrame(function(){
+    Gl_hrChartRedrawTimer = null
+    if (shouldShowHeartRateChart())
+      drawHeartRateChart()
+  })
+}
+
+function ensureHeartRateChartCanvasSize(){
+  var canvas = document.getElementById("idHeartRateChartCanvas")
+  var wrap = canvas && canvas.parentElement
+  if (!canvas || !wrap)
+    return
+  var dpr = window.devicePixelRatio || 1
+  var w = Math.max(280, wrap.clientWidth || 800)
+  var h = Math.max(160, wrap.clientHeight || 220)
+  var cw = Math.round(w * dpr)
+  var ch = Math.round(h * dpr)
+  if (canvas.width !== cw || canvas.height !== ch){
+    canvas.width = cw
+    canvas.height = ch
+  }
+}
+
+function formatHeartRateChartClock(ms){
+  var d = new Date(ms)
+  var h = d.getHours()
+  var m = d.getMinutes()
+  var s = d.getSeconds()
+  return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s
+}
+
+function drawHeartRateChart(){
+  var canvas = document.getElementById("idHeartRateChartCanvas")
+  var cap = document.getElementById("idHeartRateChartCaption")
+  if (!canvas)
+    return
+  ensureHeartRateChartCanvasSize()
+  var ctx = canvas.getContext("2d")
+  if (!ctx)
+    return
+  var dpr = window.devicePixelRatio || 1
+  var W = canvas.width
+  var H = canvas.height
+  var padL = 52 * dpr
+  var padR = 14 * dpr
+  var padT = 14 * dpr
+  var padB = 34 * dpr
+  var plotW = Math.max(1, W - padL - padR)
+  var plotH = Math.max(1, H - padT - padB)
+  ctx.clearRect(0, 0, W, H)
+
+  var pts = Gl_hrChartPoints
+  var now = Date.now()
+  var tMax = now
+  var tMin = Math.max((Gl_hrChartStartedAt || now) - HR_CHART_WINDOW_MS, tMax - HR_CHART_WINDOW_MS)
+  if (pts.length){
+    tMin = Math.max(tMin, pts[0].t - 1000)
+    tMax = Math.max(tMax, pts[pts.length - 1].t)
+  }
+  if (tMax - tMin < 60000)
+    tMin = tMax - 60000
+
+  var yMin = 50
+  var yMax = 180
+  if (pts.length){
+    for (var i = 0; i < pts.length; i++){
+      if (pts[i].bpm < yMin)
+        yMin = pts[i].bpm
+      if (pts[i].bpm > yMax)
+        yMax = pts[i].bpm
+    }
+    yMin = Math.max(40, Math.floor((yMin - 8) / 10) * 10)
+    yMax = Math.min(220, Math.ceil((yMax + 8) / 10) * 10)
+    if (yMax - yMin < 20){
+      yMin = Math.max(40, yMin - 10)
+      yMax = yMin + 30
+    }
+  }
+
+  function xAt(t){
+    return padL + ((t - tMin) / (tMax - tMin)) * plotW
+  }
+  function yAt(bpm){
+    return padT + plotH - ((bpm - yMin) / (yMax - yMin)) * plotH
+  }
+
+  ctx.strokeStyle = "rgba(100, 116, 139, 0.35)"
+  ctx.lineWidth = 1 * dpr
+  ctx.font = (11 * dpr) + "px system-ui, sans-serif"
+  ctx.fillStyle = "rgba(100, 116, 139, 0.9)"
+  ctx.textAlign = "right"
+  ctx.textBaseline = "middle"
+  for (var gy = yMin; gy <= yMax; gy += 10){
+    var yy = yAt(gy)
+    ctx.beginPath()
+    ctx.moveTo(padL, yy)
+    ctx.lineTo(padL + plotW, yy)
+    ctx.stroke()
+    ctx.fillText(String(gy), padL - 6 * dpr, yy)
+  }
+
+  ctx.textAlign = "center"
+  ctx.textBaseline = "top"
+  var tMarks = 5
+  for (var mi = 0; mi <= tMarks; mi++){
+    var tm = tMin + ((tMax - tMin) * mi) / tMarks
+    var xm = xAt(tm)
+    ctx.beginPath()
+    ctx.moveTo(xm, padT)
+    ctx.lineTo(xm, padT + plotH)
+    ctx.stroke()
+    ctx.fillText(formatHeartRateChartClock(tm), xm, padT + plotH + 6 * dpr)
+  }
+
+  if (pts.length >= 1){
+    ctx.strokeStyle = "#dc2626"
+    ctx.lineWidth = 2 * dpr
+    ctx.lineJoin = "round"
+    ctx.lineCap = "round"
+    ctx.beginPath()
+    for (var pi = 0; pi < pts.length; pi++){
+      var px = xAt(pts[pi].t)
+      var py = yAt(pts[pi].bpm)
+      if (pi === 0)
+        ctx.moveTo(px, py)
+      else
+        ctx.lineTo(px, py)
+    }
+    ctx.stroke()
+    var last = pts[pts.length - 1]
+    ctx.fillStyle = "#dc2626"
+    ctx.beginPath()
+    ctx.arc(xAt(last.t), yAt(last.bpm), 4 * dpr, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  if (cap){
+    var lastBpm = pts.length ? pts[pts.length - 1].bpm : Gl_lastHeartRateBpm
+    cap.textContent = "Сейчас: " + lastBpm + " уд/мин · окно " + Math.round((tMax - tMin) / 60000) + " мин"
+  }
+}
+
+function initHeartRateChartWatchers(){
+  if (Gl_hrChartResizeBound)
+    return
+  Gl_hrChartResizeBound = true
+  window.addEventListener("resize", function(){
+    if (shouldShowHeartRateChart())
+      scheduleHeartRateChartRedraw()
+  })
+  syncHeartRateChartVisibility()
 }
 
 function heartRateSensorStart(){
@@ -1975,6 +2227,7 @@ function initAndroidHeartRateUi(){
     var show = !!(window.AndroidTraining || isWebBluetoothHeartRateAvailable())
     row.style.display = show ? "flex" : "none"
     updateHeartRateConnectButtonIcon()
+    initHeartRateChartWatchers()
   }catch(e){}
 }
 
@@ -4614,11 +4867,13 @@ END:VEVENT\n`
    function onAndroidHeartRate(bpm, disconnectReason){
      var n = Number(bpm)
      var wasConnected = Gl_lastHeartRateBpm >= 0
-     if (!isFinite(n) || n < 0)
+     if (!isFinite(n) || n < 0){
        Gl_lastHeartRateBpm = -1
-     else {
+       try{ resetHeartRateChart() }catch(eHr){}
+     } else {
        Gl_lastHeartRateBpm = Math.round(n)
        Gl_hadHeartRateDuringTraining = true
+       try{ recordHeartRateChartPoint(Gl_lastHeartRateBpm) }catch(eHr2){}
      }
      _пульс_ = Gl_lastHeartRateBpm
      try{
@@ -4629,6 +4884,7 @@ END:VEVENT\n`
        }
      }catch(e){}
      updateHeartRateConnectButtonIcon()
+     try{ syncHeartRateChartVisibility() }catch(eHr3){}
      if (n < 0 && (wasConnected || Gl_hadHeartRateDuringTraining) && shouldAutoSaveLastTrainingCheckpoint())
        scheduleAutoSaveLastTrainingCheckpoint(disconnectReason || "hr_disconnect")
    }
@@ -5740,6 +5996,7 @@ END:VEVENT\n`
        document.getElementById("checkPage").style.display ='none'
        document.getElementById("idImpExpAll").style.display ='none'
        document.getElementById("idImpExp").style.display ='none'
+       try { document.getElementById("idHeartRateChartSection").style.display = 'none'; } catch (e) {}
 
 
        //document.getElementById("idTextTrain").style.display ='block'
