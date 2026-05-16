@@ -960,6 +960,16 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
                 }
             });
         }
+
+        @JavascriptInterface
+        public boolean clearAllLocalFiles() {
+            try {
+                TrainingFilesStorage.deleteAllCheckpoints(MainActivity.this);
+                return true;
+            } catch (Exception exception) {
+                return false;
+            }
+        }
     }
 
     private static final class SpeechRequest {

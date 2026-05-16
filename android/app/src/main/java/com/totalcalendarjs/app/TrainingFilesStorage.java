@@ -26,6 +26,20 @@ public final class TrainingFilesStorage {
         return directory;
     }
 
+    public static int deleteAllCheckpoints(Context context) {
+        File directory = getCheckpointsDirectory(context);
+        File[] files = directory.listFiles();
+        int deleted = 0;
+        if (files != null) {
+            for (File file : files) {
+                if (file.isFile() && file.delete()) {
+                    deleted++;
+                }
+            }
+        }
+        return deleted;
+    }
+
     public static File saveText(Context context, String text, String filename) throws IOException {
         String safeName = sanitizeFilename(filename);
         File file = new File(getCheckpointsDirectory(context), safeName);
