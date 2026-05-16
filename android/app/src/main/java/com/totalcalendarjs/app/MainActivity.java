@@ -26,6 +26,7 @@ import android.print.PrintDocumentAdapter;
 import android.print.PrintManager;
 import android.speech.tts.TextToSpeech;
 import android.view.WindowManager;
+import android.widget.Toast;
 import android.webkit.JavascriptInterface;
 import android.webkit.JsResult;
 import android.webkit.ValueCallback;
@@ -896,6 +897,29 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         @JavascriptInterface
         public void saveTextFile(String text, String filename, String mimeType) {
             runOnUiThread(() -> saveTextFileOnUiThread(text, filename, mimeType));
+        }
+
+        /** Чекпоинты тренировки — без диалога «Сохранить как», в training-checkpoints/. */
+        @JavascriptInterface
+        public boolean saveTextFileInternal(String text, String filename, String mimeType, boolean showToast) {
+            try {
+                final File saved = TrainingFilesStorage.saveText(MainActivity.this, text, filename);
+                if (showToast) {
+                    runOnUiThread(() -> Toast.makeText(
+                            MainActivity.this,
+                            "Сохранено в папку приложения:\n" + saved.getName(),
+                            Toast.LENGTH_SHORT
+                    ).show());
+                }
+                return true;
+            } catch (IOException exception) {
+                final String message = exception.getMessage();
+                runOnUiThread(() -> new AlertDialog.Builder(MainActivity.this)
+                        .setMessage("Не удалось сохранить файл: " + message)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show());
+                return false;
+            }
         }
 
         @JavascriptInterface

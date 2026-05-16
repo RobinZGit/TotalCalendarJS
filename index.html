@@ -921,6 +921,8 @@
  var Gl_lastTrainingPeriodicTimer = null;
  var Gl_hadHeartRateDuringTraining = false;
  var Gl_batteryLowSaveDone = false;
+ /** Блокирует аварийные сохранения при штатном «Завершить» (Android onPause иначе снова открывает диалог). */
+ var Gl_suppressEmergencySave = false;
 
  function sanitizeTrainFilename(name){
    var s = String(name || "training").replace(/\s+/g, " ").trim();
@@ -1193,6 +1195,7 @@
  }
 
  function shouldAutoSaveLastTrainingCheckpoint(){
+   if (Gl_suppressEmergencySave) return false;
    if (!Gl_aRithmLisp || !Gl_aRithmLisp.length || Gl_IsFinished) return false;
    return isActiveTrainingSession() || Gl_State === TXT_BTN_PAUSED || GlflSayIntro;
  }
@@ -1226,15 +1229,18 @@
        : (base + "_pulse_last.csv");
    }
    try { pushSavedTrainingToHistory(payload); } catch (e) { return false; }
+   var notifySave = withDownload && (opts.reason === "finish");
    try {
-     if (withDownload)
-       download(rtmText, rtmFilename, "text/plain");
-     else
-       callAndroidTraining("saveTextFile", rtmText, rtmFilename, "text/plain");
+     if (withDownload) {
+       if (!saveCheckpointTextFile(rtmText, rtmFilename, "text/plain", notifySave))
+         download(rtmText, rtmFilename, "text/plain");
+     } else {
+       saveCheckpointTextFile(rtmText, rtmFilename, "text/plain", false);
+     }
    } catch (e) {}
    try {
      if (hasHeartRateLogData())
-       saveHeartRateLogFile({ download: withDownload, reason: opts.reason || "" });
+       saveHeartRateLogFile({ download: withDownload, reason: opts.reason || "", notifySave: notifySave });
    } catch (eHr) {}
    updateLastTrainingButtonVisibility();
    return true;
@@ -1697,6 +1703,28 @@ function callAndroidTraining(methodName){
   return false
 }
 
+function isAndroidTrainingApp(){
+  return !!(window.AndroidTraining)
+}
+
+/** На Android — в папку приложения без диалога; в браузере — false (только localStorage / download). */
+function saveCheckpointTextFile(text, filename, mimeType, showToast){
+  if (!isAndroidTrainingApp())
+    return false
+  if (typeof window.AndroidTraining.saveTextFileInternal !== "function")
+    return false
+  try {
+    return !!window.AndroidTraining.saveTextFileInternal(
+      String(text),
+      String(filename),
+      String(mimeType || "text/plain"),
+      !!showToast
+    )
+  } catch (e) {
+    return false
+  }
+}
+
 function isWebBluetoothHeartRateAvailable(){
   try{
     return !!(window.isSecureContext && navigator.bluetooth && typeof navigator.bluetooth.requestDevice === "function")
@@ -1887,10 +1915,12 @@ function saveHeartRateLogFile(opts){
     ? (base + "_pulse_" + new Date().yyyymmddhhmmss("_") + ".csv")
     : (base + "_pulse_last.csv")
   try{
-    if (withDownload)
-      download(text, filename, "text/csv")
-    else
-      callAndroidTraining("saveTextFile", text, filename, "text/csv")
+    if (withDownload) {
+      if (!saveCheckpointTextFile(text, filename, "text/csv", !!opts.notifySave))
+        download(text, filename, "text/csv")
+    } else {
+      saveCheckpointTextFile(text, filename, "text/csv", false)
+    }
   }catch(e){
     return false
   }
@@ -2524,6 +2554,8 @@ function resumeTrainingPlayback(){
 }
 
 function exitTrainingApp(){
+  Gl_suppressEmergencySave = true
+  try { callAndroidTraining("stopTrainingGuard") } catch (e) {}
   if (isActiveTrainingSession() || Gl_State === TXT_BTN_PAUSED || (Gl_aRithmLisp && Gl_aRithmLisp.length && GlflSayIntro)) {
     if (!saveLastTrainingCheckpoint({ download: true, reason: "finish" }))
       alert("Не удалось сохранить тренировку (ритм .rtm).");
@@ -4574,8 +4606,11 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   }
 
   function download(text,filename, type) {
-      if (callAndroidTraining("saveTextFile", String(text), String(filename), String(type || "text/plain")))
+      // В приложении диалог «Сохранить как» — только для явного экспорта пользователем.
+      if (isAndroidTrainingApp() && typeof window.AndroidTraining.saveTextFile === "function") {
+        callAndroidTraining("saveTextFile", String(text), String(filename), String(type || "text/plain"))
         return
+      }
 
       var element = document.createElement('a');
       element.setAttribute('href', 'data:' + (type || 'text/plain') + ';charset=utf-8,' + encodeURIComponent(text));
