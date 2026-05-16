@@ -5150,6 +5150,41 @@ END:VEVENT\n`
       return sTrainName.replaceAll(sSpace,' ')
   }
 
+  /** Имя тренировки из ?startwith=… в URL (deep link / календарь). null — параметра нет. */
+  function getUrlStartWithTrainName(){
+    try {
+      var search = location.search
+      if (!search || search.length < 2) {
+        var qi = location.href.indexOf('?')
+        if (qi < 0)
+          return null
+        search = location.href.slice(qi)
+      }
+      var params = new URLSearchParams(search.replace(/^\?/, ''))
+      if (!params.has('startwith'))
+        return null
+      var raw = params.get('startwith')
+      if (raw == null || String(raw).trim() === '')
+        return null
+      return forURL(String(raw).trim(), 'URL->String')
+    } catch (e) {
+      try {
+        var q = location.href.split('?')[1]
+        if (!q)
+          return null
+        var part = q.split('&').filter(function (v) { return v.indexOf('startwith=') >= 0 }).join('&')
+        if (!part)
+          return null
+        var val = part.indexOf('=') >= 0 ? part.slice(part.indexOf('=') + 1) : ''
+        if (!val)
+          return null
+        return forURL(decodeURIComponent(val), 'URL->String')
+      } catch (e2) {
+        return null
+      }
+    }
+  }
+
   function tryOpenAndroidAppFromStartLink(onFallback){
     if (window.AndroidTraining)
       return false
@@ -5213,11 +5248,8 @@ END:VEVENT\n`
       for (var i=0;i<Gl_aMetaMetaCalendar.length;i++) Gl_aMetaMetaCalendarSelected.push(true) //первоначально все календари выбраны, учитываются в общем календаре
     }
     //beep0(1000, 0.5)
-    //параметр - с какую треню выбрать по умолчанию
-    var startWithValue = location.href
-    try{
-      startWithValue =forURL( location.href.split('?')[1].split('&').filter((v)=>{return (v.indexOf('startwith')>=0)}).join(' ').split('=')[1],'URL->String');
-    } catch(e){ startWithValue= ''};
+    //параметр - с какую треню выбрать по умолчанию (?startwith=…)
+    var urlStartWithTrain = getUrlStartWithTrainName()
 
     //параметр - для вызова с сервера
     var externalCallValue = location.href
@@ -5230,11 +5262,19 @@ END:VEVENT\n`
       Gl_decodeExternalCallValue = decodeURIComponent(externalCallValue)
     else
       Gl_decodeExternalCallValue=''
-    fillForm(decodeURIComponent(startWithValue))
 
-    if (!tryRestoreTrainingSessionSnapshot()) {
-      var histList = loadSavedTrainingsList();
-      if (histList.length) applySavedTrainingPreview(histList[Gl_savedTrainingsBrowseIndex]);
+    fillForm(urlStartWithTrain != null ? urlStartWithTrain : null)
+
+    // Ссылка с startwith — только тренировка из URL, без подмены прошлой сохранённой
+    if (urlStartWithTrain == null) {
+      if (!tryRestoreTrainingSessionSnapshot()) {
+        var histList = loadSavedTrainingsList();
+        if (histList.length)
+          applySavedTrainingPreview(histList[Gl_savedTrainingsBrowseIndex]);
+      }
+    } else {
+      Gl_resumeFromHistoryOnRun = false
+      Gl_historyPreviewSnap = null
     }
 
     updateLastTrainingButtonVisibility()
