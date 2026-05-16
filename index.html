@@ -5777,6 +5777,12 @@ END:VEVENT\n`
     revealTrainEditorBlock();
   }
 
+  function hideTrainEditorPanel(){
+    var panel = document.getElementById("idTrainEditorPanel");
+    if (panel)
+      panel.hidden = true;
+  }
+
   function editCurrentTrainInEditor(ev){
     if (ev) {
       ev.preventDefault();
