@@ -677,6 +677,86 @@
             width: calc(100% - 32px);
         }
 
+        .train-help-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 20px 14px;
+            overflow-y: auto;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(4px);
+        }
+
+        .train-help-overlay[hidden] {
+            display: none !important;
+        }
+
+        .train-help-dialog {
+            width: min(760px, 100%);
+            max-height: calc(100vh - 40px);
+            margin: auto 0;
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
+        .train-help-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .train-help-header strong {
+            font-size: 20px;
+        }
+
+        .train-help-body {
+            overflow-y: auto;
+            font-size: 15px;
+            line-height: 1.55;
+            color: var(--text, #0f172a);
+        }
+
+        .train-help-body h3 {
+            margin: 1.25em 0 0.45em;
+            font-size: 1.05em;
+        }
+
+        .train-help-body h3:first-child {
+            margin-top: 0;
+        }
+
+        .train-help-body ul {
+            margin: 0.35em 0 0.65em;
+            padding-left: 1.25em;
+        }
+
+        .train-help-body pre {
+            margin: 0.5em 0;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: var(--surface-soft, #f1f5f9);
+            border: 1px solid var(--border, #e2e8f0);
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 13px;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        .train-help-body code {
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 0.92em;
+            background: var(--surface-soft, #f1f5f9);
+            padding: 1px 5px;
+            border-radius: 4px;
+        }
+
         .info-note {
             margin-top: 12px;
             padding: 12px 14px;
@@ -724,6 +804,16 @@
 <div id="idModalWindow" class="modal-card" style="display:none">
     <p>Введите данные:</p>
     <button id="idModalButtonOk" class="primary-btn" type="button">OK</button>
+</div>
+
+<div id="idTrainHelpOverlay" class="train-help-overlay" hidden>
+    <div class="train-help-dialog section-card" role="dialog" aria-labelledby="idTrainHelpTitle" aria-modal="true">
+        <div class="train-help-header">
+            <strong id="idTrainHelpTitle">Help — настройка тренировок и календарей</strong>
+            <button type="button" class="secondary-btn" onclick="closeTrainHelpDialog()">Закрыть</button>
+        </div>
+        <div id="idTrainHelpBody" class="train-help-body"></div>
+    </div>
 </div>
 
 <div id="idMainWindow" class="app-shell">
@@ -965,6 +1055,7 @@
                 <button id="btnEditCurrentTrain" type="button" class="secondary-btn" onclick="editCurrentTrainInEditor(event)">Редактировать тренировку</button>
                 <button id="btnCopyTrainToNew" type="button" class="secondary-btn" onclick="copyTrainIntoEditor(event)">Копировать в новую</button>
                 <button id="btnNewTrainTemplate" type="button" class="secondary-btn" onclick="openNewTrainTemplateInEditor(event)">Новая шаблон</button>
+                <button id="btnTrainHelp" type="button" class="secondary-btn" onclick="openTrainHelpDialog(event)">Help</button>
             </div>
             <div id="idTrainEditorPanel" class="train-editor-panel" hidden>
                 <textarea id="idTrainEditor" class="train-editor-textarea" spellcheck="false"></textarea>
@@ -5957,6 +6048,7 @@ END:VEVENT\n`
   }
 
   function initTrainEditorUi(){
+    initTrainHelpDialog();
     var ta = document.getElementById("idTrainEditor");
     if (!ta || ta._tcjsEditorBound)
       return;
@@ -6220,6 +6312,151 @@ END:VEVENT\n`
     var existingIdx = findTrainIndexByDisplayName(name);
     setTrainEditorState(text, existingIdx, name, text);
     showTrainEditorPanel();
+  }
+
+  function getTrainingSetupHelpHtml(){
+    return ""
+      + "<p>Тренировки и календари хранятся в массивах <code>Gl_aMetaRithm</code> и <code>Gl_aMetaMetaCalendar</code>. "
+      + "Редактор («Редактировать», «Копировать в новую», «Новая шаблон») меняет один элемент <code>Gl_aMetaRithm</code>. "
+      + "Каждая строка определения — в обратных кавычках <code>` ... `</code>, как в экспорте .genall.</p>"
+
+      + "<h3>1. Структура одной тренировки</h3>"
+      + "<pre>[  [],\n"
+      + "    [\n"
+      + "    `&lt;ИМЯ В СПИСКЕ&gt;=&lt;корневая цепочка&gt;`,\n"
+      + "    `&lt;ШАГ1&gt;=&lt;текст озвучки&gt;;&lt;#пауза#&gt;;...`,\n"
+      + "    `&lt;ШАГ2&gt;=...`,\n"
+      + "    `[BEGIN EVAL PARAMETERS]`,\n"
+      + "    `[END EVAL PARAMETERS]`,\n"
+      + "    ],\n"
+      + "  ],</pre>"
+      + "<ul>"
+      + "<li><code>[ ]</code> в начале — пустой служебный блок.</li>"
+      + "<li>Второй блок — строки сценария (обязателен).</li>"
+      + "<li>Третий блок — необязательный календарь тренировки (дата + расписание).</li>"
+      + "</ul>"
+
+      + "<h3>2. Первая строка и корневая цепочка</h3>"
+      + "<p>Первая строка задаёт имя в списке и порядок шагов:</p>"
+      + "<pre>`&lt;БАЗОВАЯ&gt;=&lt;ШАГ1&gt;;&lt;#3 [СЕК]#&gt;;&lt;ШАГ2&gt;;&lt;#1 [МИН]#&gt;`</pre>"
+      + "<p>После <code>=</code> — цепочка через <code>;</code>: чередуются <strong>имена шагов</strong> в угловых скобках "
+      + "и <strong>паузы</strong> <code>&lt;#...#&gt;</code>. Имена должны быть определены ниже отдельными строками.</p>"
+
+      + "<h3>3. Определение шага (дела)</h3>"
+      + "<pre>`&lt;ШАГ1&gt;=&lt;Текст, который озвучит приложение&gt;;&lt;#5 [СЕК]#&gt;;ещё фраза`</pre>"
+      + "<p>Формат: <code>&lt;ИМЯ&gt;=&lt;речь&gt;;&lt;интервал&gt;;&lt;речь&gt;;...</code>. "
+      + "При запуске движок режет текст по символу <code>#</code> на пары «пауза → озвучка».</p>"
+
+      + "<h3>4. Паузы (интервалы)</h3>"
+      + "<ul>"
+      + "<li><code>&lt;#500#&gt;</code> — миллисекунды (число без единицы).</li>"
+      + "<li><code>&lt;#3 [СЕК]#&gt;</code>, <code>[МИН]</code>, <code>[ЧАС]</code>, <code>[СУТ]</code>, <code>[НЕД]</code>, <code>[МСЕК]</code>.</li>"
+      + "<li><code>&lt;#0#&gt;</code> — без паузы до следующего шага.</li>"
+      + "<li>В цепочке и в определениях паузы пишутся одинаково: <code>&lt;#...#&gt;</code>.</li>"
+      + "</ul>"
+
+      + "<h3>5. Макросы в угловых скобках</h3>"
+      + "<p><code>&lt;ИМЯ&gt;</code> в тексте подставляется из строки <code>&lt;ИМЯ&gt;=...</code>. "
+      + "Имена обычно ЗАГЛАВНЫМИ (так проще отличать от обычного текста). "
+      + "Вложенные скобки раскрываются при генерации ритма (<code>getArithm</code>).</p>"
+
+      + "<h3>6. Блок параметров [BEGIN EVAL PARAMETERS]</h3>"
+      + "<p>Между маркерами можно задавать формулы и переменные для подстановки в паузы и текст:</p>"
+      + "<ul>"
+      + "<li><code>_пульс_</code>, <code>_прошло_минут_</code>, <code>_прошло_секунд_</code>, <code>_номер_итерации_</code> и др.</li>"
+      + "<li><code>[eval] выражение [eval]</code> — вычисление при сборке сценария.</li>"
+      + "<li><code>{ [eval_online] выражение [eval_online] }</code> — вычисление во время тренировки.</li>"
+      + "</ul>"
+
+      + "<h3>7. Выбор и случайность</h3>"
+      + "<ul>"
+      + "<li><code>[ВЫБОР ИЗ]&lt;вар1&gt;:&lt;вар2&gt;[КАК]1:1</code> — случайный вариант с весами.</li>"
+      + "<li><code>[ВЫБОР]N[ДЕЛ БЕЗ ПОВТОРЕНИЙ ИЗ]...</code> — несколько дел без повторов подряд.</li>"
+      + "<li><code>[СПРОСИТЬ]\"вопрос?\":...</code> — диалог при генерации.</li>"
+      + "</ul>"
+
+      + "<h3>8. Несколько тренировок в одном запуске</h3>"
+      + "<ul>"
+      + "<li><code>[ОДНОВРЕМЕННО С]</code> — параллельные сценарии (разделитель в тексте поля тренировки).</li>"
+      + "<li><code>[ДАЛЕЕ ДЕЛАТЬ]</code> — последовательное объединение блоков.</li>"
+      + "<li>В списке тренировок сценарии с <code>[ОДНОВРЕМЕННО С]</code> скрываются при режиме без мультивыбора.</li>"
+      + "</ul>"
+
+      + "<h3>9. Календарь (Gl_aMetaMetaCalendar)</h3>"
+      + "<p>Необязательный третий блок в элементе тренировки или отдельные календари в <code>Gl_aMetaMetaCalendar</code>:</p>"
+      + "<pre>[[new Date(2025,0,1,10,0,0)],\n"
+      + "  [\n"
+      + "  `&lt;КАЛЕНДАРЬ ИМЯ&gt;=1000&lt;РАСПИСАНИЕ&gt;`,\n"
+      + "  `&lt;РАСПИСАНИЕ&gt;=&lt;ТРЕНИРОВКА&gt;;&lt;#1 [СУТ]#&gt;`,\n"
+      + "  `[BEGIN EVAL PARAMETERS]`,\n"
+      + "  `[END EVAL PARAMETERS]`,\n"
+      + "  ]\n"
+      + "],</pre>"
+      + "<p><code>new Date(год, месяц, день, час, мин, сек)</code> — месяц с 0 (январь = 0). "
+      + "Расписание строит события: сдвиг по времени от даты, затем «интегрирование» в общий календарь (<code>stus(..., 'paint')</code>).</p>"
+
+      + "<h3>10. Редактор и сохранение</h3>"
+      + "<ul>"
+      + "<li><strong>Редактировать тренировку</strong> — правка выбранной в списке.</li>"
+      + "<li><strong>Копировать в новую</strong> — копия с суффиксом «_kopiya» в имени.</li>"
+      + "<li><strong>Новая шаблон</strong> — минимальный пример с календарём на сутки.</li>"
+      + "<li><strong>Сохранить</strong> — разбор без <code>eval</code>; все строки только в <code>`кавычках`</code>.</li>"
+      + "<li>После сохранения список и .genall в localStorage обновляются.</li>"
+      + "</ul>"
+
+      + "<h3>11. Ссылка и приложение</h3>"
+      + "<p>Открытие по URL: <code>?startwith=ИМЯ</code> (пробелы — как <code>___space___</code> или %20). "
+      + "Имя без угловых скобок, как в списке. Параметр <code>externalcall=1</code> — упрощённый вид для вызова из календаря.</p>"
+
+      + "<h3>12. Минимальный пример</h3>"
+      + "<pre>[  [],\n"
+      + "    [\n"
+      + "    `&lt;МОЯ ТРЕНИРОВКА&gt;=&lt;СТАРТ&gt;;&lt;#2 [СЕК]#&gt;;&lt;ФИНИШ&gt;`,\n"
+      + "    `&lt;СТАРТ&gt;=&lt;Начинаем&gt;;&lt;#3 [СЕК]#&gt;`,\n"
+      + "    `&lt;ФИНИШ&gt;=&lt;Готово&gt;;&lt;#1 [СЕК]#&gt;`,\n"
+      + "    `[BEGIN EVAL PARAMETERS]`,\n"
+      + "    `[END EVAL PARAMETERS]`,\n"
+      + "    ],\n"
+      + "  ],</pre>";
+  }
+
+  function openTrainHelpDialog(ev){
+    if (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+    }
+    var overlay = document.getElementById("idTrainHelpOverlay");
+    var body = document.getElementById("idTrainHelpBody");
+    if (body && !body.innerHTML.trim())
+      body.innerHTML = getTrainingSetupHelpHtml();
+    if (overlay)
+      overlay.hidden = false;
+  }
+
+  function closeTrainHelpDialog(){
+    var overlay = document.getElementById("idTrainHelpOverlay");
+    if (overlay)
+      overlay.hidden = true;
+  }
+
+  function initTrainHelpDialog(){
+    if (initTrainHelpDialog._bound)
+      return;
+    initTrainHelpDialog._bound = true;
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        var overlay = document.getElementById("idTrainHelpOverlay");
+        if (overlay && !overlay.hidden)
+          closeTrainHelpDialog();
+      }
+    });
+    var overlay = document.getElementById("idTrainHelpOverlay");
+    if (overlay) {
+      overlay.addEventListener("click", function (e) {
+        if (e.target === overlay)
+          closeTrainHelpDialog();
+      });
+    }
   }
 
   function getTrainingDisplayNameFromEntry(entry){
