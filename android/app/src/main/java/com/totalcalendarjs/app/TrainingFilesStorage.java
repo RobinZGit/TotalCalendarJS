@@ -50,6 +50,15 @@ public final class TrainingFilesStorage {
         return file;
     }
 
+    public static boolean deleteText(Context context, String filename) {
+        String safeName = sanitizeFilename(filename);
+        File file = new File(getCheckpointsDirectory(context), safeName);
+        if (!file.exists()) {
+            return true;
+        }
+        return file.delete();
+    }
+
     private static String sanitizeFilename(String filename) {
         if (filename == null || filename.trim().isEmpty()) {
             return "TotalCalendar.txt";

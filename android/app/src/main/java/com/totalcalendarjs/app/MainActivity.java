@@ -1013,6 +1013,15 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         }
 
         @JavascriptInterface
+        public boolean deleteCheckpointFile(String filename) {
+            try {
+                return TrainingFilesStorage.deleteText(MainActivity.this, filename);
+            } catch (Exception exception) {
+                return false;
+            }
+        }
+
+        @JavascriptInterface
         public void openCalendarIcs(String text, String filename) {
             runOnUiThread(() -> openCalendarIcsOnUiThread(text, filename));
         }

@@ -1345,7 +1345,7 @@
      textTime: txtTextTime ? txtTextTime.value : "",
      navScrollTop: panel ? panel.scrollTop : 0,
      stoppedAtIndex: GlnInd,
-     pulseLogText: hasHeartRateLogData() ? buildHeartRateLogText() : "",
+     pulseLogText: (Gl_hadHeartRateDuringTraining && hasHeartRateLogData()) ? buildHeartRateLogText() : "",
      stoppedAtExercise: (Gl_aRithmLisp && Gl_aRithmLisp[GlnInd]) ? String(Gl_aRithmLisp[GlnInd]) : ""
    };
  }
@@ -1548,12 +1548,14 @@
      rtmText: rtmText,
      rtmFilename: rtmFilename
    };
-   if (hasHeartRateLogData()) {
+   if (Gl_hadHeartRateDuringTraining && hasHeartRateLogData()) {
      payload.pulseLogText = buildHeartRateLogText();
      payload.pulseFilename = withDownload
        ? (base + "_pulse_" + new Date().yyyymmddhhmmss("_") + ".csv")
        : (base + "_pulse_last.csv");
    }
+   if (withDownload && opts.reason === "finish" && !Gl_hadHeartRateDuringTraining)
+     purgeStoredPulseForTrainingName(Gl_currentTrainName);
    try { pushSavedTrainingToHistory(payload); } catch (e) { return false; }
    var notifySave = withDownload && (opts.reason === "finish");
    try {
@@ -1565,7 +1567,7 @@
      }
    } catch (e) {}
    try {
-     if (hasHeartRateLogData())
+     if (Gl_hadHeartRateDuringTraining && hasHeartRateLogData())
        saveHeartRateLogFile({ download: withDownload, reason: opts.reason || "", notifySave: notifySave });
    } catch (eHr) {}
    updateLastTrainingButtonVisibility();
@@ -1752,10 +1754,8 @@
    Gl_PauseStartedAt = null;
    Gl_hadHeartRateDuringTraining = false;
    try {
-     if (Gl_hrChartPreviewMode && hasHeartRateLogData())
-       Gl_hrChartPreviewMode = false;
-     else
-       resetHeartRateChart();
+     Gl_hrChartPreviewMode = false;
+     resetHeartRateChart();
    } catch (eHr0) {}
    startTrainingAudioGuard();
    try { btnSelectAllTrain.innerHTML = "Пауза"; } catch (e) {}
@@ -2363,6 +2363,64 @@ function getPulseLogTextFromPayload(payload){
   if (payload.snap && payload.snap.pulseLogText)
     return String(payload.snap.pulseLogText)
   return ""
+}
+
+function normalizeTrainingDisplayName(name){
+  return String(name || "").trim().replace(/^<|>$/g, "").replace(/\s+/g, " ").trim()
+}
+
+function trainingNamesEqual(a, b){
+  var na = normalizeTrainingDisplayName(a).toLowerCase()
+  var nb = normalizeTrainingDisplayName(b).toLowerCase()
+  return !!(na && nb && na === nb)
+}
+
+function stripPulseFromHistoryEntry(entry){
+  if (!entry)
+    return
+  delete entry.pulseLogText
+  delete entry.pulseFilename
+  if (entry.snap)
+    delete entry.snap.pulseLogText
+}
+
+function deleteStoredPulseCheckpointFile(filename){
+  if (!filename)
+    return
+  if (isAndroidTrainingApp() && typeof window.AndroidTraining.deleteCheckpointFile === "function") {
+    try { window.AndroidTraining.deleteCheckpointFile(String(filename)) } catch (e) {}
+    return
+  }
+}
+
+function purgeStoredPulseForTrainingName(trainName){
+  if (!normalizeTrainingDisplayName(trainName))
+    return
+  var list = loadSavedTrainingsList()
+  var changed = false
+  for (var i = 0; i < list.length; i++) {
+    var e = list[i]
+    if (!e || !e.snap)
+      continue
+    if (!trainingNamesEqual(e.snap.Gl_currentTrainName, trainName))
+      continue
+    if (!getPulseLogTextFromPayload(e))
+      continue
+    stripPulseFromHistoryEntry(e)
+    changed = true
+  }
+  if (changed) {
+    try {
+      localStorage.setItem(TCJS_LAST_TRAININGS_KEY, JSON.stringify(list))
+      if (list.length)
+        localStorage.setItem(TCJS_LAST_TRAINING_KEY, JSON.stringify(list[0]))
+    } catch (e) {}
+  }
+  deleteStoredPulseCheckpointFile(sanitizeTrainFilename(trainName) + "_pulse_last.csv")
+  if (Gl_hrChartPreviewMode && trainingNamesEqual(getCurrentSavedTrainingTitle(), trainName)) {
+    resetHeartRateChart()
+    syncHeartRateChartVisibility()
+  }
 }
 
 function loadHeartRatePreviewFromPayload(payload){
