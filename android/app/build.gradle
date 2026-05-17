@@ -82,7 +82,6 @@ tasks.register('syncWebAssets', Copy) {
         include '*.html'
         include 'favicon.svg'
         include 'app-build.txt'
-        include 'js/**'
     }
     into(generatedWebAssetsDir)
 
