@@ -6541,12 +6541,19 @@ END:VEVENT\n`
       selectAllTrain.selectedIndex = getTrainIndexByName("<" + trainLabel + ">");
     } catch (e) {}
     try {
-      document.getElementById("trainPage").style.display = "block";
-      document.getElementById("checkTrainPage").checked = true;
-      document.getElementById("calendarPage").style.display = "none";
-      document.getElementById("checkCalendarPage").checked = false;
-      document.getElementById("selectedCalendars").style.display = "none";
-      document.getElementById("checkPage").style.display = "none";
+      if (opts.silent) {
+        changePageTrain(true);
+        changePageCalendar(false);
+        document.getElementById("checkTrainPage").checked = true;
+        document.getElementById("checkCalendarPage").checked = false;
+      } else {
+        document.getElementById("trainPage").style.display = "block";
+        document.getElementById("checkTrainPage").checked = true;
+        document.getElementById("calendarPage").style.display = "none";
+        document.getElementById("checkCalendarPage").checked = false;
+        document.getElementById("selectedCalendars").style.display = "none";
+        document.getElementById("checkPage").style.display = "none";
+      }
     } catch (e2) {}
     processSimultaneousMode(nIndexInMetaRithm, "Calendar");
     try { btnSelectAllTrain.setAttribute("onclick", 'execTrain1(0,"Run")'); } catch (e3) {}
