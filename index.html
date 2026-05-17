@@ -5516,12 +5516,12 @@ END:VEVENT\n`
 
     fillForm(urlStartWithTrain != null ? urlStartWithTrain : null)
 
-    // Ссылка с startwith — только тренировка из URL, без подмены прошлой сохранённой
+    // Без startwith — ближайшая вперёд по календарю (не прошлая сохранённая тренировка)
     if (urlStartWithTrain == null) {
       if (!tryRestoreTrainingSessionSnapshot()) {
-        var histList = loadSavedTrainingsList();
-        if (histList.length)
-          applySavedTrainingPreview(histList[Gl_savedTrainingsBrowseIndex]);
+        var calSlot = findNearestUpcomingCalendarTrainSlot();
+        if (calSlot != null)
+          loadTrainingFromCalendarSlot(calSlot, { silent: true });
       }
     } else {
       Gl_resumeFromHistoryOnRun = false
@@ -6485,6 +6485,77 @@ END:VEVENT\n`
       Gl_aMetaMetaCalendarSelected.push(true);
       onSelectCalendar(-1);
     } catch (e) {}
+  }
+
+  /** Индекс в Gl_aMultiCalendar (нечётный: 1,3,5…) — ближайшее событие не раньше сейчас; иначе последнее прошедшее. */
+  function findNearestUpcomingCalendarTrainSlot(){
+    if (!Gl_aMultiCalendar || Gl_aMultiCalendar.length < 2)
+      return null;
+    var now = Date.now();
+    var bestFuture = null;
+    var bestFutureDelta = Infinity;
+    for (var i = 1; i < Gl_aMultiCalendar.length - 1; i += 2) {
+      var d = Gl_aMultiCalendar[i - 1];
+      if (!(d instanceof Date))
+        d = new Date(d);
+      var t = d.getTime();
+      if (isNaN(t))
+        continue;
+      if (t >= now && t - now < bestFutureDelta) {
+        bestFutureDelta = t - now;
+        bestFuture = i;
+      }
+    }
+    if (bestFuture != null)
+      return bestFuture;
+    var bestPast = null;
+    var bestPastT = -Infinity;
+    for (var j = 1; j < Gl_aMultiCalendar.length - 1; j += 2) {
+      var d2 = Gl_aMultiCalendar[j - 1];
+      if (!(d2 instanceof Date))
+        d2 = new Date(d2);
+      var t2 = d2.getTime();
+      if (isNaN(t2) || t2 > now)
+        continue;
+      if (t2 > bestPastT) {
+        bestPastT = t2;
+        bestPast = j;
+      }
+    }
+    return bestPast;
+  }
+
+  function loadTrainingFromCalendarSlot(value, opts){
+    opts = opts || {};
+    if (value == null || value < 0 || !Gl_aMultiCalendar || Gl_aMultiCalendar[value] == null)
+      return false;
+    Gl_resumeFromHistoryOnRun = false;
+    Gl_historyPreviewSnap = null;
+    var trainLabel = String(Gl_aMultiCalendar[value]).trim();
+    Gl_currentTrainName = trainLabel;
+    var nIndexInMetaRithm = getTrainIndexByName("<" + trainLabel + ">");
+    if (nIndexInMetaRithm == null || !Gl_aMetaRithm[nIndexInMetaRithm])
+      return false;
+    GltxtSpeek.value = Gl_aMetaRithm[nIndexInMetaRithm][1].join("     " + Gl_sDelim + "\n");
+    try {
+      selectAllTrain.selectedIndex = getTrainIndexByName("<" + trainLabel + ">");
+    } catch (e) {}
+    try {
+      document.getElementById("trainPage").style.display = "block";
+      document.getElementById("checkTrainPage").checked = true;
+      document.getElementById("calendarPage").style.display = "none";
+      document.getElementById("checkCalendarPage").checked = false;
+      document.getElementById("selectedCalendars").style.display = "none";
+      document.getElementById("checkPage").style.display = "none";
+    } catch (e2) {}
+    processSimultaneousMode(nIndexInMetaRithm, "Calendar");
+    try { btnSelectAllTrain.setAttribute("onclick", 'execTrain1(0,"Run")'); } catch (e3) {}
+    getText2Print(Gl_currentTrainName);
+    if (!opts.silent)
+      alert("Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку «Начать тренировку».");
+    try { refreshTrainEditorFromSelection(); } catch (eEd) {}
+    updateOpenAndroidAppLink();
+    return true;
   }
 
   function fillForm(loadTrain=null)
@@ -7491,23 +7562,8 @@ END:VEVENT\n`
     }
 
     if (sMode=="Calendar")  {
-      Gl_currentTrainName = Gl_aMultiCalendar[value].trim()
-//???@ OK if calendars are not filtered now (value - from calendars)
-      var nIndexInMetaRithm = getTrainIndexByName("<"+Gl_aMultiCalendar[value].trim()+">")
-      var aEv = Gl_aMetaRithm[nIndexInMetaRithm][1]
-      GltxtSpeek.value= aEv.join('     '+Gl_sDelim+'\n')
-      selectAllTrain.selectedIndex = getTrainIndexByName("<"+Gl_aMultiCalendar[value].trim()+">") //!!!!
-      document.getElementById("trainPage").style.display ='block'
-      document.getElementById("checkTrainPage").checked = true
-      document.getElementById("calendarPage").style.display ='none'
-      document.getElementById("checkCalendarPage").checked = false
-      document.getElementById("selectedCalendars").style.display ='none'
-      document.getElementById("checkPage").style.display ='none'
-      alert('Тренировка загружена. Вы можете изменить код тренировки. Для запуска еще раз нажмите кнопку "Начать тренировку." ')
-      processSimultaneousMode(nIndexInMetaRithm,sMode)
-      btnSelectAllTrain.setAttribute('onclick','execTrain1(0,"Run")');
-      getText2Print(Gl_currentTrainName)
-      return
+      loadTrainingFromCalendarSlot(value, { silent: false });
+      return;
     } else if (sMode=="Act")  {
       processSimultaneousMode(value,sMode)
 
