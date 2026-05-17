@@ -2953,9 +2953,11 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
    var links = document.getElementById("idTrainPageSetupLinks");
    var ext = document.getElementById("externalcall");
    var appLink = document.getElementById("openAndroidAppLink");
+   var checkPage = document.getElementById("checkPage");
    if (links) links.style.display = active ? "none" : "";
    if (ext) ext.style.display = active ? "none" : "block";
    if (appLink) appLink.style.display = active ? "none" : "";
+   if (checkPage) checkPage.style.display = active ? "none" : "";
    syncPrevNextNavButtons();
    try { syncHeartRateChartVisibility(); } catch (e) {}
  }
@@ -3470,7 +3472,6 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
    document.getElementById("idDivNavigation").style.display = "block";
    document.getElementById("idDivTextTime").style.display = "block";
    document.getElementById("selectedCalendars").style.display = "none";
-   document.getElementById("checkPage").style.display = "none";
    document.getElementById("idImpExpAll").style.display = "none";
    document.getElementById("idImpExp").style.display = "none";
    syncTrainPageSetupLinksVisibility();
@@ -3485,7 +3486,6 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
    try { document.getElementById("idImpExpAll").style.display = ""; } catch (e) {}
    try { document.getElementById("idImpExp").style.display = ""; } catch (e) {}
    try { document.getElementById("selectedCalendars").style.display = ""; } catch (e) {}
-   try { document.getElementById("checkPage").style.display = ""; } catch (e) {}
    try {
      var calOn = document.getElementById("checkCalendarPage") && document.getElementById("checkCalendarPage").checked;
      document.getElementById("idDivCalendar").style.display = calOn ? "" : "none";
@@ -6541,20 +6541,12 @@ END:VEVENT\n`
       selectAllTrain.selectedIndex = getTrainIndexByName("<" + trainLabel + ">");
     } catch (e) {}
     try {
-      if (opts.silent) {
-        changePageTrain(true);
-        changePageCalendar(false);
-        document.getElementById("checkTrainPage").checked = true;
-        document.getElementById("checkCalendarPage").checked = false;
-      } else {
-        document.getElementById("trainPage").style.display = "block";
-        document.getElementById("checkTrainPage").checked = true;
-        document.getElementById("calendarPage").style.display = "none";
-        document.getElementById("checkCalendarPage").checked = false;
-        document.getElementById("selectedCalendars").style.display = "none";
-        document.getElementById("checkPage").style.display = "none";
-      }
+      changePageTrain(true);
+      changePageCalendar(false);
+      document.getElementById("checkTrainPage").checked = true;
+      document.getElementById("checkCalendarPage").checked = false;
     } catch (e2) {}
+    syncTrainPageSetupLinksVisibility();
     processSimultaneousMode(nIndexInMetaRithm, "Calendar");
     try { btnSelectAllTrain.setAttribute("onclick", 'execTrain1(0,"Run")'); } catch (e3) {}
     getText2Print(Gl_currentTrainName);
