@@ -1727,6 +1727,43 @@
    try { btnSelectAllTrain.setAttribute("onclick", 'execTrain1(0,"Run")'); } catch (e) {}
  }
 
+ function restoreTrainingSetupChrome(){
+   try { document.getElementById("idDivAllTrain").style.display = ""; } catch (e) {}
+   try { document.getElementById("idDivNavigation").style.display = "none"; } catch (e) {}
+   try { document.getElementById("idDivTextTime").style.display = "none"; } catch (e) {}
+   try { document.getElementById("idImpExpAll").style.display = ""; } catch (e) {}
+   try { document.getElementById("idImpExp").style.display = ""; } catch (e) {}
+   try { document.getElementById("selectedCalendars").style.display = ""; } catch (e) {}
+   try { document.getElementById("checkPage").style.display = ""; } catch (e) {}
+   try {
+     var calOn = document.getElementById("checkCalendarPage") && document.getElementById("checkCalendarPage").checked;
+     document.getElementById("idDivCalendar").style.display = calOn ? "" : "none";
+     document.getElementById("btnRecalcCal").style.display = calOn ? "" : "none";
+     document.getElementById("btnImportCal").style.display = calOn ? "" : "none";
+     document.getElementById("idDivActionCalendar").style.display = calOn ? "" : "none";
+   } catch (e) {}
+   try { syncHeartRateChartVisibility(); } catch (e) {}
+   syncTrainPageSetupLinksVisibility();
+ }
+
+ function beginTrainingRunSession(){
+   GlIsRunning = true;
+   Gl_IsFinished = false;
+   Gl_PauseStartedAt = null;
+   Gl_hadHeartRateDuringTraining = false;
+   try {
+     if (Gl_hrChartPreviewMode && hasHeartRateLogData())
+       Gl_hrChartPreviewMode = false;
+     else
+       resetHeartRateChart();
+   } catch (eHr0) {}
+   startTrainingAudioGuard();
+   try { btnSelectAllTrain.innerHTML = "Пауза"; } catch (e) {}
+   applyTrainingRunChrome();
+   setTimeout(function(){ scrollTrainingNavToProgress(false); }, 0);
+   try { syncHeartRateChartVisibility(); } catch (eHr1) {}
+ }
+
  function buildTrainingNavigationList(){
    currentT.innerHTML = "";
    var nId = "";
@@ -6846,7 +6883,8 @@ END:VEVENT\n`
     Gl_IsGenerated = false;
     try { document.getElementById("btnSelectAllTrain").disabled = false; } catch (e) {}
     try { btnSelectAllTrain.innerHTML = TXT_BTN_NOTSTARTED; } catch (e) {}
-    try { syncTrainPageSetupLinksVisibility(); } catch (e) {}
+    restoreTrainingSetupChrome();
+    scheduleStopTrainingAudioGuard();
   }
 
   function confirmEvalParamsDialog(){
@@ -7686,46 +7724,14 @@ END:VEVENT\n`
         resumeTrainingPlayback()
         return
       }
-    }
-    if (!GlIsRunning && sMode=="Run"){
-       GlIsRunning =true;
-       Gl_IsFinished=false
-       Gl_PauseStartedAt=null
-       Gl_hadHeartRateDuringTraining = false
-       try {
-         if (Gl_hrChartPreviewMode && hasHeartRateLogData())
-           Gl_hrChartPreviewMode = false
-         else
-           resetHeartRateChart()
-       } catch (eHr0) {}
-       startTrainingAudioGuard()
-       btnSelectAllTrain.innerHTML = 'Пауза'
-
-       //скрываем/открываем контролы
-       document.getElementById("idDivCalendar").style.display ='none'
-       document.getElementById("btnRecalcCal").style.display ='none'
-       document.getElementById("btnImportCal").style.display ='none'
-       document.getElementById("idDivActionCalendar").style.display ='none'
-       document.getElementById("idDivAllTrain").style.display ='none'
-       syncTrainPageSetupLinksVisibility()
-       applyTrainingRunChrome()
-       setTimeout(function(){ scrollTrainingNavToProgress(false); }, 0);
-       document.getElementById("selectedCalendars").style.display ='none'
-       document.getElementById("checkPage").style.display ='none'
-       document.getElementById("idImpExpAll").style.display ='none'
-       document.getElementById("idImpExp").style.display ='none'
-       try { syncHeartRateChartVisibility() } catch (eHr1) {}
-
-
-       //document.getElementById("idTextTrain").style.display ='block'
-       /*
-       document.getElementById("idDivTextTime").style.display ='none'// = document.getElementById("selectAllTrain");
-       //btnSelectAllTrain = document.getElementById("btnSelectAllTrain");
-       //txtTextTime  = document.getElementById("idTextTime");
-       //docTextTrain = document.getElementById("idTextTrain");
-       //docNoSound = document.getElementById("idNoSound");
-       */
-
+      maybeShowEvalParametersBeforeRun(
+        function () {
+          beginTrainingRunSession();
+          execTrain1ProceedAfterArithm(sMode);
+        },
+        abortTrainingRunAfterEvalCancel
+      );
+      return;
     }
 
     if (sMode=="Calendar")  {
@@ -7756,16 +7762,10 @@ END:VEVENT\n`
       if (isTrainEditorPanelOpen())
         loadTrainEditorForIndex(typeof value === "number" ? value : getCurrentTrainingMetaIndex());
       return
-    } else if (sMode=="Run"){
-      maybeShowEvalParametersBeforeRun(
-        function () { execTrain1ProceedAfterArithm(sMode); },
-        abortTrainingRunAfterEvalCancel
-      );
-      return;
     }
 
     execTrain1ProceedAfterArithm(sMode);
-
+  }
 
     //Печать тренировки
     function updatePrintTextButtonVisibility(){
