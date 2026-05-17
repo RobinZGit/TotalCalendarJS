@@ -324,13 +324,14 @@
         .imp-exp-panel {
             display: grid;
             gap: 14px;
+            max-width: 100%;
         }
 
         .imp-exp-modes {
             display: flex;
             flex: 1 1 auto;
-            flex-wrap: nowrap;
-            gap: 10px 18px;
+            flex-wrap: wrap;
+            gap: 10px 14px;
             align-items: center;
             min-width: 0;
         }
@@ -356,19 +357,21 @@
 
         .imp-exp-toolbar {
             display: flex;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
             gap: 12px 16px;
-            align-items: center;
+            align-items: flex-start;
+            justify-content: flex-start;
         }
 
         .imp-exp-actions {
             display: flex;
+            flex: 0 0 auto;
             flex-shrink: 0;
             gap: 10px;
         }
 
         .imp-exp-actions .secondary-btn {
-            min-width: 120px;
+            min-width: 7rem;
         }
 
         .imp-exp-toolbar + .imp-exp-toolbar {
@@ -909,6 +912,26 @@
             .option-grid {
                 grid-template-columns: 1fr;
             }
+
+            .imp-exp-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .imp-exp-actions {
+                width: 100%;
+            }
+
+            .imp-exp-actions .secondary-btn {
+                flex: 1 1 auto;
+                min-width: 0;
+                width: 100%;
+            }
+
+            .imp-exp-modes {
+                flex-direction: column;
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
@@ -1091,23 +1114,23 @@
     <section id="idImpExpUnified" class="section-card">
         <div class="imp-exp-panel">
             <div class="imp-exp-toolbar">
-                <div class="imp-exp-modes" role="radiogroup" aria-label="Формат экспорта">
-                    <label><input type="radio" name="impExpMode" value="genall" checked> Календарь и все тренировки (.genall)</label>
-                    <label><input type="radio" name="impExpMode" value="rtm"> Текущая тренировка (.rtm)</label>
-                    <label><input type="radio" name="impExpMode" value="gen"> Текст тренировки (.gen)</label>
-                </div>
                 <div class="imp-exp-actions">
                     <button id="btnImpExpExport" class="secondary-btn" type="button" onclick="onImpExpExportClick()">Экспорт</button>
                 </div>
+                <div class="imp-exp-modes" role="radiogroup" aria-label="Формат экспорта">
+                    <label><input type="radio" name="impExpMode" value="genall"> Календарь и все тренировки (.genall)</label>
+                    <label><input type="radio" name="impExpMode" value="rtm"> Текущая тренировка (.rtm)</label>
+                    <label><input type="radio" name="impExpMode" value="gen"> Текст тренировки (.gen)</label>
+                </div>
             </div>
             <div class="imp-exp-toolbar">
-                <div class="imp-exp-modes" role="radiogroup" aria-label="Формат запуска из файла">
-                    <label><input type="radio" name="impExpRunMode" value="rtm" checked> Запуск из .rtm</label>
-                    <label><input type="radio" name="impExpRunMode" value="gen"> Запуск из .gen</label>
-                </div>
                 <div class="imp-exp-actions">
                     <button id="btnImpExpRun" class="secondary-btn" type="button" onclick="onImpExpRunImportClick()">Импорт</button>
                     <input type="file" id="inpImpExpRun" hidden onchange="onImpExpRunFileSelected(this)">
+                </div>
+                <div class="imp-exp-modes" role="radiogroup" aria-label="Формат запуска из файла">
+                    <label><input type="radio" name="impExpRunMode" value="rtm"> Запуск из .rtm</label>
+                    <label><input type="radio" name="impExpRunMode" value="gen"> Запуск из .gen</label>
                 </div>
             </div>
         </div>
@@ -4973,11 +4996,16 @@ window.addEventListener("pageshow", function(){
 
   function getImpExpMode(){
     var el = document.querySelector('input[name="impExpMode"]:checked');
-    return el ? el.value : 'genall';
+    return el ? el.value : null;
+  }
+
+  function warnImpExpModeNotSelected(actionName){
+    alert('Сначала выберите формат (' + actionName + '): отметьте один из вариантов переключателем выше.');
   }
 
   function onImpExpExportClick(){
     var mode = getImpExpMode();
+    if (!mode) { warnImpExpModeNotSelected('экспорт'); return; }
     if (mode === 'genall') downloadTrainAndCalFromFile(null);
     else if (mode === 'rtm') btnImportTrainOnClick();
     else if (mode === 'gen') btnImportTrainInGenOnClick();
@@ -4985,13 +5013,14 @@ window.addEventListener("pageshow", function(){
 
   function getImpExpRunMode(){
     var el = document.querySelector('input[name="impExpRunMode"]:checked');
-    return el ? el.value : 'rtm';
+    return el ? el.value : null;
   }
 
   function onImpExpRunImportClick(){
+    var mode = getImpExpRunMode();
+    if (!mode) { warnImpExpModeNotSelected('импорт и запуск'); return; }
     var inp = document.getElementById('inpImpExpRun');
     if (!inp) return;
-    var mode = getImpExpRunMode();
     inp.accept = mode === 'rtm' ? '.rtm' : '.gen';
     inp.value = '';
     inp.click();
@@ -5000,6 +5029,7 @@ window.addEventListener("pageshow", function(){
   function onImpExpRunFileSelected(input){
     if (!input || !input.files || !input.files[0]) return;
     var mode = getImpExpRunMode();
+    if (!mode) { warnImpExpModeNotSelected('импорт и запуск'); input.value = ''; return; }
     if (mode === 'rtm') runFromRTM(input);
     else runFromGenAndStart(input);
     input.value = '';
