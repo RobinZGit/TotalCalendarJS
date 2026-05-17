@@ -321,6 +321,81 @@
             letter-spacing: 0.04em;
         }
 
+        .imp-exp-panel {
+            display: grid;
+            gap: 14px;
+        }
+
+        .imp-exp-modes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 18px;
+            align-items: center;
+        }
+
+        .imp-exp-modes label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+            text-transform: none;
+            letter-spacing: normal;
+            cursor: pointer;
+        }
+
+        .imp-exp-modes input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            accent-color: var(--primary);
+        }
+
+        .imp-exp-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px 20px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .imp-exp-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .imp-exp-actions .secondary-btn {
+            min-width: 120px;
+        }
+
+        .imp-exp-run-row {
+            display: grid;
+            gap: 10px;
+            padding-top: 4px;
+            border-top: 1px solid var(--border);
+        }
+
+        .imp-exp-run-row > span {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .imp-exp-run-item {
+            display: grid;
+            gap: 6px;
+        }
+
+        .imp-exp-run-item label {
+            color: var(--muted);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
         .checkbox-line {
             display: flex;
             align-items: center;
@@ -1041,14 +1116,30 @@
         </div>
     </section>
 
-    <section id="idImpExpAll" class="section-card">
-        <div class="file-grid">
-            <div class="file-card">
-                <button id="btnDownLoad" class="secondary-btn" type="button" onclick="downloadTrainAndCalFromFile(this)">Экспорт всех данных о календарях и тренировках в файл .genall</button>
+    <section id="idImpExpUnified" class="section-card">
+        <div class="imp-exp-panel">
+            <div class="imp-exp-toolbar">
+                <div class="imp-exp-modes" role="radiogroup" aria-label="Формат экспорта и импорта">
+                    <label><input type="radio" name="impExpMode" value="genall" checked> Календарь и все тренировки (.genall)</label>
+                    <label><input type="radio" name="impExpMode" value="rtm"> Текущая тренировка (.rtm)</label>
+                    <label><input type="radio" name="impExpMode" value="gen"> Текст тренировки (.gen)</label>
+                </div>
+                <div class="imp-exp-actions">
+                    <button id="btnImpExpExport" class="secondary-btn" type="button" onclick="onImpExpExportClick()">Экспорт</button>
+                    <button id="btnImpExpImport" class="secondary-btn" type="button" onclick="onImpExpImportClick()">Импорт</button>
+                    <input type="file" id="inpImpExpImport" hidden onchange="onImpExpImportFileSelected(this)">
+                </div>
             </div>
-            <div class="file-card">
-                <label for="inpLoad">Загрузить данные о календарях и тренировках из файла .genall:</label>
-                <input type="file" accept=".genall" id="inpLoad" onchange="loadTrainAndCalFromFile(this)">
+            <div class="imp-exp-run-row">
+                <span>Запуск из файла</span>
+                <div class="imp-exp-run-item">
+                    <label for="inpRunFromRTM">Из .rtm (сразу старт)</label>
+                    <input type="file" accept=".rtm" id="inpRunFromRTM" onchange="runFromRTM(this)">
+                </div>
+                <div class="imp-exp-run-item">
+                    <label for="inpRunFromGen">Из .gen (в редактор)</label>
+                    <input type="file" accept=".gen" id="inpRunFromGen" onchange="loadFromGen(this)">
+                </div>
             </div>
         </div>
     </section>
@@ -1086,29 +1177,6 @@
     <div id="delimiter3" class="delimiter"></div>
 
     <section id="trainPage" class="section-card">
-        <section id="idImpExp" class="section-card" style="box-shadow:none;">
-            <div class="file-grid">
-                <div class="file-card">
-                    <button id="btnImportTrain" class="secondary-btn" type="button" onclick="btnImportTrainOnClick()">Экспорт тренировки в файл .rtm</button>
-                </div>
-                <div id="delimiter5" class="delimiter"></div>
-                <div id="idRunTrain" class="file-card">
-                    <label for="inpRunFromRTM">Запустить тренировку из файла .rtm:</label>
-                    <input type="file" accept=".rtm" id="inpRunFromRTM" onchange="runFromRTM(this)">
-                </div>
-                <div id="delimiter6" class="delimiter"></div>
-                <div class="file-card">
-                    <button id="btnImportTrain2Gen" class="secondary-btn" type="button" onclick="btnImportTrainInGenOnClick()">Экспорт тренировки в файл .gen</button>
-                </div>
-                <div id="delimiter7" class="delimiter"></div>
-                <div id="idRunTrainFromGen" class="file-card">
-                    <label for="inpRunFromGen">Запустить тренировку из файла .gen:</label>
-                    <input type="file" accept=".gen" id="inpRunFromGen" onchange="loadFromGen(this)">
-                </div>
-                <div id="delimiter8" class="delimiter"></div>
-            </div>
-        </section>
-
         <div id="idDivTextTime" class="training-display" style="display:none">
             <textarea id="idTextTime"> </textarea>
         </div>
@@ -3472,8 +3540,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
    document.getElementById("idDivNavigation").style.display = "block";
    document.getElementById("idDivTextTime").style.display = "block";
    document.getElementById("selectedCalendars").style.display = "none";
-   document.getElementById("idImpExpAll").style.display = "none";
-   document.getElementById("idImpExp").style.display = "none";
+   document.getElementById("idImpExpUnified").style.display = "none";
    syncTrainPageSetupLinksVisibility();
    initTrainingNavScrollGuard();
    try { btnSelectAllTrain.setAttribute("onclick", 'execTrain1(0,"Run")'); } catch (e) {}
@@ -3483,8 +3550,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
    try { document.getElementById("idDivAllTrain").style.display = ""; } catch (e) {}
    try { document.getElementById("idDivNavigation").style.display = "none"; } catch (e) {}
    try { document.getElementById("idDivTextTime").style.display = "none"; } catch (e) {}
-   try { document.getElementById("idImpExpAll").style.display = ""; } catch (e) {}
-   try { document.getElementById("idImpExp").style.display = ""; } catch (e) {}
+   try { document.getElementById("idImpExpUnified").style.display = ""; } catch (e) {}
    try { document.getElementById("selectedCalendars").style.display = ""; } catch (e) {}
    try {
      var calOn = document.getElementById("checkCalendarPage") && document.getElementById("checkCalendarPage").checked;
@@ -4951,6 +5017,53 @@ window.addEventListener("pageshow", function(){
   //var Gl_CountOfGenTrainRtm = 0
   //var Gl_CountOfGenCalendarRtm = 0
   
+
+  function getImpExpMode(){
+    var el = document.querySelector('input[name="impExpMode"]:checked');
+    return el ? el.value : 'genall';
+  }
+
+  function onImpExpExportClick(){
+    var mode = getImpExpMode();
+    if (mode === 'genall') downloadTrainAndCalFromFile(null);
+    else if (mode === 'rtm') btnImportTrainOnClick();
+    else if (mode === 'gen') btnImportTrainInGenOnClick();
+  }
+
+  function onImpExpImportClick(){
+    var inp = document.getElementById('inpImpExpImport');
+    if (!inp) return;
+    var mode = getImpExpMode();
+    inp.accept = mode === 'genall' ? '.genall' : (mode === 'rtm' ? '.rtm' : '.gen');
+    inp.value = '';
+    inp.click();
+  }
+
+  function onImpExpImportFileSelected(input){
+    if (!input || !input.files || !input.files[0]) return;
+    var mode = getImpExpMode();
+    if (mode === 'genall') loadTrainAndCalFromFile(input);
+    else if (mode === 'rtm') importRtmFromFile(input);
+    else loadFromGen(input);
+    input.value = '';
+  }
+
+  function importRtmFromFile(input){
+    var file = input.files[0];
+    var reader = new FileReader();
+    reader.readAsText(file);
+    reader.onload = function() {
+      try {
+        Gl_aRithmLisp = reader.result.split('\n');
+        Gl_IsGenerated = true;
+        alert('Тренировка загружена из файла .rtm. Нажмите «Старт» для запуска.');
+      } catch (e) {
+        alert('Не удалось загрузить .rtm. Проверьте формат (строки: время в мс, текст).');
+      }
+    };
+    reader.onerror = function() { console.log(reader.error); };
+  }
+
   function btnImportTrainInGenOnClick(){
     download(GltxtSpeek.value, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+selectAllTrain.value+'_train.gen', 'text/plain', true)
   }
