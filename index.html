@@ -361,14 +361,9 @@
             align-items: center;
         }
 
-        .imp-exp-modes {
-            flex: 1 1 auto;
-            min-width: 0;
-        }
-
         .imp-exp-actions {
             display: flex;
-            flex-wrap: wrap;
+            flex-shrink: 0;
             gap: 10px;
         }
 
@@ -715,6 +710,11 @@
             flex: 1 1 160px;
             font-size: 13px;
             font-weight: 600;
+        }
+
+        .train-editor-toolbar .train-toolbar-calendar-btn {
+            flex: 0 1 auto;
+            margin-left: auto;
         }
 
         .train-editor-panel {
@@ -1073,19 +1073,6 @@
         </div>
     </section>
 
-    <section id="checkPage" class="section-card">
-        <div id="checkPage1" class="toolbar">
-            <label class="option-card checkbox-line" for="checkCalendarPage">
-                <span><strong>Календарь:</strong></span>
-                <input id="checkCalendarPage" type="checkbox" onclick="changePageCalendar(this.checked)">
-            </label>
-            <label class="option-card checkbox-line" for="checkTrainPage">
-                <span><strong>Тренировки:</strong></span>
-                <input id="checkTrainPage" checked="checked" type="checkbox" onclick="changePageTrain(this.checked)">
-            </label>
-        </div>
-    </section>
-
     <section id="idHeartRateChartSection" class="section-card heart-rate-chart-section" aria-live="polite">
         <strong>График пульса</strong>
         <div class="heart-rate-chart-wrap">
@@ -1178,6 +1165,7 @@
                 <button id="btnCopyTrainToNew" type="button" class="secondary-btn" onclick="copyTrainIntoEditor(event)">Копировать в новую</button>
                 <button id="btnNewTrainTemplate" type="button" class="secondary-btn" onclick="openNewTrainTemplateInEditor(event)">Новая шаблон</button>
                 <button id="btnTrainHelp" type="button" class="secondary-btn" onclick="openTrainHelpDialog(event)">Help</button>
+                <button id="btnToggleCalendar" type="button" class="secondary-btn train-toolbar-calendar-btn" onclick="toggleCalendarVisibility(event)" aria-pressed="false">Показать календарь</button>
             </div>
             <div id="idTrainEditorPanel" class="train-editor-panel" hidden>
                 <textarea id="idTrainEditor" class="train-editor-textarea" spellcheck="false"></textarea>
@@ -3003,11 +2991,9 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
    var links = document.getElementById("idTrainPageSetupLinks");
    var ext = document.getElementById("externalcall");
    var appLink = document.getElementById("openAndroidAppLink");
-   var checkPage = document.getElementById("checkPage");
    if (links) links.style.display = active ? "none" : "";
    if (ext) ext.style.display = active ? "none" : "block";
    if (appLink) appLink.style.display = active ? "none" : "";
-   if (checkPage) checkPage.style.display = active ? "none" : "";
    syncPrevNextNavButtons();
    try { syncHeartRateChartVisibility(); } catch (e) {}
  }
@@ -3301,10 +3287,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
        selectAllTrain.selectedIndex = snap.selectAllTrainIndex;
    } catch (e) {}
    applyTrainingUiSettingsFromSnap(snap);
-   try {
-     document.getElementById("trainPage").style.display = "block";
-     document.getElementById("checkTrainPage").checked = true;
-   } catch (e) {}
+   try { document.getElementById("trainPage").style.display = "block"; } catch (e) {}
    try { loadHeartRatePreviewFromPayload(payload) } catch (eHr) {}
    try { initHeartRateChartWatchers() } catch (eHrW) {}
    try { refreshTrainEditorFromSelection() } catch (eHrEd) {}
@@ -3475,9 +3458,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
 
    try {
      document.getElementById("trainPage").style.display = "block";
-     document.getElementById("checkTrainPage").checked = true;
-     document.getElementById("calendarPage").style.display = "none";
-     document.getElementById("checkCalendarPage").checked = false;
+     setCalendarVisible(false);
    } catch (e) {}
 
    var idx = snap.stoppedAtIndex != null ? snap.stoppedAtIndex : snap.GlnInd;
@@ -3514,14 +3495,10 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
  }
 
  function applyTrainingRunChrome(){
-   document.getElementById("idDivCalendar").style.display = "none";
-   document.getElementById("btnRecalcCal").style.display = "none";
-   document.getElementById("btnImportCal").style.display = "none";
-   document.getElementById("idDivActionCalendar").style.display = "none";
+   try { setCalendarVisible(false); } catch (e) {}
    document.getElementById("idDivAllTrain").style.display = "none";
    document.getElementById("idDivNavigation").style.display = "block";
    document.getElementById("idDivTextTime").style.display = "block";
-   document.getElementById("selectedCalendars").style.display = "none";
    document.getElementById("idImpExpUnified").style.display = "none";
    syncTrainPageSetupLinksVisibility();
    initTrainingNavScrollGuard();
@@ -3533,14 +3510,8 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
    try { document.getElementById("idDivNavigation").style.display = "none"; } catch (e) {}
    try { document.getElementById("idDivTextTime").style.display = "none"; } catch (e) {}
    try { document.getElementById("idImpExpUnified").style.display = ""; } catch (e) {}
-   try { document.getElementById("selectedCalendars").style.display = ""; } catch (e) {}
-   try {
-     var calOn = document.getElementById("checkCalendarPage") && document.getElementById("checkCalendarPage").checked;
-     document.getElementById("idDivCalendar").style.display = calOn ? "" : "none";
-     document.getElementById("btnRecalcCal").style.display = calOn ? "" : "none";
-     document.getElementById("btnImportCal").style.display = calOn ? "" : "none";
-     document.getElementById("idDivActionCalendar").style.display = calOn ? "" : "none";
-   } catch (e) {}
+   try { syncCalendarInnerChrome(); } catch (e) {}
+   try { updateToggleCalendarButtonLabel(); } catch (e) {}
    try { syncHeartRateChartVisibility(); } catch (e) {}
    syncTrainPageSetupLinksVisibility();
  }
@@ -5255,17 +5226,44 @@ window.addEventListener("pageshow", function(){
     var sDownload = buildFullGenallScript();
     download(sDownload, (new Date()).getFullYear()+'_'+(new Date()).getMonth()+'_'+(new Date()).getDate()+'_'+'GenTrainsAndCalendarFromTotalCalendarJS.genall', 'text/plain', true)
   }
-  function changePageCalendar(isCheck){
-    if (isCheck)
-      document.getElementById("calendarPage").style.display ='block'
-    else
-      document.getElementById("calendarPage").style.display ='none'
+  var Gl_calendarPanelVisible = false;
+
+  function isCalendarVisible(){
+    return !!Gl_calendarPanelVisible;
   }
-  function changePageTrain(isCheck){
-    if (isCheck)
-      document.getElementById("trainPage").style.display ='block'
-    else
-      document.getElementById("trainPage").style.display ='none'
+
+  function updateToggleCalendarButtonLabel(){
+    var btn = document.getElementById("btnToggleCalendar");
+    if (!btn) return;
+    var on = isCalendarVisible();
+    btn.textContent = on ? "Скрыть календарь" : "Показать календарь";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+  }
+
+  function syncCalendarInnerChrome(){
+    var d = isCalendarVisible() ? "" : "none";
+    try { document.getElementById("idDivCalendar").style.display = d; } catch (e) {}
+    try { document.getElementById("btnRecalcCal").style.display = d; } catch (e) {}
+    try { document.getElementById("btnImportCal").style.display = d; } catch (e) {}
+    try { document.getElementById("idDivActionCalendar").style.display = d; } catch (e) {}
+    try { document.getElementById("selectedCalendars").style.display = d; } catch (e) {}
+  }
+
+  function setCalendarVisible(show){
+    Gl_calendarPanelVisible = !!show;
+    var page = document.getElementById("calendarPage");
+    if (page) page.style.display = Gl_calendarPanelVisible ? "block" : "none";
+    syncCalendarInnerChrome();
+    updateToggleCalendarButtonLabel();
+  }
+
+  function toggleCalendarVisibility(ev){
+    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+    setCalendarVisible(!isCalendarVisible());
+  }
+
+  function changePageCalendar(isCheck){
+    setCalendarVisible(isCheck);
   }
   function changeSelectMode(isChecked){
     if (isChecked) {
@@ -6639,10 +6637,8 @@ END:VEVENT\n`
       selectAllTrain.selectedIndex = getTrainIndexByName("<" + trainLabel + ">");
     } catch (e) {}
     try {
-      changePageTrain(true);
-      changePageCalendar(false);
-      document.getElementById("checkTrainPage").checked = true;
-      document.getElementById("checkCalendarPage").checked = false;
+      document.getElementById("trainPage").style.display = "block";
+      setCalendarVisible(false);
     } catch (e2) {}
     syncTrainPageSetupLinksVisibility();
     processSimultaneousMode(nIndexInMetaRithm, "Calendar");
