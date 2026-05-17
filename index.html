@@ -5249,12 +5249,27 @@ window.addEventListener("pageshow", function(){
     try { document.getElementById("selectedCalendars").style.display = d; } catch (e) {}
   }
 
+  function scrollToCalendarPanel(){
+    var page = document.getElementById("calendarPage");
+    if (!page) return;
+    try {
+      page.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (e) {
+      try { window.scrollTo(0, 0); } catch (e2) {}
+    }
+  }
+
   function setCalendarVisible(show){
     Gl_calendarPanelVisible = !!show;
     var page = document.getElementById("calendarPage");
     if (page) page.style.display = Gl_calendarPanelVisible ? "block" : "none";
     syncCalendarInnerChrome();
     updateToggleCalendarButtonLabel();
+    if (Gl_calendarPanelVisible) {
+      var scrollAfterShow = function(){ scrollToCalendarPanel(); };
+      try { requestAnimationFrame(scrollAfterShow); }
+      catch (e) { setTimeout(scrollAfterShow, 0); }
+    }
   }
 
   function toggleCalendarVisibility(ev){
