@@ -771,6 +771,50 @@
             font-size: 0.95em;
         }
 
+        .eval-params-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 12px 0 16px;
+            max-height: min(50vh, 420px);
+            overflow-y: auto;
+        }
+
+        .eval-params-row {
+            display: grid;
+            grid-template-columns: minmax(120px, 34%) 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .eval-params-row label {
+            font-size: 14px;
+            font-weight: 600;
+            word-break: break-word;
+        }
+
+        .eval-params-row input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 13px;
+        }
+
+        .eval-params-hint {
+            margin: 0;
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .eval-params-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
         .info-note {
             margin-top: 12px;
             padding: 12px 14px;
@@ -818,6 +862,20 @@
 <div id="idModalWindow" class="modal-card" style="display:none">
     <p>Введите данные:</p>
     <button id="idModalButtonOk" class="primary-btn" type="button">OK</button>
+</div>
+
+<div id="idEvalParamsOverlay" class="train-help-overlay eval-params-overlay" hidden>
+    <div class="train-help-dialog section-card" role="dialog" aria-labelledby="idEvalParamsTitle" aria-modal="true">
+        <div class="train-help-header">
+            <strong id="idEvalParamsTitle">Параметры тренировки</strong>
+        </div>
+        <p class="eval-params-hint">Перед запуском можно изменить значения из блока <code>[BEGIN EVAL PARAMETERS]</code>. Выражения — на JavaScript.</p>
+        <div id="idEvalParamsForm" class="eval-params-form"></div>
+        <div class="eval-params-actions">
+            <button type="button" class="secondary-btn" onclick="cancelEvalParamsDialog()">Отмена</button>
+            <button type="button" class="primary-btn" onclick="confirmEvalParamsDialog()">OK</button>
+        </div>
+    </div>
 </div>
 
 <div id="idTrainHelpOverlay" class="train-help-overlay" hidden>
@@ -2756,6 +2814,7 @@ function scheduleStopTrainingAudioGuard(){
 function finishTrainingPlayback(){
   Gl_IsFinished = true
   GlIsRunning = false
+  Gl_evalParamOverrides = null
   clearTrainingSessionSnapshot()
 
   try{
@@ -4791,6 +4850,9 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
   //...
   //
   var Gl_IsUserAnswered = true  //признак ответа пользователем на вопрос в модальном окне
+  var Gl_evalParamOverrides = null
+  var Gl_evalParamsOnConfirm = null
+  var Gl_evalParamsOnCancel = null
   var Gl_IsGenerated = false    //признак завершения генерации ритма
   var Gl_IntervalId
   //var Gl_CountOfGenTrainRtm = 0
@@ -6047,6 +6109,7 @@ END:VEVENT\n`
   }
 
   function initTrainEditorUi(){
+    initEvalParamsDialog();
     initTrainHelpDialog();
     var ta = document.getElementById("idTrainEditor");
     if (!ta || ta._tcjsEditorBound)
@@ -6568,6 +6631,26 @@ END:VEVENT\n`
       overlay.hidden = true;
   }
 
+  function initEvalParamsDialog(){
+    if (initEvalParamsDialog._bound)
+      return;
+    initEvalParamsDialog._bound = true;
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        var evOverlay = document.getElementById("idEvalParamsOverlay");
+        if (evOverlay && !evOverlay.hidden)
+          cancelEvalParamsDialog();
+      }
+    });
+    var evOverlay = document.getElementById("idEvalParamsOverlay");
+    if (evOverlay) {
+      evOverlay.addEventListener("click", function (e) {
+        if (e.target === evOverlay)
+          cancelEvalParamsDialog();
+      });
+    }
+  }
+
   function initTrainHelpDialog(){
     if (initTrainHelpDialog._bound)
       return;
@@ -6681,7 +6764,164 @@ END:VEVENT\n`
     }
   }
   //>>
-  
+
+  function splitGenLinesFromSpeek(){
+    return GltxtSpeek.value.split(Gl_sDelim);
+  }
+
+  function findEvalParametersBlockRange(aGen){
+    var nBeg = -1;
+    var nEnd = -1;
+    for (var i = 0; i < aGen.length; i++) {
+      if (aGen[i].indexOf("[BEGIN EVAL PARAMETERS]") >= 0) nBeg = i + 1;
+      if (aGen[i].indexOf("[END EVAL PARAMETERS]") >= 0) nEnd = i - 1;
+    }
+    if (nBeg < 0 || nEnd < nBeg) return null;
+    return { nBeg: nBeg, nEnd: nEnd };
+  }
+
+  function parseEvalParameterLine(line){
+    var s = String(line || "").trim();
+    if (!s || s.indexOf("//") === 0) return null;
+    var eq = s.indexOf("=");
+    if (eq < 0) return null;
+    var name = s.substring(0, eq).trim();
+    if (name.indexOf("<") !== 0) return null;
+    return { name: name, rhs: s.substring(eq + 1).trim() };
+  }
+
+  function extractEvalParameterEntries(aGen){
+    var block = findEvalParametersBlockRange(aGen);
+    if (!block) return [];
+    var out = [];
+    for (var i = block.nBeg; i <= block.nEnd; i++) {
+      var p = parseEvalParameterLine(aGen[i]);
+      if (p) out.push(p);
+    }
+    return out;
+  }
+
+  function substituteEvalRhs(rhs, valuesByName){
+    var s = String(rhs);
+    var names = Object.keys(valuesByName);
+    names.sort(function (a, b) { return b.length - a.length; });
+    for (var k = 0; k < names.length; k++) {
+      var n = names[k];
+      if (valuesByName[n] !== undefined)
+        s = s.split(n).join(String(valuesByName[n]));
+    }
+    return s;
+  }
+
+  function computeEvalParameterDefaults(entries){
+    var valuesByName = {};
+    for (var i = 0; i < entries.length; i++) {
+      var name = entries[i].name;
+      var rhs = substituteEvalRhs(entries[i].rhs, valuesByName);
+      if (hasOnlineCalcedParams(rhs)) {
+        valuesByName[name] = rhs;
+        continue;
+      }
+      try {
+        valuesByName[name] = String(eval(rhs));
+      } catch (e) {
+        valuesByName[name] = rhs;
+      }
+    }
+    return valuesByName;
+  }
+
+  function displayNameFromEvalParam(name){
+    return String(name || "").trim().replace(/^<|>$/g, "");
+  }
+
+  function closeEvalParamsOverlay(){
+    var overlay = document.getElementById("idEvalParamsOverlay");
+    if (overlay) overlay.hidden = true;
+  }
+
+  function abortTrainingRunAfterEvalCancel(){
+    Gl_evalParamOverrides = null;
+    GlIsRunning = false;
+    Gl_IsGenerated = false;
+    try { document.getElementById("btnSelectAllTrain").disabled = false; } catch (e) {}
+    try { btnSelectAllTrain.innerHTML = TXT_BTN_NOTSTARTED; } catch (e) {}
+    try { syncTrainPageSetupLinksVisibility(); } catch (e) {}
+  }
+
+  function confirmEvalParamsDialog(){
+    var form = document.getElementById("idEvalParamsForm");
+    if (!form) return;
+    var inputs = form.querySelectorAll("input[data-eval-param-name]");
+    var overrides = {};
+    for (var i = 0; i < inputs.length; i++) {
+      var n = inputs[i].getAttribute("data-eval-param-name");
+      if (n) overrides[n] = inputs[i].value;
+    }
+    closeEvalParamsOverlay();
+    var fn = Gl_evalParamsOnConfirm;
+    Gl_evalParamsOnConfirm = null;
+    Gl_evalParamsOnCancel = null;
+    if (typeof fn === "function") fn(overrides);
+  }
+
+  function cancelEvalParamsDialog(){
+    closeEvalParamsOverlay();
+    var fn = Gl_evalParamsOnCancel;
+    Gl_evalParamsOnConfirm = null;
+    Gl_evalParamsOnCancel = null;
+    if (typeof fn === "function") fn();
+  }
+
+  function openEvalParametersDialog(entries, defaults, onConfirm, onCancel){
+    var form = document.getElementById("idEvalParamsForm");
+    var overlay = document.getElementById("idEvalParamsOverlay");
+    if (!form || !overlay) {
+      if (typeof onConfirm === "function") onConfirm({});
+      return;
+    }
+    Gl_evalParamsOnConfirm = onConfirm;
+    Gl_evalParamsOnCancel = onCancel;
+    form.innerHTML = "";
+    for (var i = 0; i < entries.length; i++) {
+      var name = entries[i].name;
+      var row = document.createElement("div");
+      row.className = "eval-params-row";
+      var label = document.createElement("label");
+      label.htmlFor = "idEvalParam_" + i;
+      label.textContent = displayNameFromEvalParam(name);
+      var input = document.createElement("input");
+      input.type = "text";
+      input.id = "idEvalParam_" + i;
+      input.setAttribute("data-eval-param-name", name);
+      var defVal = defaults[name];
+      input.value = defVal !== undefined && defVal !== null ? String(defVal) : entries[i].rhs;
+      if (hasOnlineCalcedParams(entries[i].rhs))
+        input.title = "Онлайн-параметр: формула с _пульс_, _прошло_минут_ и т.п.";
+      row.appendChild(label);
+      row.appendChild(input);
+      form.appendChild(row);
+    }
+    overlay.hidden = false;
+    var first = form.querySelector("input");
+    if (first) setTimeout(function () { first.focus(); }, 0);
+  }
+
+  function maybeShowEvalParametersBeforeRun(onReady, onCancel){
+    var aGen = splitGenLinesFromSpeek();
+    var entries = extractEvalParameterEntries(aGen);
+    if (!entries.length) {
+      Gl_evalParamOverrides = null;
+      if (typeof onReady === "function") onReady();
+      return;
+    }
+    var defaults = computeEvalParameterDefaults(entries);
+    openEvalParametersDialog(entries, defaults, function (overrides) {
+      Gl_evalParamOverrides = overrides;
+      if (typeof onReady === "function") onReady();
+    }, onCancel);
+  }
+
   function getArithm(aGen){
     Gl_IsGenerated = false
     Gl_aGenRithm = aGen
@@ -6902,13 +7142,18 @@ END:VEVENT\n`
         }
     if (nBeg>0){
         for(var i=nBeg; i<=nEnd; i++){ //вычисление формул (! в java нужно длать иначе)
-            if (hasOnlineCalcedParams(Gl_aGenRithm[i]))
-                Gl_aGenRithm[i] = Gl_aGenRithm[i].split('=')[0]+'=[eval]'+Gl_aGenRithm[i].split('=')[1]+'[eval]'
+            var eqParts = Gl_aGenRithm[i].split("=");
+            var paramName = eqParts[0].trim();
+            var rhs = eqParts.slice(1).join("=").trim();
+            if (Gl_evalParamOverrides && Gl_evalParamOverrides[paramName] !== undefined)
+              rhs = String(Gl_evalParamOverrides[paramName]);
+            if (hasOnlineCalcedParams(rhs))
+                Gl_aGenRithm[i] = paramName + '=[eval]' + rhs + '[eval]'
             else{
                 try{
-                  Gl_aGenRithm[i]=Gl_aGenRithm[i].split("=")[0]+"="+eval(Gl_aGenRithm[i].split("=")[1])+""
+                  Gl_aGenRithm[i]=paramName+"="+eval(rhs)+""
                 }catch(e){
-                  Gl_aGenRithm[i]=Gl_aGenRithm[i].split("=")[0]+"="+Gl_aGenRithm[i].split("=")[1]+""
+                  Gl_aGenRithm[i]=paramName+"="+rhs+""
                 }
             }
         }
@@ -7338,6 +7583,7 @@ END:VEVENT\n`
     }
 
   function processSimultaneousMode(value,sMode){
+       Gl_evalParamOverrides = null;
        var aSimultTrain =[]
       if (selectAllTrain.getAttribute("multiple")=="multiple"){
         GltxtSpeek.value =''
@@ -7374,6 +7620,55 @@ END:VEVENT\n`
           if((i<aSimultTrain.length-1)&&(aSimultTrain.length>1)) GltxtSpeek.value+='\n'+Gl_sSimultTrain+'\n'
       }
 
+  }
+
+  function execTrain1ProceedAfterArithm(sMode){
+    var aRithmLisp=[]
+    var aSimult = []
+    if (GltxtSpeek.value.indexOf(Gl_sSimultTrain)>=0){
+        var arrStr = GltxtSpeek.value.split(Gl_sSimultTrain)
+        for (i=0;i<arrStr.length;i++) {
+          aSimult.push([[],arrStr[i].split(Gl_sDelim)])
+        }
+        Gl_aRithmLisp = stus(aSimult,'diff')
+    }else aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim));
+
+    if (!Gl_IsGenerated) return
+
+    buildTrainingNavigationList();
+
+    if (sMode!="Run") return
+
+    Gl_State = TXT_BTN_STARTED
+    syncTrainPageSetupLinksVisibility()
+    if (1==1)
+    {
+      if (Gl_resumeFromHistoryOnRun && Gl_historyPreviewSnap) {
+        var hs = Gl_historyPreviewSnap;
+        GlnInd = hs.stoppedAtIndex != null ? hs.stoppedAtIndex : (hs.GlnInd || 1);
+        try {
+          if (GlnInd > 0) GlnDelta = calcMilliseconds(String(Gl_aRithmLisp[GlnInd - 1]));
+          else GlnDelta = Number(Gl_aRithmLisp[0]) || 0;
+        } catch (e) { GlnDelta = 3000; }
+        GlflSayIntro = true;
+        GlflSayIntro2 = true;
+        Gl_resumeFromHistoryOnRun = false;
+        Gl_historyPreviewSnap = null;
+      } else {
+        GlnDelta=0;
+        GlnInd=0;
+        if (!Gl_flBegWord){
+             GlnDelta = Number(Gl_aRithmLisp[0]);
+             GlnInd =1;
+        }
+      }
+      paintTrainingNavProgress(GlnInd);
+        {
+            if (!Gl_SayInterval)
+              Gl_SayInterval = setInterval(fSayInTime,10);
+            scheduleSaveTrainingSessionSnapshot();
+        }
+    }
   }
 
   //Запускает цикл проговаривания тренировки
@@ -7462,70 +7757,14 @@ END:VEVENT\n`
         loadTrainEditorForIndex(typeof value === "number" ? value : getCurrentTrainingMetaIndex());
       return
     } else if (sMode=="Run"){
-      //null..
+      maybeShowEvalParametersBeforeRun(
+        function () { execTrain1ProceedAfterArithm(sMode); },
+        abortTrainingRunAfterEvalCancel
+      );
+      return;
     }
 
-    var aRithmLisp=[]
-    var aSimult = []
-    if (GltxtSpeek.value.indexOf(Gl_sSimultTrain)>=0){
-        var arrStr = GltxtSpeek.value.split(Gl_sSimultTrain)
-        for (i=0;i<arrStr.length;i++) {
-          aSimult.push([[],arrStr[i].split(Gl_sDelim)])
-        }
-        Gl_aRithmLisp = stus(aSimult,'diff')
-    }else aRithmLisp=getArithm(GltxtSpeek.value.split(Gl_sDelim));
-
-    if (!Gl_IsGenerated) return
-
-    buildTrainingNavigationList();
-
-    //== Вывод  тренировки в текстовом виде
-    if (sMode!="Run") fgetTextToPrint()
-
-    //== Проговаривание тренировки по массиву
-    Gl_State = TXT_BTN_STARTED
-    syncTrainPageSetupLinksVisibility()
-    if (1==1) //(button.firstChild.data == TXT_BTN_NOTSTARTED)
-    {
-
-
-    //#####  ѓлавный цикл с задержками по 1 мс  ######################################## 
-      if (Gl_resumeFromHistoryOnRun && Gl_historyPreviewSnap) {
-        var hs = Gl_historyPreviewSnap;
-        GlnInd = hs.stoppedAtIndex != null ? hs.stoppedAtIndex : (hs.GlnInd || 1);
-        try {
-          if (GlnInd > 0) GlnDelta = calcMilliseconds(String(Gl_aRithmLisp[GlnInd - 1]));
-          else GlnDelta = Number(Gl_aRithmLisp[0]) || 0;
-        } catch (e) { GlnDelta = 3000; }
-        GlflSayIntro = true;
-        GlflSayIntro2 = true;
-        Gl_resumeFromHistoryOnRun = false;
-        Gl_historyPreviewSnap = null;
-      } else {
-        GlnDelta=0;
-        GlnInd=0;
-        if (!Gl_flBegWord){
-             GlnDelta = Number(Gl_aRithmLisp[0]);
-             GlnInd =1;
-        }
-      }
-      paintTrainingNavProgress(GlnInd);
-      //  alert(Gl_aRithmLisp)
-      //if (
-      //  (button.firstChild.data == TXT_BTN_NOTSTARTED)  ||
-      //  (button.firstChild.data == TXT_BTN_STARTED)     ||
-      //  (button.firstChild.data == TXT_BTN_PAUSED))
-        {
-            if (!Gl_SayInterval)
-              Gl_SayInterval = setInterval(fSayInTime,10);  //цикл с задержками по 10 мс
-            scheduleSaveTrainingSessionSnapshot();
-        }
-    //##################################################################################
-
-
-    }
-
-    }
+    execTrain1ProceedAfterArithm(sMode);
 
 
     //Печать тренировки
