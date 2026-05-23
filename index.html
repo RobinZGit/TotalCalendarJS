@@ -634,6 +634,45 @@
             border-radius: 16px;
             background: var(--surface-soft);
             overflow: hidden;
+            cursor: pointer;
+        }
+
+        body.hr-chart-fullscreen-active {
+            overflow: hidden;
+        }
+
+        .heart-rate-chart-section.hr-chart-fullscreen {
+            position: fixed;
+            inset: 0;
+            z-index: 9000;
+            display: block !important;
+            margin: 0;
+            max-width: none;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            border-radius: 0;
+            overflow: auto;
+            padding: 14px 16px 18px;
+            background: var(--surface);
+        }
+
+        .heart-rate-chart-section.hr-chart-fullscreen .heart-rate-chart-wrap {
+            height: calc(100vh - 168px);
+            min-height: 240px;
+            margin-top: 12px;
+        }
+
+        .heart-rate-chart-section.hr-chart-fullscreen .heart-rate-chart-hint {
+            display: block;
+        }
+
+        .heart-rate-chart-hint {
+            display: none;
+            margin: 6px 0 0;
+            font-size: 13px;
+            color: var(--text-muted, #64748b);
+            text-align: center;
         }
 
         #idHeartRateChartCanvas {
@@ -1098,9 +1137,10 @@
 
     <section id="idHeartRateChartSection" class="section-card heart-rate-chart-section" aria-live="polite">
         <strong>График пульса</strong>
-        <div class="heart-rate-chart-wrap">
+        <div id="idHeartRateChartWrap" class="heart-rate-chart-wrap" title="Double-click for full screen" ondblclick="onHeartRateChartWrapDblClick(event)">
             <canvas id="idHeartRateChartCanvas" width="800" height="220"></canvas>
         </div>
+        <p class="heart-rate-chart-hint">Double-click the chart again to exit full screen</p>
         <p id="idHeartRateChartCaption" class="heart-rate-chart-caption"></p>
         <div class="heart-rate-zone-legend" aria-label="Зоны пульса для возраста 50 лет">
             <span class="hr-zone-120">120–130</span>
@@ -4034,6 +4074,8 @@ var HR_CHART_ZONES_50 = [
 ]
 var Gl_hrChartRedrawTimer = null
 var Gl_hrChartResizeBound = false
+var Gl_hrChartFullscreen = false
+var Gl_hrChartEscapeBound = false
 
 function heartRateZoneLineColor(bpm){
   var v = Number(bpm)
@@ -4250,14 +4292,44 @@ function shouldShowHeartRateChart(){
     && Gl_lastHeartRateBpm > 0
 }
 
+function setHeartRateChartFullscreen(on){
+  var sec = document.getElementById("idHeartRateChartSection")
+  if (!sec)
+    return
+  Gl_hrChartFullscreen = !!on
+  sec.classList.toggle("hr-chart-fullscreen", Gl_hrChartFullscreen)
+  try {
+    document.body.classList.toggle("hr-chart-fullscreen-active", Gl_hrChartFullscreen)
+  } catch (e) {}
+  scheduleHeartRateChartRedraw()
+}
+
+function toggleHeartRateChartFullscreen(){
+  if (!shouldShowHeartRateChart())
+    return
+  setHeartRateChartFullscreen(!Gl_hrChartFullscreen)
+}
+
+function onHeartRateChartWrapDblClick(ev){
+  if (ev) {
+    ev.preventDefault()
+    ev.stopPropagation()
+  }
+  toggleHeartRateChartFullscreen()
+}
+
 function syncHeartRateChartVisibility(){
   var sec = document.getElementById("idHeartRateChartSection")
   if (!sec)
     return
   var show = shouldShowHeartRateChart()
-  sec.style.display = show ? "block" : "none"
-  if (!show)
+  if (!show) {
+    if (Gl_hrChartFullscreen)
+      setHeartRateChartFullscreen(false)
+    sec.style.display = "none"
     return
+  }
+  sec.style.display = "block"
   ensureHeartRateChartCanvasSize()
   drawHeartRateChart()
 }
@@ -4462,6 +4534,13 @@ function drawHeartRateChart(){
 }
 
 function initHeartRateChartWatchers(){
+  if (!Gl_hrChartEscapeBound) {
+    Gl_hrChartEscapeBound = true
+    document.addEventListener("keydown", function(ev){
+      if (ev && ev.key === "Escape" && Gl_hrChartFullscreen)
+        setHeartRateChartFullscreen(false)
+    })
+  }
   if (Gl_hrChartResizeBound)
     return
   Gl_hrChartResizeBound = true
