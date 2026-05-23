@@ -621,11 +621,16 @@
             background: var(--surface-soft);
         }
 
-        .heart-rate-chart-section {
-            display: none;
+        .heart-rate-chart-section:not(.hr-chart-active) {
+            display: none !important;
+        }
+
+        .heart-rate-chart-section.hr-chart-active .heart-rate-chart-wrap {
+            display: block;
         }
 
         .heart-rate-chart-wrap {
+            display: none;
             position: relative;
             width: 100%;
             height: 220px;
@@ -641,7 +646,7 @@
             overflow: hidden;
         }
 
-        .heart-rate-chart-section.hr-chart-fullscreen {
+        .heart-rate-chart-section.hr-chart-fullscreen.hr-chart-active {
             position: fixed;
             inset: 0;
             z-index: 9000;
@@ -1135,21 +1140,7 @@
         </div>
     </section>
 
-    <section id="idHeartRateChartSection" class="section-card heart-rate-chart-section" aria-live="polite">
-        <strong>График пульса</strong>
-        <div id="idHeartRateChartWrap" class="heart-rate-chart-wrap" title="Double-click for full screen" ondblclick="onHeartRateChartWrapDblClick(event)">
-            <canvas id="idHeartRateChartCanvas" width="800" height="220"></canvas>
-        </div>
-        <p class="heart-rate-chart-hint">Double-click the chart again to exit full screen</p>
-        <p id="idHeartRateChartCaption" class="heart-rate-chart-caption"></p>
-        <div class="heart-rate-zone-legend" aria-label="Зоны пульса для возраста 50 лет">
-            <span class="hr-zone-120">120–130</span>
-            <span class="hr-zone-130">130–140</span>
-            <span class="hr-zone-140">140–150</span>
-            <span class="hr-zone-150">150–160</span>
-            <span class="hr-zone-160">&gt;160</span>
-        </div>
-    </section>
+
 
     <section id="idImpExpUnified" class="section-card">
         <div class="imp-exp-panel">
@@ -1173,6 +1164,22 @@
                     <label><input type="radio" name="impExpRunMode" value="gen"> Запуск из .gen</label>
                 </div>
             </div>
+        </div>
+    </section>
+
+    <section id="idHeartRateChartSection" class="section-card heart-rate-chart-section" aria-live="polite">
+        <strong>График пульса</strong>
+        <div id="idHeartRateChartWrap" class="heart-rate-chart-wrap" title="Double-click for full screen" ondblclick="onHeartRateChartWrapDblClick(event)">
+            <canvas id="idHeartRateChartCanvas" width="800" height="220"></canvas>
+        </div>
+        <p class="heart-rate-chart-hint">Double-click the chart again to exit full screen</p>
+        <p id="idHeartRateChartCaption" class="heart-rate-chart-caption"></p>
+        <div class="heart-rate-zone-legend" aria-label="Зоны пульса для возраста 50 лет">
+            <span class="hr-zone-120">120–130</span>
+            <span class="hr-zone-130">130–140</span>
+            <span class="hr-zone-140">140–150</span>
+            <span class="hr-zone-150">150–160</span>
+            <span class="hr-zone-160">&gt;160</span>
         </div>
     </section>
 
@@ -4326,10 +4333,12 @@ function syncHeartRateChartVisibility(){
   if (!show) {
     if (Gl_hrChartFullscreen)
       setHeartRateChartFullscreen(false)
-    sec.style.display = "none"
+    sec.classList.remove("hr-chart-active")
+    sec.style.display = ""
     return
   }
-  sec.style.display = "block"
+  sec.classList.add("hr-chart-active")
+  sec.style.display = ""
   ensureHeartRateChartCanvasSize()
   drawHeartRateChart()
 }
@@ -4405,15 +4414,19 @@ function formatHeartRateChartClock(ms){
 }
 
 function drawHeartRateChart(){
-  if (!shouldShowHeartRateChart())
+  if (!shouldShowHeartRateChart()) {
+    syncHeartRateChartVisibility()
     return
+  }
   var canvas = document.getElementById("idHeartRateChartCanvas")
   var cap = document.getElementById("idHeartRateChartCaption")
   if (!canvas)
     return
   var pts = Gl_hrChartPoints
-  if (!pts || !pts.length)
+  if (!pts || !pts.length) {
+    syncHeartRateChartVisibility()
     return
+  }
   ensureHeartRateChartCanvasSize()
   var ctx = canvas.getContext("2d")
   if (!ctx)
