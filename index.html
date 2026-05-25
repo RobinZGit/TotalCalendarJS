@@ -292,6 +292,36 @@
             grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
         }
 
+        .training-nav-row {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: stretch;
+            gap: 8px;
+            margin-top: 14px;
+            width: 100%;
+        }
+
+        .training-nav-arrow {
+            flex: 0 0 auto;
+            min-width: 2.75rem;
+            max-width: 3.25rem;
+            padding: 10px 6px;
+            font-size: 1.35rem;
+            line-height: 1;
+            font-weight: 700;
+        }
+
+        .training-nav-center {
+            flex: 1 1 auto;
+            min-width: 0;
+            padding: 10px 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            text-align: center;
+        }
+
         .option-grid {
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             margin-top: 14px;
@@ -1044,6 +1074,23 @@
                 width: 100%;
             }
 
+            .training-nav-row {
+                flex-wrap: nowrap;
+                gap: 6px;
+            }
+
+            .training-nav-arrow {
+                min-width: 2.5rem;
+                max-width: 2.75rem;
+                padding: 8px 4px;
+                font-size: 1.2rem;
+            }
+
+            .training-nav-center {
+                padding: 8px 8px;
+                font-size: 0.92rem;
+            }
+
             .imp-exp-modes {
                 flex-direction: column;
                 align-items: flex-start;
@@ -1208,10 +1255,10 @@
                 <button id="btnSelectAllTrain" class="success-btn" type="button">Начать тренировку</button>
                 <button id="btnExit" class="danger-btn" type="button" onclick="exitTrainingApp()">Завершить тренировку</button>
             </div>
-            <div id="idTrainingNavRow" class="button-row" style="margin-top:14px;display:none">
-                <button id="btnPrev" class="secondary-btn" type="button" onclick="prev()">&lt;&lt;</button>
-                <button id="btnLastTraining" class="secondary-btn" type="button" onclick="resumeLastSavedTraining()" title="Загрузить выбранную сохранённую тренировку">Прошлые тренировки</button>
-                <button id="btnNext" class="secondary-btn" type="button" onclick="next()">&gt;&gt;</button>
+            <div id="idTrainingNavRow" class="training-nav-row" style="display:none">
+                <button id="btnPrev" class="secondary-btn training-nav-arrow" type="button" onclick="prev()" aria-label="Предыдущая" title="Предыдущая">&lsaquo;</button>
+                <button id="btnLastTraining" class="secondary-btn training-nav-center" type="button" onclick="resumeLastSavedTraining()" title="Загрузить выбранную сохранённую тренировку">Прошлые тренировки</button>
+                <button id="btnNext" class="secondary-btn training-nav-arrow" type="button" onclick="next()" aria-label="Следующая" title="Следующая">&rsaquo;</button>
             </div>
             <div class="option-grid">
                 <label class="option-card checkbox-line" for="idNoSound">
@@ -3383,11 +3430,30 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
    return String(p.snap.Gl_currentTrainName || "").trim();
  }
 
- function updateLastTrainingCenterButtonLabel(){
+ function getActiveTrainingNavTitle(){
+   var n = String(Gl_currentTrainName || "").trim();
+   try {
+     if (selectAllTrain && selectAllTrain.selectedIndex >= 0) {
+       var optText = selectAllTrain.options[selectAllTrain.selectedIndex].text.trim();
+       if (optText) n = optText.replace(/^<|>$/g, "").trim() || n;
+     }
+   } catch (e) {}
+   return truncateTrainingTitle(n, 48) || "Тренировка";
+ }
+
+ function updateTrainingNavCenterLabel(){
    var btn = document.getElementById("btnLastTraining");
    if (!btn) return;
-   var short = truncateTrainingTitle(getCurrentSavedTrainingTitle(), 26);
-   btn.textContent = short ? ("Прошлые тренировки (" + short + ")") : "Прошлые тренировки";
+   if (isTrainingExerciseNavMode()) {
+     btn.textContent = getActiveTrainingNavTitle();
+     btn.title = "Текущая тренировка";
+     return;
+   }
+   var short = truncateTrainingTitle(getCurrentSavedTrainingTitle(), 48);
+   btn.textContent = short ? short : "Прошлые тренировки";
+   var list = loadSavedTrainingsList();
+   var pos = list.length ? " (" + (Gl_savedTrainingsBrowseIndex + 1) + " из " + list.length + ")" : "";
+   btn.title = "Загрузить выбранную сохранённую тренировку" + pos;
  }
 
  function syncPrevNextNavButtons(){
@@ -3398,46 +3464,46 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
    if (!prevBtn || !nextBtn) return;
 
    var active = isActiveTrainingSession();
+   var exerciseNav = isTrainingExerciseNavMode();
    var hasHistory = hasLastSavedTraining();
 
-   if (!active && !hasHistory) {
+   if (!exerciseNav && !hasHistory) {
      if (navRow) navRow.style.display = "none";
-     prevBtn.style.display = "none";
-     nextBtn.style.display = "none";
-     if (centerBtn) centerBtn.style.display = "none";
      return;
    }
 
-   if (navRow) navRow.style.display = "";
-
-   if (active) {
-     prevBtn.style.display = "";
-     nextBtn.style.display = "";
-     if (centerBtn) centerBtn.style.display = "none";
-     prevBtn.innerHTML = "&lt;&lt; предыдущее упражнение";
-     nextBtn.innerHTML = "следующее упражнение &gt;&gt;";
-     prevBtn.disabled = false;
-     nextBtn.disabled = false;
-     prevBtn.title = "";
-     nextBtn.title = "";
-     return;
-   }
-
+   if (navRow) navRow.style.display = "flex";
    prevBtn.style.display = "";
    nextBtn.style.display = "";
+   prevBtn.innerHTML = "&lsaquo;";
+   nextBtn.innerHTML = "&rsaquo;";
+
    if (centerBtn) {
      centerBtn.style.display = "";
-     centerBtn.disabled = false;
-     centerBtn.title = "Загрузить выбранную сохранённую тренировку и продолжить с того же упражнения";
-     updateLastTrainingCenterButtonLabel();
+     updateTrainingNavCenterLabel();
    }
-   prevBtn.innerHTML = "&lt;&lt;";
-   nextBtn.innerHTML = "&gt;&gt;";
+
+   if (exerciseNav) {
+     prevBtn.disabled = false;
+     nextBtn.disabled = false;
+     prevBtn.title = "Предыдущее упражнение";
+     nextBtn.title = "Следующее упражнение";
+     if (centerBtn) {
+       centerBtn.disabled = true;
+       centerBtn.setAttribute("aria-disabled", "true");
+     }
+     return;
+   }
+
+   if (centerBtn) {
+     centerBtn.disabled = false;
+     centerBtn.removeAttribute("aria-disabled");
+   }
    var list = loadSavedTrainingsList();
    var i = Gl_savedTrainingsBrowseIndex;
    prevBtn.disabled = i >= list.length - 1;
    nextBtn.disabled = i <= 0;
-   var pos = " (" + (i + 1) + " из " + list.length + ")";
+   var pos = list.length ? " (" + (i + 1) + " из " + list.length + ")" : "";
    prevBtn.title = "Предыдущая сохранённая тренировка" + pos;
    nextBtn.title = "Следующая сохранённая тренировка" + pos;
  }
@@ -5558,15 +5624,15 @@ window.addEventListener("pageshow", function(){
       var entry = localRithm[i];
       var name = normalizeTrainingSyncName(getTrainingDisplayNameFromEntry(entry));
       if (!name) {
-        Gl_trainRemoteSyncByIndex[i] = hasPrevSnapshot ? "local_only" : "sync";
+        Gl_trainRemoteSyncByIndex[i] = hasPrevSnapshot ? "local_only" : "neutral";
         continue;
       }
       if (nowMap[name]) {
-        Gl_trainRemoteSyncByIndex[i] = metaRithmEntriesEqual(entry, nowMap[name]) ? "sync" : "diff_remote";
+        Gl_trainRemoteSyncByIndex[i] = metaRithmEntriesEqual(entry, nowMap[name]) ? "on_server_match" : "diff_remote";
       } else if (prevMap[name]) {
         Gl_trainRemoteSyncByIndex[i] = metaRithmEntriesEqual(entry, prevMap[name]) ? "deleted_match" : "deleted_diff";
       } else {
-        Gl_trainRemoteSyncByIndex[i] = hasPrevSnapshot ? "local_only" : "sync";
+        Gl_trainRemoteSyncByIndex[i] = hasPrevSnapshot ? "local_only" : "neutral";
       }
     }
   }
@@ -5576,7 +5642,7 @@ window.addEventListener("pageshow", function(){
     if (!Gl_aMetaRithm || !Gl_aMetaRithm.length)
       return;
     for (var i = 0; i < Gl_aMetaRithm.length; i++)
-      Gl_trainRemoteSyncByIndex[i] = "sync";
+      Gl_trainRemoteSyncByIndex[i] = "neutral";
   }
 
   function showTrainSyncRemoteFetchFailedMessage(err){
@@ -5607,33 +5673,38 @@ window.addEventListener("pageshow", function(){
   }
 
   var Gl_trainSyncStyleByStatus = {
-    sync: { color: "", background: "", title: "" },
-    diff_remote: {
-      color: "#9a3412",
-      background: "#ffedd5",
-      title: "На сервере есть тренировка с тем же именем, но содержимое отличается от локального."
-    },
-    deleted_match: {
+    neutral: { color: "", background: "", title: "" },
+    on_server_match: {
       color: "#166534",
       background: "#bbf7d0",
-      title: "На сервере удалена; локальная копия совпадает с прежней версией с сервера."
+      title: "Присутствует на сервере; совпадает с локальной."
     },
-    deleted_diff: {
+    diff_remote: {
       color: "#9a3412",
       background: "#fdba74",
-      title: "На сервере удалена; локальная версия отличается от той, что была на сервере."
+      title: "Присутствует на сервере; отличается от локальной."
+    },
+    deleted_match: {
+      color: "",
+      background: "",
+      title: "Удалена с сервера; локальная копия совпадает с прежней версией на сервере."
+    },
+    deleted_diff: {
+      color: "",
+      background: "",
+      title: "Удалена с сервера; локальная версия отличается от прежней на сервере."
     },
     local_only: {
       color: "#991b1b",
       background: "#fecaca",
-      title: "Нет на сервере (ни в текущем списке, ни в сохранённом снимке GET)."
+      title: "Отсутствует на сервере (только в локальной базе)."
     }
   };
 
   function applyTrainOptionSyncStyle(opt, status){
     if (!opt)
       return;
-    var st = Gl_trainSyncStyleByStatus[status] || Gl_trainSyncStyleByStatus.sync;
+    var st = Gl_trainSyncStyleByStatus[status] || Gl_trainSyncStyleByStatus.neutral;
     opt.style.color = st.color;
     opt.style.backgroundColor = st.background;
     if (st.title)
@@ -5646,34 +5717,30 @@ window.addEventListener("pageshow", function(){
     var el = document.getElementById("idTrainSyncLegend");
     if (!el)
       return;
-    var hasDeletedMatch = false;
-    var hasDeletedDiff = false;
-    var hasLocalOnly = false;
+    var hasOnServerMatch = false;
     var hasDiffRemote = false;
+    var hasLocalOnly = false;
     for (var k in Gl_trainRemoteSyncByIndex) {
       if (!Gl_trainRemoteSyncByIndex.hasOwnProperty(k))
         continue;
       var s = Gl_trainRemoteSyncByIndex[k];
-      if (s === "deleted_match") hasDeletedMatch = true;
-      else if (s === "deleted_diff") hasDeletedDiff = true;
-      else if (s === "local_only") hasLocalOnly = true;
+      if (s === "on_server_match") hasOnServerMatch = true;
       else if (s === "diff_remote") hasDiffRemote = true;
+      else if (s === "local_only") hasLocalOnly = true;
     }
-    if (!hasDeletedMatch && !hasDeletedDiff && !hasLocalOnly && !hasDiffRemote) {
+    if (!hasOnServerMatch && !hasDiffRemote && !hasLocalOnly) {
       el.style.display = "none";
       el.setAttribute("aria-hidden", "true");
       el.innerHTML = "";
       return;
     }
     var html = "";
-    if (hasDeletedMatch)
-      html += '<span class="train-sync-pill train-sync-pill--deleted-match">Зелёный — удалена с сервера, локально как была на сервере</span>';
-    if (hasDeletedDiff)
-      html += '<span class="train-sync-pill train-sync-pill--deleted-diff">Оранжевый — удалена с сервера, локально изменена</span>';
-    if (hasLocalOnly)
-      html += '<span class="train-sync-pill train-sync-pill--local-only">Красный — только локально, на сервере не было</span>';
+    if (hasOnServerMatch)
+      html += '<span class="train-sync-pill train-sync-pill--deleted-match">Зелёный — присутствует на сервере, совпадает с локальной</span>';
     if (hasDiffRemote)
-      html += '<span class="train-sync-pill train-sync-pill--diff-remote">Светло-оранжевый — на сервере, но отличается от локальной</span>';
+      html += '<span class="train-sync-pill train-sync-pill--deleted-diff">Оранжевый — присутствует на сервере, отличается от локальной</span>';
+    if (hasLocalOnly)
+      html += '<span class="train-sync-pill train-sync-pill--local-only">Красный — только в локальной базе, на сервере отсутствует</span>';
     el.innerHTML = html;
     el.style.display = "flex";
     el.setAttribute("aria-hidden", "false");
@@ -6598,7 +6665,7 @@ END:VEVENT\n`
       if (flAdd) {
         addAction("all",null/*actions*/,Gl_aMetaRithm[i][1][0].split('=')[0],i,false,false,"width:100%",false);
         var opt = selectAllTrain.options[selectAllTrain.options.length - 1];
-        applyTrainOptionSyncStyle(opt, Gl_trainRemoteSyncByIndex[i] || "sync");
+        applyTrainOptionSyncStyle(opt, Gl_trainRemoteSyncByIndex[i] || "neutral");
       }
 
     }
