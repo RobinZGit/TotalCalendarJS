@@ -5347,10 +5347,15 @@ window.addEventListener("pageshow", function(){
   var TCJS_REMOTE_INDEX_CANONICAL = "https://robinzgit.github.io/TotalCalendarJS/" + TCJS_REMOTE_INDEX_NAME;
   var TCJS_REMOTE_INDEX_RAW = "https://raw.githubusercontent.com/RobinZGit/TotalCalendarJS/master/" + TCJS_REMOTE_INDEX_NAME;
 
-  function getRemoteIndexHtmlUrlList(){
+  function getRemoteIndexHtmlUrlList(forSyncCompare){
     var list = [];
     function add(u){
       if (u && list.indexOf(u) < 0) list.push(u);
+    }
+    if (forSyncCompare) {
+      add(TCJS_REMOTE_INDEX_CANONICAL);
+      add(TCJS_REMOTE_INDEX_RAW);
+      return list;
     }
     try {
       var page = new URL(document.baseURI || window.location.href);
@@ -5406,9 +5411,9 @@ window.addEventListener("pageshow", function(){
     return "Gl_aMetaRithm = " + src.slice(bracketPos, end + 1) + ";";
   }
 
-  function fetchRemoteIndexHtml(done){
+  function fetchRemoteIndexHtml(done, forSyncCompare){
     done = done || function(){};
-    var urls = getRemoteIndexHtmlUrlList();
+    var urls = getRemoteIndexHtmlUrlList(!!forSyncCompare);
     var idx = 0;
     var lastErr = null;
     function tryNext(){
@@ -5593,11 +5598,44 @@ window.addEventListener("pageshow", function(){
     return String(name || "").trim().replace(/^<|>$/g, "").toUpperCase();
   }
 
+  function rithmEntryIsCalendarBlock(node){
+    return !!(node && Array.isArray(node) && node.length > 0
+      && Array.isArray(node[0]) && node[0][0] instanceof Date);
+  }
+
+  /** Содержимое тренировки (без календаря), для сравнения локальной и серверной версии. */
+  function rithmEntryTrainingFingerprint(entry){
+    if (!entry || !entry.length)
+      return "";
+    var parts = [];
+    function collectStrings(node){
+      if (node == null)
+        return;
+      if (typeof node === "string") {
+        var t = node.replace(/\s+/g, " ").trim();
+        if (t)
+          parts.push(t);
+        return;
+      }
+      if (node instanceof Date)
+        return;
+      if (!Array.isArray(node))
+        return;
+      if (rithmEntryIsCalendarBlock(node))
+        return;
+      for (var i = 0; i < node.length; i++)
+        collectStrings(node[i]);
+    }
+    for (var j = 0; j < entry.length; j++)
+      collectStrings(entry[j]);
+    return parts.join("\n");
+  }
+
   function metaRithmEntriesEqual(a, b){
     if (!a || !b)
       return false;
     try {
-      return serializeOneMetaRithmEntry(a) === serializeOneMetaRithmEntry(b);
+      return rithmEntryTrainingFingerprint(a) === rithmEntryTrainingFingerprint(b);
     } catch (e) {
       return false;
     }
@@ -5703,7 +5741,7 @@ window.addEventListener("pageshow", function(){
     }
   };
 
-  function applyTrainOptionSyncStyle(opt, status){
+  function applyTrainOptionSyncStyle(opt, status, baseLabel){
     if (!opt)
       return;
     var st = Gl_trainSyncStyleByStatus[status] || Gl_trainSyncStyleByStatus.neutral;
@@ -5713,6 +5751,15 @@ window.addEventListener("pageshow", function(){
       opt.title = st.title;
     else
       opt.removeAttribute("title");
+    var label = String(baseLabel != null ? baseLabel : opt.text || "");
+    if (status === "diff_remote")
+      opt.text = "\u25C6 " + label;
+    else if (status === "on_server_match")
+      opt.text = "\u2713 " + label;
+    else if (status === "local_only")
+      opt.text = "\u25CF " + label;
+    else
+      opt.text = label;
   }
 
   function updateTrainSyncLegend(){
@@ -5760,7 +5807,7 @@ window.addEventListener("pageshow", function(){
       else
         hideTrainSyncCompareOfflineMessage();
       done();
-    });
+    }, true);
   }
 
   function fetchTrainingsRithmFromRemoteIndex(done){
@@ -6655,9 +6702,10 @@ END:VEVENT\n`
         flAdd = !(Gl_aMetaRithm[i].join(' ').toUpperCase().indexOf(Gl_sSimultTrain)>=0)
 
       if (flAdd) {
-        addAction("all",null/*actions*/,Gl_aMetaRithm[i][1][0].split('=')[0],i,false,false,"width:100%",false);
+        var trainLabel = Gl_aMetaRithm[i][1][0].split('=')[0];
+        addAction("all",null/*actions*/,trainLabel,i,false,false,"width:100%",false);
         var opt = selectAllTrain.options[selectAllTrain.options.length - 1];
-        applyTrainOptionSyncStyle(opt, Gl_trainRemoteSyncByIndex[i] || "neutral");
+        applyTrainOptionSyncStyle(opt, Gl_trainRemoteSyncByIndex[i] || "neutral", trainLabel);
       }
 
     }
@@ -6791,7 +6839,7 @@ END:VEVENT\n`
     return sDownload;
   }
 
-  function persistTrainingsGenallToLocal(){
+  function persistTrainingsGenallToLocal(afterSyncDone){
     try {
       saveLocalTrainingsGenall(buildFullGenallScript());
     } catch (e) {}
@@ -6802,6 +6850,8 @@ END:VEVENT\n`
         readFilteredListOfTrainings(filtEl ? filtEl.value : "", null);
         updateTrainSyncLegend();
       } catch (e2) {}
+      if (typeof afterSyncDone === "function")
+        afterSyncDone();
     });
   }
 
@@ -7068,11 +7118,12 @@ END:VEVENT\n`
     Gl_trainEditorSourceIndex = targetIdx;
     Gl_trainEditorIndex = targetIdx;
     Gl_trainEditorOriginalName = newName;
-    persistTrainingsGenallToLocal();
+    persistTrainingsGenallToLocal(function(){
+      readFilteredListOfTrainings("", newName);
+      execTrain1(targetIdx, "Act");
+    });
     Gl_trainEditorBaseline = ta.value;
     syncTrainEditorDirtyState();
-    readFilteredListOfTrainings("", newName);
-    execTrain1(targetIdx, "Act");
     hideTrainEditorPanel();
     alert(isNew ? "Тренировка добавлена в конец списка и выбрана." : "Тренировка сохранена в общем списке.");
   }
