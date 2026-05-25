@@ -3145,8 +3145,9 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
  var TCJS_LAST_TRAINING_MAX = 10;
  /** Локальная копия экспорта .genall (календари + Gl_aMetaRithm). */
  var TCJS_LOCAL_TRAININGS_KEY = "tcjs_trainings_genall_v1";
- /** Предыдущий успешный GET .genall с сервера (для «удалённых» тренировок). */
- var TCJS_REMOTE_GENALL_SNAPSHOT_KEY = "tcjs_remote_genall_snapshot_v1";
+ /** Снимок Gl_aMetaRithm с удалённого index.html (для «удалённых» тренировок). */
+ var TCJS_REMOTE_RITHM_SNAPSHOT_KEY = "tcjs_remote_rithm_snapshot_v1";
+ var TCJS_REMOTE_RITHM_SNAPSHOT_KEY_LEGACY = "tcjs_remote_genall_snapshot_v1";
  var Gl_trainRemoteSyncByIndex = {};
  /** Список тренировок загружен из localStorage (.genall), а не только с сервера/встроенный. */
  var Gl_trainingsLoadedFromLocal = false;
@@ -5247,11 +5248,11 @@ window.addEventListener("pageshow", function(){
         };
   }
 
-  var TCJS_REMOTE_GENALL_NAME = "GenTrainsAndCalendarFromTotalCalendarJS.genall";
-  var TCJS_REMOTE_GENALL_CANONICAL = "https://robinzgit.github.io/TotalCalendarJS/" + TCJS_REMOTE_GENALL_NAME;
-  var TCJS_REMOTE_GENALL_RAW = "https://raw.githubusercontent.com/RobinZGit/TotalCalendarJS/master/" + TCJS_REMOTE_GENALL_NAME;
+  var TCJS_REMOTE_INDEX_NAME = "index.html";
+  var TCJS_REMOTE_INDEX_CANONICAL = "https://robinzgit.github.io/TotalCalendarJS/" + TCJS_REMOTE_INDEX_NAME;
+  var TCJS_REMOTE_INDEX_RAW = "https://raw.githubusercontent.com/RobinZGit/TotalCalendarJS/master/" + TCJS_REMOTE_INDEX_NAME;
 
-  function getRemoteTrainingsGenallUrlList(){
+  function getRemoteIndexHtmlUrlList(){
     var list = [];
     function add(u){
       if (u && list.indexOf(u) < 0) list.push(u);
@@ -5259,31 +5260,65 @@ window.addEventListener("pageshow", function(){
     try {
       var page = new URL(document.baseURI || window.location.href);
       if (page.protocol === "http:" || page.protocol === "https:")
-        add(new URL(TCJS_REMOTE_GENALL_NAME, page.href).href);
+        add(new URL(TCJS_REMOTE_INDEX_NAME, page.href).href);
     } catch (e) {}
-    add(TCJS_REMOTE_GENALL_CANONICAL);
-    add(TCJS_REMOTE_GENALL_RAW);
+    add(TCJS_REMOTE_INDEX_CANONICAL);
+    add(TCJS_REMOTE_INDEX_RAW);
     return list;
   }
 
-  function getRemoteTrainingsGenallUrl(){
-    var list = getRemoteTrainingsGenallUrlList();
-    return list.length ? list[0] : TCJS_REMOTE_GENALL_CANONICAL;
+  function indexHtmlContainsRithm(html){
+    return /(?:var\s+)?Gl_aMetaRithm\s*=\s*\[/i.test(String(html || ""));
   }
 
-  function isValidRemoteGenallText(text){
-    var t = String(text || "").trim();
-    return t.length > 0 && t.indexOf("Gl_aMetaRithm") >= 0;
+  function findBalancedBracketEnd(s, pos, openCh, closeCh){
+    var depth = 0;
+    var inStr = false;
+    var strCh = "";
+    var esc = false;
+    for (var i = pos; i < s.length; i++) {
+      var c = s[i];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (c === "\\") esc = true;
+        else if (c === strCh) inStr = false;
+        continue;
+      }
+      if (c === "\"" || c === "'" || c === "`") {
+        inStr = true;
+        strCh = c;
+        continue;
+      }
+      if (c === openCh) depth++;
+      else if (c === closeCh) {
+        depth--;
+        if (depth === 0) return i;
+      }
+    }
+    return -1;
   }
 
-  function fetchRemoteGenallText(done){
+  /** Только Gl_aMetaRithm = [ ... ]; из index.html (без календарей). */
+  function extractRithmScriptFromIndexHtml(html){
+    var src = String(html || "");
+    var m = src.match(/(?:var\s+)?Gl_aMetaRithm\s*=\s*\[/i);
+    if (!m) return null;
+    var assignPos = src.indexOf(m[0]);
+    var bracketPos = src.indexOf("[", assignPos + m[0].length - 1);
+    if (bracketPos < 0) return null;
+    var end = findBalancedBracketEnd(src, bracketPos, "[", "]");
+    if (end < 0) return null;
+    return "Gl_aMetaRithm = " + src.slice(bracketPos, end + 1) + ";";
+  }
+
+  function fetchRemoteIndexHtml(done){
     done = done || function(){};
-    var urls = getRemoteTrainingsGenallUrlList();
+    var urls = getRemoteIndexHtmlUrlList();
     var idx = 0;
     var lastErr = null;
     function tryNext(){
       if (idx >= urls.length) {
-        done(null, lastErr || new Error("remote genall unavailable"));
+        done(null, lastErr || new Error("remote index.html unavailable"));
         return;
       }
       var url = urls[idx++];
@@ -5292,8 +5327,8 @@ window.addEventListener("pageshow", function(){
           throw new Error("HTTP " + r.status + " (" + url + ")");
         return r.text().then(function(t){ return { text: t, url: url }; });
       }).then(function(o){
-        if (!isValidRemoteGenallText(o.text))
-          throw new Error("invalid genall (" + url + ")");
+        if (!indexHtmlContainsRithm(o.text))
+          throw new Error("Gl_aMetaRithm not found (" + url + ")");
         done(o.text, null, o.url);
       }).catch(function(e){
         lastErr = e;
@@ -5411,25 +5446,29 @@ window.addEventListener("pageshow", function(){
     }
   }
 
-  function readRemoteGenallSnapshot(){
+  function readRemoteRithmSnapshot(){
     try {
-      return localStorage.getItem(TCJS_REMOTE_GENALL_SNAPSHOT_KEY);
+      return localStorage.getItem(TCJS_REMOTE_RITHM_SNAPSHOT_KEY)
+        || localStorage.getItem(TCJS_REMOTE_RITHM_SNAPSHOT_KEY_LEGACY);
     } catch (e) {
       return null;
     }
   }
 
-  function saveRemoteGenallSnapshot(scriptText){
+  function saveRemoteRithmSnapshot(scriptText){
     if (!scriptText || !String(scriptText).trim())
       return;
     try {
-      localStorage.setItem(TCJS_REMOTE_GENALL_SNAPSHOT_KEY, String(scriptText));
+      localStorage.setItem(TCJS_REMOTE_RITHM_SNAPSHOT_KEY, String(scriptText));
     } catch (e) {}
   }
 
-  function snapshotGenallRithmFromScript(scriptText){
+  function snapshotRithmFromScript(scriptText){
     if (!scriptText || !String(scriptText).trim())
       return null;
+    var src = String(scriptText).trim();
+    if (/<html/i.test(src) || src.indexOf("<!DOCTYPE") >= 0)
+      return snapshotRithmFromIndexHtml(src);
     var savedRithm = Gl_aMetaRithm;
     var savedCal = Gl_aMetaMetaCalendar;
     var savedSel = Gl_aMetaMetaCalendarSelected;
@@ -5438,16 +5477,21 @@ window.addEventListener("pageshow", function(){
       Gl_aMetaRithm = [];
       Gl_aMetaMetaCalendar = [];
       Gl_aMetaMetaCalendarSelected = [];
-      eval(String(scriptText));
+      eval(src);
       if (Gl_aMetaRithm && Gl_aMetaRithm.length)
         snapRithm = Gl_aMetaRithm.slice();
     } catch (e) {
-      console.log("snapshotGenallRithmFromScript:", e);
+      console.log("snapshotRithmFromScript:", e);
     }
     Gl_aMetaRithm = savedRithm;
     Gl_aMetaMetaCalendar = savedCal;
     Gl_aMetaMetaCalendarSelected = savedSel;
     return snapRithm;
+  }
+
+  function snapshotRithmFromIndexHtml(html){
+    var script = extractRithmScriptFromIndexHtml(html);
+    return script ? snapshotRithmFromScript(script) : null;
   }
 
   function normalizeTrainingSyncName(name){
@@ -5512,14 +5556,14 @@ window.addEventListener("pageshow", function(){
     var el = document.getElementById("idTrainSyncOfflineMsg");
     if (!el)
       return;
-    var msg = "Не удалось загрузить удалённую базу тренировок (.genall) для сравнения с локальной.";
+    var msg = "Не удалось загрузить список тренировок из удалённого index.html для сравнения с локальным.";
     var detail = "";
     try {
       var s = String(err && err.message ? err.message : err || "");
       if (/failed to fetch|networkerror|network error|load failed/i.test(s))
         detail = " Проверьте подключение к интернету или доступ к GitHub.";
       else if (/HTTP 404/i.test(s))
-        detail = " Файл на сервере не найден (404) — обновите страницу после публикации .genall в репозитории.";
+        detail = " index.html на сервере не найден (404).";
       else if (s)
         detail = " " + s;
     } catch (e2) {}
@@ -5611,14 +5655,16 @@ window.addEventListener("pageshow", function(){
   function refreshTrainingRemoteSyncDisplay(done){
     done = done || function(){};
     var fromLocal = !!Gl_trainingsLoadedFromLocal;
-    fetchRemoteGenallText(function(text, err){
-      if (text) {
+    fetchRemoteIndexHtml(function(html, err){
+      if (html) {
         hideTrainSyncCompareOfflineMessage();
-        var prevText = readRemoteGenallSnapshot();
-        var remotePrev = prevText ? snapshotGenallRithmFromScript(prevText) : null;
-        var remoteNow = snapshotGenallRithmFromScript(text);
+        var prevText = readRemoteRithmSnapshot();
+        var remotePrev = prevText ? snapshotRithmFromScript(prevText) : null;
+        var remoteNow = snapshotRithmFromIndexHtml(html);
         computeTrainingRemoteSyncStatuses(Gl_aMetaRithm, remoteNow, remotePrev);
-        saveRemoteGenallSnapshot(text);
+        var rithmScript = extractRithmScriptFromIndexHtml(html);
+        if (rithmScript)
+          saveRemoteRithmSnapshot(rithmScript);
         done();
         return;
       }
@@ -5632,14 +5678,21 @@ window.addEventListener("pageshow", function(){
     });
   }
 
-  function fetchTrainingsGenallFromNetwork(done){
-    fetchRemoteGenallText(function(text, err){
-      if (text)
-        done(!!applyGenallScript(text));
-      else {
-        console.log("Remote trainings .genall:", err);
+  function fetchTrainingsRithmFromRemoteIndex(done){
+    fetchRemoteIndexHtml(function(html, err){
+      if (!html) {
+        console.log("Remote trainings index.html:", err);
         done(false);
+        return;
       }
+      var rithm = snapshotRithmFromIndexHtml(html);
+      if (!rithm || !rithm.length) {
+        console.log("Remote trainings: Gl_aMetaRithm empty");
+        done(false);
+        return;
+      }
+      Gl_aMetaRithm = rithm;
+      done(true);
     });
   }
 
@@ -5660,10 +5713,10 @@ window.addEventListener("pageshow", function(){
       }
       console.log("Local trainings data failed, loading from network");
       clearLocalTrainingsGenall();
-      fetchTrainingsGenallFromNetwork(finish);
+      fetchTrainingsRithmFromRemoteIndex(finish);
       return;
     }
-    fetchTrainingsGenallFromNetwork(finish);
+    fetchTrainingsRithmFromRemoteIndex(finish);
   }
 
   function loadTrainAndCalFromFile(input){
