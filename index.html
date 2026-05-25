@@ -578,7 +578,7 @@
 
         .train-sync-pill--diff-remote {
             color: #9a3412;
-            background: #ffedd5;
+            background: #fdba74;
         }
 
         .train-sync-offline-msg {
@@ -3225,6 +3225,8 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
  var Gl_trainRemoteSyncByIndex = {};
  /** Список тренировок загружен из localStorage (.genall), а не только с сервера/встроенный. */
  var Gl_trainingsLoadedFromLocal = false;
+ /** Удалённый index.html успешно загружен для сравнения (показать полную легенду). */
+ var Gl_trainRemoteSyncCompared = false;
  /** Последний e-mail для отправки экспортированных файлов. */
  var TCJS_EXPORT_EMAIL_KEY = "tcjs_export_email_v1";
  var Gl_savedTrainingsBrowseIndex = 0;
@@ -5717,30 +5719,16 @@ window.addEventListener("pageshow", function(){
     var el = document.getElementById("idTrainSyncLegend");
     if (!el)
       return;
-    var hasOnServerMatch = false;
-    var hasDiffRemote = false;
-    var hasLocalOnly = false;
-    for (var k in Gl_trainRemoteSyncByIndex) {
-      if (!Gl_trainRemoteSyncByIndex.hasOwnProperty(k))
-        continue;
-      var s = Gl_trainRemoteSyncByIndex[k];
-      if (s === "on_server_match") hasOnServerMatch = true;
-      else if (s === "diff_remote") hasDiffRemote = true;
-      else if (s === "local_only") hasLocalOnly = true;
-    }
-    if (!hasOnServerMatch && !hasDiffRemote && !hasLocalOnly) {
+    if (!Gl_trainingsLoadedFromLocal || !Gl_trainRemoteSyncCompared) {
       el.style.display = "none";
       el.setAttribute("aria-hidden", "true");
       el.innerHTML = "";
       return;
     }
     var html = "";
-    if (hasOnServerMatch)
-      html += '<span class="train-sync-pill train-sync-pill--deleted-match">Зелёный — присутствует на сервере, совпадает с локальной</span>';
-    if (hasDiffRemote)
-      html += '<span class="train-sync-pill train-sync-pill--deleted-diff">Оранжевый — присутствует на сервере, отличается от локальной</span>';
-    if (hasLocalOnly)
-      html += '<span class="train-sync-pill train-sync-pill--local-only">Красный — только в локальной базе, на сервере отсутствует</span>';
+    html += '<span class="train-sync-pill train-sync-pill--deleted-match">Зелёный — присутствует на сервере, совпадает с локальной</span>';
+    html += '<span class="train-sync-pill train-sync-pill--diff-remote">Оранжевый — присутствует на сервере, отличается от локальной</span>';
+    html += '<span class="train-sync-pill train-sync-pill--local-only">Красный — только в локальной базе, на сервере отсутствует</span>';
     el.innerHTML = html;
     el.style.display = "flex";
     el.setAttribute("aria-hidden", "false");
@@ -5752,6 +5740,7 @@ window.addEventListener("pageshow", function(){
     fetchRemoteIndexHtml(function(html, err){
       if (html) {
         hideTrainSyncCompareOfflineMessage();
+        Gl_trainRemoteSyncCompared = true;
         var prevText = readRemoteRithmSnapshot();
         var remotePrev = prevText ? snapshotRithmFromScript(prevText) : null;
         var remoteNow = snapshotRithmFromIndexHtml(html);
@@ -5759,10 +5748,12 @@ window.addEventListener("pageshow", function(){
         var rithmScript = extractRithmScriptFromIndexHtml(html);
         if (rithmScript)
           saveRemoteRithmSnapshot(rithmScript);
+        updateTrainSyncLegend();
         done();
         return;
       }
       console.log("refreshTrainingRemoteSyncDisplay:", err);
+      Gl_trainRemoteSyncCompared = false;
       clearTrainingRemoteSyncStyles();
       if (fromLocal)
         showTrainSyncRemoteFetchFailedMessage(err);
@@ -5793,6 +5784,7 @@ window.addEventListener("pageshow", function(){
   function loadTrainingsDataThen(done){
     done = done || function(){};
     Gl_trainingsLoadedFromLocal = false;
+    Gl_trainRemoteSyncCompared = false;
     function finish(fromLocal){
       Gl_trainingsLoadedFromLocal = !!fromLocal;
       refreshTrainingRemoteSyncDisplay(function(){
@@ -6808,6 +6800,7 @@ END:VEVENT\n`
       try {
         var filtEl = document.getElementById("filterStr");
         readFilteredListOfTrainings(filtEl ? filtEl.value : "", null);
+        updateTrainSyncLegend();
       } catch (e2) {}
     });
   }
