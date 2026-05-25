@@ -490,6 +490,52 @@
             padding: 12px;
         }
 
+        .train-sync-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 12px;
+            margin-top: 8px;
+            font-size: 0.82rem;
+            line-height: 1.35;
+            color: var(--muted, #64748b);
+        }
+
+        .train-sync-pill {
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+
+        .train-sync-pill--deleted-match {
+            color: #166534;
+            background: #bbf7d0;
+        }
+
+        .train-sync-pill--deleted-diff {
+            color: #9a3412;
+            background: #fdba74;
+        }
+
+        .train-sync-pill--local-only {
+            color: #991b1b;
+            background: #fecaca;
+        }
+
+        .train-sync-pill--diff-remote {
+            color: #9a3412;
+            background: #ffedd5;
+        }
+
+        .train-sync-offline-msg {
+            margin-top: 8px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            line-height: 1.35;
+            color: var(--warning-text, #92400e);
+            background: var(--warning, #fef3c7);
+            border: 1px solid rgba(146, 64, 14, 0.2);
+        }
+
         .tcjs-clear-cache-btn {
             flex-shrink: 0;
             display: inline-flex;
@@ -1091,6 +1137,8 @@
             <div class="field">
                 <label for="selectAllTrain">Выбор тренировки:</label>
                 <select id="selectAllTrain" class="select-large" onchange="onSelectTrain(this.selectedIndex,this.options[this.selectedIndex].text);"></select>
+                <div id="idTrainSyncLegend" class="train-sync-legend" style="display:none" aria-hidden="true"></div>
+                <div id="idTrainSyncOfflineMsg" class="train-sync-offline-msg" style="display:none" role="status"></div>
             </div>
             <div class="option-grid">
                 <div class="field">
@@ -3074,6 +3122,11 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
  var TCJS_LAST_TRAINING_MAX = 10;
  /** Локальная копия экспорта .genall (календари + Gl_aMetaRithm). */
  var TCJS_LOCAL_TRAININGS_KEY = "tcjs_trainings_genall_v1";
+ /** Предыдущий успешный GET .genall с сервера (для «удалённых» тренировок). */
+ var TCJS_REMOTE_GENALL_SNAPSHOT_KEY = "tcjs_remote_genall_snapshot_v1";
+ var Gl_trainRemoteSyncByIndex = {};
+ /** Список тренировок загружен из localStorage (.genall), а не только с сервера/встроенный. */
+ var Gl_trainingsLoadedFromLocal = false;
  /** Последний e-mail для отправки экспортированных файлов. */
  var TCJS_EXPORT_EMAIL_KEY = "tcjs_export_email_v1";
  var Gl_savedTrainingsBrowseIndex = 0;
@@ -5286,6 +5339,220 @@ window.addEventListener("pageshow", function(){
     }
   }
 
+  function readRemoteGenallSnapshot(){
+    try {
+      return localStorage.getItem(TCJS_REMOTE_GENALL_SNAPSHOT_KEY);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function saveRemoteGenallSnapshot(scriptText){
+    if (!scriptText || !String(scriptText).trim())
+      return;
+    try {
+      localStorage.setItem(TCJS_REMOTE_GENALL_SNAPSHOT_KEY, String(scriptText));
+    } catch (e) {}
+  }
+
+  function snapshotGenallRithmFromScript(scriptText){
+    if (!scriptText || !String(scriptText).trim())
+      return null;
+    var savedRithm = Gl_aMetaRithm;
+    var savedCal = Gl_aMetaMetaCalendar;
+    var savedSel = Gl_aMetaMetaCalendarSelected;
+    var snapRithm = null;
+    try {
+      Gl_aMetaRithm = [];
+      Gl_aMetaMetaCalendar = [];
+      Gl_aMetaMetaCalendarSelected = [];
+      eval(String(scriptText));
+      if (Gl_aMetaRithm && Gl_aMetaRithm.length)
+        snapRithm = Gl_aMetaRithm.slice();
+    } catch (e) {
+      console.log("snapshotGenallRithmFromScript:", e);
+    }
+    Gl_aMetaRithm = savedRithm;
+    Gl_aMetaMetaCalendar = savedCal;
+    Gl_aMetaMetaCalendarSelected = savedSel;
+    return snapRithm;
+  }
+
+  function normalizeTrainingSyncName(name){
+    return String(name || "").trim().replace(/^<|>$/g, "").toUpperCase();
+  }
+
+  function metaRithmEntriesEqual(a, b){
+    if (!a || !b)
+      return false;
+    try {
+      return serializeOneMetaRithmEntry(a) === serializeOneMetaRithmEntry(b);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function buildRithmByNameMap(rithmArr){
+    var map = {};
+    if (!rithmArr || !rithmArr.length)
+      return map;
+    for (var i = 0; i < rithmArr.length; i++) {
+      var n = normalizeTrainingSyncName(getTrainingDisplayNameFromEntry(rithmArr[i]));
+      if (n)
+        map[n] = rithmArr[i];
+    }
+    return map;
+  }
+
+  function computeTrainingRemoteSyncStatuses(localRithm, remoteNow, remotePrev){
+    Gl_trainRemoteSyncByIndex = {};
+    if (!localRithm || !localRithm.length)
+      return;
+    var hasPrevSnapshot = !!(remotePrev && remotePrev.length);
+    var nowMap = buildRithmByNameMap(remoteNow);
+    var prevMap = buildRithmByNameMap(remotePrev);
+    for (var i = 0; i < localRithm.length; i++) {
+      var entry = localRithm[i];
+      var name = normalizeTrainingSyncName(getTrainingDisplayNameFromEntry(entry));
+      if (!name) {
+        Gl_trainRemoteSyncByIndex[i] = hasPrevSnapshot ? "local_only" : "sync";
+        continue;
+      }
+      if (nowMap[name]) {
+        Gl_trainRemoteSyncByIndex[i] = metaRithmEntriesEqual(entry, nowMap[name]) ? "sync" : "diff_remote";
+      } else if (prevMap[name]) {
+        Gl_trainRemoteSyncByIndex[i] = metaRithmEntriesEqual(entry, prevMap[name]) ? "deleted_match" : "deleted_diff";
+      } else {
+        Gl_trainRemoteSyncByIndex[i] = hasPrevSnapshot ? "local_only" : "sync";
+      }
+    }
+  }
+
+  function clearTrainingRemoteSyncStyles(){
+    Gl_trainRemoteSyncByIndex = {};
+    if (!Gl_aMetaRithm || !Gl_aMetaRithm.length)
+      return;
+    for (var i = 0; i < Gl_aMetaRithm.length; i++)
+      Gl_trainRemoteSyncByIndex[i] = "sync";
+  }
+
+  function showTrainSyncCompareOfflineMessage(){
+    var el = document.getElementById("idTrainSyncOfflineMsg");
+    if (!el)
+      return;
+    el.textContent = "Отсутствует подключение к интернету: не удалось сравнить локальную базу тренировок с удалённой.";
+    el.style.display = "block";
+  }
+
+  function hideTrainSyncCompareOfflineMessage(){
+    var el = document.getElementById("idTrainSyncOfflineMsg");
+    if (!el)
+      return;
+    el.style.display = "none";
+    el.textContent = "";
+  }
+
+  var Gl_trainSyncStyleByStatus = {
+    sync: { color: "", background: "", title: "" },
+    diff_remote: {
+      color: "#9a3412",
+      background: "#ffedd5",
+      title: "На сервере есть тренировка с тем же именем, но содержимое отличается от локального."
+    },
+    deleted_match: {
+      color: "#166534",
+      background: "#bbf7d0",
+      title: "На сервере удалена; локальная копия совпадает с прежней версией с сервера."
+    },
+    deleted_diff: {
+      color: "#9a3412",
+      background: "#fdba74",
+      title: "На сервере удалена; локальная версия отличается от той, что была на сервере."
+    },
+    local_only: {
+      color: "#991b1b",
+      background: "#fecaca",
+      title: "Нет на сервере (ни в текущем списке, ни в сохранённом снимке GET)."
+    }
+  };
+
+  function applyTrainOptionSyncStyle(opt, status){
+    if (!opt)
+      return;
+    var st = Gl_trainSyncStyleByStatus[status] || Gl_trainSyncStyleByStatus.sync;
+    opt.style.color = st.color;
+    opt.style.backgroundColor = st.background;
+    if (st.title)
+      opt.title = st.title;
+    else
+      opt.removeAttribute("title");
+  }
+
+  function updateTrainSyncLegend(){
+    var el = document.getElementById("idTrainSyncLegend");
+    if (!el)
+      return;
+    var hasDeletedMatch = false;
+    var hasDeletedDiff = false;
+    var hasLocalOnly = false;
+    var hasDiffRemote = false;
+    for (var k in Gl_trainRemoteSyncByIndex) {
+      if (!Gl_trainRemoteSyncByIndex.hasOwnProperty(k))
+        continue;
+      var s = Gl_trainRemoteSyncByIndex[k];
+      if (s === "deleted_match") hasDeletedMatch = true;
+      else if (s === "deleted_diff") hasDeletedDiff = true;
+      else if (s === "local_only") hasLocalOnly = true;
+      else if (s === "diff_remote") hasDiffRemote = true;
+    }
+    if (!hasDeletedMatch && !hasDeletedDiff && !hasLocalOnly && !hasDiffRemote) {
+      el.style.display = "none";
+      el.setAttribute("aria-hidden", "true");
+      el.innerHTML = "";
+      return;
+    }
+    var html = "";
+    if (hasDeletedMatch)
+      html += '<span class="train-sync-pill train-sync-pill--deleted-match">Зелёный — удалена с сервера, локально как была на сервере</span>';
+    if (hasDeletedDiff)
+      html += '<span class="train-sync-pill train-sync-pill--deleted-diff">Оранжевый — удалена с сервера, локально изменена</span>';
+    if (hasLocalOnly)
+      html += '<span class="train-sync-pill train-sync-pill--local-only">Красный — только локально, на сервере не было</span>';
+    if (hasDiffRemote)
+      html += '<span class="train-sync-pill train-sync-pill--diff-remote">Светло-оранжевый — на сервере, но отличается от локальной</span>';
+    el.innerHTML = html;
+    el.style.display = "flex";
+    el.setAttribute("aria-hidden", "false");
+  }
+
+  function refreshTrainingRemoteSyncDisplay(done){
+    done = done || function(){};
+    var fromLocal = !!Gl_trainingsLoadedFromLocal;
+    var url = getRemoteTrainingsGenallUrl();
+    fetch(url, { cache: "no-store" }).then(function(r){
+      if (!r.ok)
+        throw new Error("HTTP " + r.status);
+      return r.text();
+    }).then(function(text){
+      hideTrainSyncCompareOfflineMessage();
+      var prevText = readRemoteGenallSnapshot();
+      var remotePrev = prevText ? snapshotGenallRithmFromScript(prevText) : null;
+      var remoteNow = text ? snapshotGenallRithmFromScript(text) : null;
+      computeTrainingRemoteSyncStatuses(Gl_aMetaRithm, remoteNow, remotePrev);
+      if (text)
+        saveRemoteGenallSnapshot(text);
+      done();
+    }).catch(function(e){
+      console.log("refreshTrainingRemoteSyncDisplay:", e);
+      clearTrainingRemoteSyncStyles();
+      if (fromLocal)
+        showTrainSyncCompareOfflineMessage();
+      else
+        hideTrainSyncCompareOfflineMessage();
+      done();
+    });
+  }
+
   function fetchTrainingsGenallFromNetwork(done){
     var url = getRemoteTrainingsGenallUrl();
     fetch(url, { cache: "no-store" }).then(function(r){
@@ -5302,18 +5569,25 @@ window.addEventListener("pageshow", function(){
 
   function loadTrainingsDataThen(done){
     done = done || function(){};
+    Gl_trainingsLoadedFromLocal = false;
+    function finish(fromLocal){
+      Gl_trainingsLoadedFromLocal = !!fromLocal;
+      refreshTrainingRemoteSyncDisplay(function(){
+        done(fromLocal);
+      });
+    }
     var local = readLocalTrainingsGenall();
     if (local && String(local).trim()) {
       if (applyGenallScript(local)) {
-        done(true);
+        finish(true);
         return;
       }
       console.log("Local trainings data failed, loading from network");
       clearLocalTrainingsGenall();
-      fetchTrainingsGenallFromNetwork(done);
+      fetchTrainingsGenallFromNetwork(finish);
       return;
     }
-    fetchTrainingsGenallFromNetwork(done);
+    fetchTrainingsGenallFromNetwork(finish);
   }
 
   function loadTrainAndCalFromFile(input){
@@ -5326,8 +5600,11 @@ window.addEventListener("pageshow", function(){
             if (!applyGenallScript(str))
               throw new Error("invalid genall");
             saveLocalTrainingsGenall(str);
-            loadTrainDataWeb(true);
-            alert('Загружен календарь и список тренировок')
+            Gl_trainingsLoadedFromLocal = true;
+            refreshTrainingRemoteSyncDisplay(function(){
+              loadTrainDataWeb(true);
+              alert('Загружен календарь и список тренировок');
+            });
           } catch(e){
             alert('Не удалось прочитать данные, проверьте формат файла. Должен быть js формат (без var!): "Gl-aMetaMetaCalendar=...;Gl_aMetaRithm=...;')
           }
@@ -6162,10 +6439,14 @@ END:VEVENT\n`
       if (flAdd && (selectAllTrain.getAttribute("multiple")=="multiple"))
         flAdd = !(Gl_aMetaRithm[i].join(' ').toUpperCase().indexOf(Gl_sSimultTrain)>=0)
 
-      if (flAdd)
-        addAction("all",null/*actions*/,Gl_aMetaRithm[i][1][0].split('=')[0],i,false,false,"width:100%",false)
+      if (flAdd) {
+        addAction("all",null/*actions*/,Gl_aMetaRithm[i][1][0].split('=')[0],i,false,false,"width:100%",false);
+        var opt = selectAllTrain.options[selectAllTrain.options.length - 1];
+        applyTrainOptionSyncStyle(opt, Gl_trainRemoteSyncByIndex[i] || "sync");
+      }
 
     }
+    updateTrainSyncLegend();
     if (loadTrain!==null)
       for(var i=0; i<selectAllTrain.options.length;i++)
         if (selectAllTrain.options[i].text.trim()=="<"+loadTrain.trim()+">")
@@ -6299,6 +6580,13 @@ END:VEVENT\n`
     try {
       saveLocalTrainingsGenall(buildFullGenallScript());
     } catch (e) {}
+    Gl_trainingsLoadedFromLocal = true;
+    refreshTrainingRemoteSyncDisplay(function(){
+      try {
+        var filtEl = document.getElementById("filterStr");
+        readFilteredListOfTrainings(filtEl ? filtEl.value : "", null);
+      } catch (e2) {}
+    });
   }
 
   function serializeOneMetaRithmEntry(entry){
