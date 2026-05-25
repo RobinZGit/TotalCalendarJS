@@ -521,22 +521,82 @@
             padding: 12px;
         }
 
+        .train-pick-wrap {
+            width: 100%;
+        }
+
+        .train-pick-wrap.train-pick-wrap--multi #selectAllTrain {
+            display: block;
+        }
+
+        .train-pick-wrap.train-pick-wrap--multi .train-pick-list {
+            display: none;
+        }
+
+        .train-pick-list,
         #selectAllTrain {
             display: block;
             width: 100%;
             box-sizing: border-box;
             min-height: 5.5em;
             max-height: 8.5em;
-            padding: 6px 10px;
+            padding: 0;
             font-size: inherit;
             line-height: 1.35;
             border: 3px solid var(--primary-dark, #1d4ed8);
             border-radius: 10px;
             background: var(--surface, #fff);
             color: inherit;
+            overflow-y: auto;
         }
 
-        #selectAllTrain:focus {
+        .train-pick-wrap:not(.train-pick-wrap--multi) #selectAllTrain {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            overflow: hidden;
+            pointer-events: none;
+            border: 0;
+            min-height: 0;
+            max-height: none;
+        }
+
+        .train-pick-item {
+            padding: 5px 10px;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+        }
+
+        .train-pick-item:last-child {
+            border-bottom: none;
+        }
+
+        .train-pick-item--on-server-match {
+            color: #166534;
+            background: #bbf7d0;
+        }
+
+        .train-pick-item--diff-remote {
+            color: #9a3412;
+            background: #fdba74;
+        }
+
+        .train-pick-item--local-only {
+            color: #991b1b;
+            background: #fecaca;
+        }
+
+        .train-pick-item--selected {
+            box-shadow: inset 0 0 0 2px #1d4ed8;
+            font-weight: 700;
+        }
+
+        #selectAllTrain:focus,
+        .train-pick-list:focus-within {
             outline: none;
             border-color: var(--primary, #2563eb);
             box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
@@ -1235,7 +1295,10 @@
                     <div id="idTrainSyncLegend" class="train-sync-legend" style="display:none" aria-hidden="true"></div>
                     <div id="idTrainSyncOfflineMsg" class="train-sync-offline-msg" style="display:none" role="status"></div>
                 </div>
-                <select id="selectAllTrain" onchange="onSelectTrain(this.selectedIndex,this.options[this.selectedIndex].text);"></select>
+                <div id="selectAllTrainWrap" class="train-pick-wrap">
+                    <div id="selectAllTrainList" class="train-pick-list" role="listbox" tabindex="0" aria-label="Список тренировок"></div>
+                    <select id="selectAllTrain" onchange="onSelectTrain(this.selectedIndex,this.options[this.selectedIndex].text);"></select>
+                </div>
             </div>
             <div class="option-grid">
                 <div class="field">
@@ -5406,7 +5469,16 @@ window.addEventListener("pageshow", function(){
     var assignPos = src.indexOf(m[0]);
     var bracketPos = src.indexOf("[", assignPos + m[0].length - 1);
     if (bracketPos < 0) return null;
-    var end = findBalancedBracketEnd(src, bracketPos, "[", "]");
+    var end = -1;
+    var blockEnd = src.indexOf("/* ===================== конец БЛОКА 3", bracketPos);
+    if (blockEnd > bracketPos) {
+      var chunk = src.slice(bracketPos, blockEnd);
+      var lastClose = chunk.lastIndexOf("];");
+      if (lastClose >= 0)
+        end = bracketPos + lastClose;
+    }
+    if (end < 0)
+      end = findBalancedBracketEnd(src, bracketPos, "[", "]");
     if (end < 0) return null;
     return "Gl_aMetaRithm = " + src.slice(bracketPos, end + 1) + ";";
   }
@@ -5422,7 +5494,8 @@ window.addEventListener("pageshow", function(){
         return;
       }
       var url = urls[idx++];
-      fetch(url, { cache: "no-store" }).then(function(r){
+      var fetchUrl = url + (url.indexOf("?") >= 0 ? "&" : "?") + "tcjs_cb=" + Date.now();
+      fetch(fetchUrl, { cache: "no-store" }).then(function(r){
         if (!r.ok)
           throw new Error("HTTP " + r.status + " (" + url + ")");
         return r.text().then(function(t){ return { text: t, url: url }; });
@@ -5653,13 +5726,82 @@ window.addEventListener("pageshow", function(){
     return map;
   }
 
+  function buildRithmFingerprintByNameMap(rithmArr){
+    var map = {};
+    if (!rithmArr || !rithmArr.length)
+      return map;
+    for (var i = 0; i < rithmArr.length; i++) {
+      var n = normalizeTrainingSyncName(getTrainingDisplayNameFromEntry(rithmArr[i]));
+      if (n)
+        map[n] = rithmEntryTrainingFingerprint(rithmArr[i]);
+    }
+    return map;
+  }
+
+  function getTrainDisplayLabelFromMeta(metaIdx){
+    if (metaIdx < 0 || !Gl_aMetaRithm[metaIdx] || !Gl_aMetaRithm[metaIdx][1])
+      return "";
+    for (var j = 0; j < Gl_aMetaRithm[metaIdx][1].length; j++) {
+      if (typeof Gl_aMetaRithm[metaIdx][1][j] === "string") {
+        var tag = Gl_aMetaRithm[metaIdx][1][j].split("=")[0].trim();
+        if (tag)
+          return tag;
+      }
+    }
+    return "";
+  }
+
+  function trainSyncStatusToPickClass(status){
+    return String(status || "neutral").replace(/_/g, "-");
+  }
+
+  function syncTrainPickListChrome(){
+    var wrap = document.getElementById("selectAllTrainWrap");
+    if (!wrap || !selectAllTrain)
+      return;
+    if (selectAllTrain.getAttribute("multiple") === "multiple")
+      wrap.classList.add("train-pick-wrap--multi");
+    else
+      wrap.classList.remove("train-pick-wrap--multi");
+  }
+
+  function syncTrainPickListSelection(){
+    var listEl = document.getElementById("selectAllTrainList");
+    if (!listEl || !selectAllTrain)
+      return;
+    var curMeta = -1;
+    if (selectAllTrain.selectedIndex >= 0 && selectAllTrain.options[selectAllTrain.selectedIndex])
+      curMeta = Number(selectAllTrain.options[selectAllTrain.selectedIndex].value);
+    var items = listEl.querySelectorAll(".train-pick-item");
+    for (var i = 0; i < items.length; i++) {
+      var mi = Number(items[i].getAttribute("data-meta-idx"));
+      if (mi === curMeta)
+        items[i].classList.add("train-pick-item--selected");
+      else
+        items[i].classList.remove("train-pick-item--selected");
+    }
+  }
+
+  function pickTrainListItem(metaIdx){
+    if (!selectAllTrain)
+      return;
+    for (var o = 0; o < selectAllTrain.options.length; o++) {
+      if (Number(selectAllTrain.options[o].value) === metaIdx) {
+        selectAllTrain.selectedIndex = o;
+        syncTrainPickListSelection();
+        onSelectTrain(o, getTrainDisplayLabelFromMeta(metaIdx));
+        return;
+      }
+    }
+  }
+
   function computeTrainingRemoteSyncStatuses(localRithm, remoteNow, remotePrev){
     Gl_trainRemoteSyncByIndex = {};
     if (!localRithm || !localRithm.length)
       return;
     var hasPrevSnapshot = !!(remotePrev && remotePrev.length);
-    var nowMap = buildRithmByNameMap(remoteNow);
-    var prevMap = buildRithmByNameMap(remotePrev);
+    var nowFpMap = buildRithmFingerprintByNameMap(remoteNow);
+    var prevFpMap = buildRithmFingerprintByNameMap(remotePrev);
     for (var i = 0; i < localRithm.length; i++) {
       var entry = localRithm[i];
       var name = normalizeTrainingSyncName(getTrainingDisplayNameFromEntry(entry));
@@ -5667,10 +5809,11 @@ window.addEventListener("pageshow", function(){
         Gl_trainRemoteSyncByIndex[i] = hasPrevSnapshot ? "local_only" : "neutral";
         continue;
       }
-      if (nowMap[name]) {
-        Gl_trainRemoteSyncByIndex[i] = metaRithmEntriesEqual(entry, nowMap[name]) ? "on_server_match" : "diff_remote";
-      } else if (prevMap[name]) {
-        Gl_trainRemoteSyncByIndex[i] = metaRithmEntriesEqual(entry, prevMap[name]) ? "deleted_match" : "deleted_diff";
+      var localFp = rithmEntryTrainingFingerprint(entry);
+      if (Object.prototype.hasOwnProperty.call(nowFpMap, name)) {
+        Gl_trainRemoteSyncByIndex[i] = (localFp === nowFpMap[name]) ? "on_server_match" : "diff_remote";
+      } else if (Object.prototype.hasOwnProperty.call(prevFpMap, name)) {
+        Gl_trainRemoteSyncByIndex[i] = (localFp === prevFpMap[name]) ? "deleted_match" : "deleted_diff";
       } else {
         Gl_trainRemoteSyncByIndex[i] = hasPrevSnapshot ? "local_only" : "neutral";
       }
@@ -5747,19 +5890,11 @@ window.addEventListener("pageshow", function(){
     var st = Gl_trainSyncStyleByStatus[status] || Gl_trainSyncStyleByStatus.neutral;
     opt.style.color = st.color;
     opt.style.backgroundColor = st.background;
+    opt.text = String(baseLabel != null ? baseLabel : opt.text || "");
     if (st.title)
       opt.title = st.title;
     else
       opt.removeAttribute("title");
-    var label = String(baseLabel != null ? baseLabel : opt.text || "");
-    if (status === "diff_remote")
-      opt.text = "\u25C6 " + label;
-    else if (status === "on_server_match")
-      opt.text = "\u2713 " + label;
-    else if (status === "local_only")
-      opt.text = "\u25CF " + label;
-    else
-      opt.text = label;
   }
 
   function updateTrainSyncLegend(){
@@ -6691,31 +6826,56 @@ END:VEVENT\n`
   }
 
   function readFilteredListOfTrainings(sFilt,loadTrain){
-    selectAllTrain.options.length = 0
-    for(var i=0; i<Gl_aMetaRithm.length; i++) {
-      var flAdd = true
+    var listEl = document.getElementById("selectAllTrainList");
+    var multi = selectAllTrain && selectAllTrain.getAttribute("multiple") === "multiple";
+    syncTrainPickListChrome();
+    selectAllTrain.options.length = 0;
+    if (listEl)
+      listEl.innerHTML = "";
+    for (var i = 0; i < Gl_aMetaRithm.length; i++) {
+      var flAdd = true;
       if (flAdd)
-        flAdd = ((sFilt.length==0)
-          ||((sFilt.length>0)&&(Gl_aMetaRithm[i].join(' ').toUpperCase().indexOf(sFilt.toUpperCase())>=0))
-          )
-      if (flAdd && (selectAllTrain.getAttribute("multiple")=="multiple"))
-        flAdd = !(Gl_aMetaRithm[i].join(' ').toUpperCase().indexOf(Gl_sSimultTrain)>=0)
+        flAdd = ((sFilt.length === 0)
+          || ((sFilt.length > 0) && (Gl_aMetaRithm[i].join(" ").toUpperCase().indexOf(sFilt.toUpperCase()) >= 0)));
+      if (flAdd && multi)
+        flAdd = !(Gl_aMetaRithm[i].join(" ").toUpperCase().indexOf(Gl_sSimultTrain) >= 0);
 
       if (flAdd) {
-        var trainLabel = Gl_aMetaRithm[i][1][0].split('=')[0];
-        addAction("all",null/*actions*/,trainLabel,i,false,false,"width:100%",false);
+        var trainLabel = getTrainDisplayLabelFromMeta(i);
+        var status = Gl_trainRemoteSyncByIndex[i] || "neutral";
+        addAction("all", null, trainLabel, i, false, false, "width:100%", false);
         var opt = selectAllTrain.options[selectAllTrain.options.length - 1];
-        applyTrainOptionSyncStyle(opt, Gl_trainRemoteSyncByIndex[i] || "neutral", trainLabel);
+        if (multi) {
+          applyTrainOptionSyncStyle(opt, status, trainLabel);
+        } else if (listEl) {
+          opt.text = trainLabel;
+          var item = document.createElement("div");
+          item.className = "train-pick-item train-pick-item--" + trainSyncStatusToPickClass(status);
+          item.setAttribute("data-meta-idx", String(i));
+          item.setAttribute("role", "option");
+          item.textContent = trainLabel;
+          var st = Gl_trainSyncStyleByStatus[status] || Gl_trainSyncStyleByStatus.neutral;
+          if (st.title)
+            item.title = st.title;
+          item.onclick = (function(idx){
+            return function(){ pickTrainListItem(idx); };
+          })(i);
+          listEl.appendChild(item);
+        }
       }
-
     }
     updateTrainSyncLegend();
-    if (loadTrain!==null)
-      for(var i=0; i<selectAllTrain.options.length;i++)
-        if (selectAllTrain.options[i].text.trim()=="<"+loadTrain.trim()+">")
-          selectAllTrain.selectedIndex = i
-      //selectAllTrain.selectedIndex = getTrainIndexByName("<"+loadTrain+">")
-    updateOpenAndroidAppLink()
+    if (loadTrain !== null) {
+      var want = "<" + String(loadTrain).trim() + ">";
+      for (var o = 0; o < selectAllTrain.options.length; o++) {
+        if (selectAllTrain.options[o].text.trim() === want) {
+          selectAllTrain.selectedIndex = o;
+          break;
+        }
+      }
+    }
+    syncTrainPickListSelection();
+    updateOpenAndroidAppLink();
   }
 
   //"стусовка" тренировок из массива (может не работать, если промежутки времени зависят от онлайн-вычисляемых параметров)
