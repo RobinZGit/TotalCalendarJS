@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="tcjs-build" content="__TCJS_GITHUB_RUN__">
-    <script id="tcjs-app-build" type="text/plain">22</script>
+    <script id="tcjs-app-build" type="text/plain">22
+2026-05-25 08:15:15</script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Календарь тренировок</title>
     <style>
@@ -429,20 +430,42 @@
     </header>
     <script>
     (function () {
-        function applyAppVersion(n) {
-            var verEl = document.getElementById('idAppBarTitleVersion');
-            if (verEl && typeof n === 'number' && n >= 0 && isFinite(n)) {
-                verEl.textContent = ' (v' + n + ')';
-            }
+        function formatAppBuildDateTime(stamp) {
+            var s = String(stamp || '').trim();
+            if (!s) return '';
+            var d = new Date(s.indexOf('T') >= 0 ? s : s.replace(' ', 'T'));
+            if (isNaN(d.getTime())) return '';
+            function pad(n) { return (n < 10 ? '0' : '') + n; }
+            return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear()
+                + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
         }
-        function parseAppBuild(str) {
-            var line = String(str || '').trim().split(/\s/)[0];
-            var n = parseInt(line, 10);
-            return isFinite(n) && n >= 0 ? n : null;
+        function applyAppVersion(info) {
+            var verEl = document.getElementById('idAppBarTitleVersion');
+            if (!verEl) return;
+            var n = (typeof info === 'number') ? info : (info && info.n);
+            var builtAt = (info && info.builtAt) ? info.builtAt : '';
+            if (typeof n !== 'number' || n < 0 || !isFinite(n)) return;
+            var label = formatAppBuildDateTime(builtAt);
+            var text = ' (V' + n;
+            if (label) text += ' от ' + label;
+            text += ')';
+            verEl.textContent = text;
+            verEl.title = label
+                ? ('Версия приложения V' + n + ', сборка от ' + label)
+                : ('Версия приложения V' + n);
+        }
+        function parseAppBuildInfo(str) {
+            var raw = String(str || '').trim();
+            if (!raw) return null;
+            var lines = raw.split(/\r?\n/);
+            var n = parseInt(String(lines[0] || '').trim(), 10);
+            if (!isFinite(n) || n < 0) return null;
+            var builtAt = lines.length > 1 ? lines.slice(1).join('\n').trim() : '';
+            return { n: n, builtAt: builtAt || null };
         }
         var inlineEl = document.getElementById('tcjs-app-build');
         if (inlineEl) {
-            var fromInline = parseAppBuild(inlineEl.textContent);
+            var fromInline = parseAppBuildInfo(inlineEl.textContent);
             if (fromInline !== null) {
                 applyAppVersion(fromInline);
                 return;
@@ -452,7 +475,7 @@
             var m = document.querySelector('meta[name="tcjs-build"]');
             var v = m ? (m.getAttribute('content') || '').trim() : '';
             if (v && v !== '__TCJS_GITHUB_RUN__' && /^[0-9]+$/.test(v)) {
-                applyAppVersion(parseInt(v, 10));
+                applyAppVersion({ n: parseInt(v, 10), builtAt: null });
                 return;
             }
         } catch (e) { /* ignore */ }
@@ -461,8 +484,8 @@
             fetch(u, { cache: 'no-store' }).then(function (r) {
                 return r.ok ? r.text() : '';
             }).then(function (t) {
-                var n = parseAppBuild(t);
-                if (n !== null) applyAppVersion(n);
+                var info = parseAppBuildInfo(t);
+                if (info !== null) applyAppVersion(info);
             }).catch(function () { /* ignore */ });
         } catch (e2) { /* ignore */ }
     })();

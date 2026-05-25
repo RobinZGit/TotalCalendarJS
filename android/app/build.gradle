@@ -15,7 +15,19 @@ String readRootAppBuildTxt() {
     return (t ==~ /^[0-9]+$/) ? t : ''
 }
 
+String readRootAppBuildDate() {
+    def f = rootProject.projectDir.parentFile.toPath().resolve('app-build.txt').toFile()
+    if (!f.exists()) return ''
+    def lines = f.getText('UTF-8').readLines()
+    return lines.size() > 1 ? (lines[1] ?: '').trim() : ''
+}
+
 def effectiveTcjsRun = tcjsGithubRun ?: readRootAppBuildTxt()
+def tcjsBuildStamp = readRootAppBuildDate()
+if (!tcjsBuildStamp) {
+    tcjsBuildStamp = new java.text.SimpleDateFormat('yyyy-MM-dd HH:mm:ss').format(new Date())
+}
+def tcjsInlineBuildContent = effectiveTcjsRun ? (effectiveTcjsRun + '\n' + tcjsBuildStamp) : ''
 
 def versionCodeFromFile = 1
 def rootBuildTxt = readRootAppBuildTxt()
@@ -97,7 +109,7 @@ tasks.register('syncWebAssets', Copy) {
                 text = text.replace('__TCJS_GITHUB_RUN__', effectiveTcjsRun)
                 text = text.replaceAll(
                     ~/<script id="tcjs-app-build" type="text\/plain">[^<]*<\/script>/,
-                    '<script id="tcjs-app-build" type="text/plain">' + effectiveTcjsRun + '</script>'
+                    '<script id="tcjs-app-build" type="text/plain">' + tcjsInlineBuildContent + '</script>'
                 )
             }
             indexFile.setText(text, 'UTF-8')
@@ -110,7 +122,7 @@ tasks.register('syncWebAssets', Copy) {
                 t1 = t1.replace('__TCJS_GITHUB_RUN__', effectiveTcjsRun)
                 t1 = t1.replaceAll(
                     ~/<script id="tcjs-app-build" type="text\/plain">[^<]*<\/script>/,
-                    '<script id="tcjs-app-build" type="text/plain">' + effectiveTcjsRun + '</script>'
+                    '<script id="tcjs-app-build" type="text/plain">' + tcjsInlineBuildContent + '</script>'
                 )
             }
             index1File.setText(t1, 'UTF-8')
