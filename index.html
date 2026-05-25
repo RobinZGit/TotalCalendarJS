@@ -491,11 +491,36 @@
             padding: 12px;
         }
 
+        #selectAllTrain {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 5.5em;
+            max-height: 8.5em;
+            padding: 6px 10px;
+            font-size: inherit;
+            line-height: 1.35;
+            border: 3px solid var(--primary-dark, #1d4ed8);
+            border-radius: 10px;
+            background: var(--surface, #fff);
+            color: inherit;
+        }
+
+        #selectAllTrain:focus {
+            outline: none;
+            border-color: var(--primary, #2563eb);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
+        }
+
+        .train-sync-status {
+            margin: 4px 0 8px;
+        }
+
         .train-sync-legend {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px 12px;
-            margin-top: 8px;
+            gap: 6px 10px;
+            margin: 0;
             font-size: 0.82rem;
             line-height: 1.35;
             color: var(--muted, #64748b);
@@ -527,7 +552,7 @@
         }
 
         .train-sync-offline-msg {
-            margin-top: 8px;
+            margin-top: 6px;
             padding: 8px 10px;
             border-radius: 8px;
             font-size: 0.82rem;
@@ -1157,11 +1182,13 @@
 
     <section id="trainingControlsTop" class="section-card">
         <div id="idDivAllTrain">
-            <div class="field">
+            <div class="field field-train-select">
                 <label for="selectAllTrain">Выбор тренировки:</label>
-                <select id="selectAllTrain" class="select-large" onchange="onSelectTrain(this.selectedIndex,this.options[this.selectedIndex].text);"></select>
-                <div id="idTrainSyncLegend" class="train-sync-legend" style="display:none" aria-hidden="true"></div>
-                <div id="idTrainSyncOfflineMsg" class="train-sync-offline-msg" style="display:none" role="status"></div>
+                <div id="idTrainSyncStatus" class="train-sync-status">
+                    <div id="idTrainSyncLegend" class="train-sync-legend" style="display:none" aria-hidden="true"></div>
+                    <div id="idTrainSyncOfflineMsg" class="train-sync-offline-msg" style="display:none" role="status"></div>
+                </div>
+                <select id="selectAllTrain" onchange="onSelectTrain(this.selectedIndex,this.options[this.selectedIndex].text);"></select>
             </div>
             <div class="option-grid">
                 <div class="field">
