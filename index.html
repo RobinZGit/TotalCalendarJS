@@ -722,6 +722,7 @@
             border-radius: 6px;
         }
 
+        .train-sync-pill--on-server-match,
         .train-sync-pill--deleted-match {
             color: #166534;
             background: #bbf7d0;
@@ -5926,6 +5927,7 @@ window.addEventListener("pageshow", function(){
       var status = Gl_trainRemoteSyncByIndex[metaIdx] || "neutral";
       trig.classList.add("train-pick-trigger--" + trainSyncStatusToPickClass(status));
     }
+    updateTrainSyncLegend();
   }
 
   function initTrainPickDropdownUi(){
@@ -6090,6 +6092,15 @@ window.addEventListener("pageshow", function(){
       opt.removeAttribute("title");
   }
 
+  function getSelectedTrainMetaIndex(){
+    if (!selectAllTrain || selectAllTrain.selectedIndex < 0)
+      return -1;
+    var opt = selectAllTrain.options[selectAllTrain.selectedIndex];
+    if (!opt)
+      return -1;
+    return Number(opt.value);
+  }
+
   function updateTrainSyncLegend(){
     var el = document.getElementById("idTrainSyncLegend");
     if (!el)
@@ -6097,15 +6108,30 @@ window.addEventListener("pageshow", function(){
     if (!Gl_trainingsLoadedFromLocal || !Gl_trainRemoteSyncCompared) {
       el.style.display = "none";
       el.setAttribute("aria-hidden", "true");
-      el.innerHTML = "";
+      el.textContent = "";
       return;
     }
-    var html = "";
-    html += '<span class="train-sync-pill train-sync-pill--deleted-match">Зелёный — присутствует на сервере, совпадает с локальной</span>';
-    html += '<span class="train-sync-pill train-sync-pill--diff-remote">Оранжевый — присутствует на сервере, отличается от локальной</span>';
-    html += '<span class="train-sync-pill train-sync-pill--local-only">Красный — только в локальной базе, на сервере отсутствует</span>';
-    el.innerHTML = html;
-    el.style.display = "flex";
+    var metaIdx = getSelectedTrainMetaIndex();
+    if (metaIdx < 0) {
+      el.style.display = "none";
+      el.setAttribute("aria-hidden", "true");
+      el.textContent = "";
+      return;
+    }
+    var status = Gl_trainRemoteSyncByIndex[metaIdx] || "neutral";
+    var st = Gl_trainSyncStyleByStatus[status] || Gl_trainSyncStyleByStatus.neutral;
+    if (!st.title || status === "neutral") {
+      el.style.display = "none";
+      el.setAttribute("aria-hidden", "true");
+      el.textContent = "";
+      return;
+    }
+    el.textContent = "";
+    var pill = document.createElement("span");
+    pill.className = "train-sync-pill train-sync-pill--" + trainSyncStatusToPickClass(status);
+    pill.textContent = st.title;
+    el.appendChild(pill);
+    el.style.display = "block";
     el.setAttribute("aria-hidden", "false");
   }
 
@@ -6941,6 +6967,7 @@ END:VEVENT\n`
        nGlInd = getTrainIndexByName(sName)
      execTrain1(nGlInd,"Act")
      updateOpenAndroidAppLink()
+     updateTrainSyncLegend()
   }
 
   function onSelectCalendar(nInd){
@@ -7057,7 +7084,6 @@ END:VEVENT\n`
         }
       }
     }
-    updateTrainSyncLegend();
     if (loadTrain !== null) {
       var want = "<" + String(loadTrain).trim() + ">";
       for (var o = 0; o < selectAllTrain.options.length; o++) {
