@@ -3502,6 +3502,12 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
  function collectTrainingSessionSnapshotObject(){
    var panel = typeof getTrainingNavPanel === "function" ? getTrainingNavPanel() : null;
    var ui = readTrainingUiSettings();
+  var edTa = null;
+  var edText = "";
+  var edPanelOpen = false;
+  try { edTa = document.getElementById("idTrainEditor"); } catch (e) {}
+  try { edText = edTa ? (edTa.value || "") : ""; } catch (e) {}
+  try { edPanelOpen = typeof isTrainEditorPanelOpen === "function" ? !!isTrainEditorPanelOpen() : false; } catch (e) {}
    return {
      v: 2,
      savedAt: Date.now(),
@@ -3529,7 +3535,13 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
      navScrollTop: panel ? panel.scrollTop : 0,
      stoppedAtIndex: GlnInd,
      pulseLogText: (Gl_hadHeartRateDuringTraining && hasHeartRateLogData()) ? buildHeartRateLogText() : "",
-     stoppedAtExercise: (Gl_aRithmLisp && Gl_aRithmLisp[GlnInd]) ? String(Gl_aRithmLisp[GlnInd]) : ""
+    stoppedAtExercise: (Gl_aRithmLisp && Gl_aRithmLisp[GlnInd]) ? String(Gl_aRithmLisp[GlnInd]) : "",
+    trainEditorPanelOpen: edPanelOpen,
+    trainEditorText: edText,
+    trainEditorSourceIndex: Gl_trainEditorSourceIndex,
+    trainEditorOriginalName: Gl_trainEditorOriginalName,
+    trainEditorBaseline: Gl_trainEditorBaseline,
+    trainEditorIndex: Gl_trainEditorIndex
    };
  }
 
@@ -4016,6 +4028,25 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
    var panel = getTrainingNavPanel();
    if (panel && typeof snap.navScrollTop === "number")
      panel.scrollTop = snap.navScrollTop;
+
+  // Сохраняем состояние редактора тренировки при ресайзе/сворачивании элементов в Android.
+  try {
+    var edPanel = document.getElementById("idTrainEditorPanel");
+    if (edPanel) {
+      var edOpen = !!snap.trainEditorPanelOpen;
+      edPanel.hidden = !edOpen;
+    }
+    if (typeof snap.trainEditorText === "string" && typeof setTrainEditorState === "function") {
+      var srcIdx = (typeof snap.trainEditorSourceIndex === "number") ? snap.trainEditorSourceIndex : -1;
+      setTrainEditorState(
+        snap.trainEditorText,
+        srcIdx,
+        snap.trainEditorOriginalName,
+        (typeof snap.trainEditorBaseline === "string" ? snap.trainEditorBaseline : snap.trainEditorText)
+      );
+    }
+  } catch (e) {}
+
    syncNoSoundTextTrainLayout();
    return true;
  }
@@ -4026,7 +4057,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
    if (!raw) return false;
    var snap;
    try { snap = JSON.parse(raw); } catch (e) { clearTrainingSessionSnapshot(); return false; }
-   if (!snap || snap.v !== 1 || !snap.Gl_aRithmLisp || !snap.Gl_aRithmLisp.length) return false;
+  if (!snap || (snap.v !== 1 && snap.v !== 2) || !snap.Gl_aRithmLisp || !snap.Gl_aRithmLisp.length) return false;
    if (Date.now() - (snap.savedAt || 0) > 12 * 60 * 60 * 1000) {
      clearTrainingSessionSnapshot();
      return false;
