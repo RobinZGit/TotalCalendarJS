@@ -161,7 +161,11 @@
         }
 
         .training-head-sticky--active .app-bar {
-            margin-bottom: 8px;
+            display: none;
+        }
+
+        .training-head-sticky--active .training-live-name {
+            margin-top: 8px;
         }
 
         .training-screen-awake {
@@ -521,32 +525,130 @@
             padding: 12px;
         }
 
+        .field-train-select {
+            min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
         .train-pick-wrap {
+            position: relative;
             width: 100%;
+            max-width: 100%;
+            min-width: 0;
         }
 
         .train-pick-wrap.train-pick-wrap--multi #selectAllTrain {
-            display: block;
-        }
-
-        .train-pick-wrap.train-pick-wrap--multi .train-pick-list {
-            display: none;
-        }
-
-        .train-pick-list,
-        #selectAllTrain {
             display: block;
             width: 100%;
             box-sizing: border-box;
             min-height: 5.5em;
             max-height: 8.5em;
-            padding: 0;
+            padding: 6px 10px;
+            font-size: inherit;
+            line-height: 1.35;
+            border: 3px solid var(--primary-dark, #1d4ed8);
+            border-radius: 10px;
+            background: var(--surface, #fff);
+        }
+
+        .train-pick-wrap.train-pick-wrap--multi .train-pick-trigger,
+        .train-pick-wrap.train-pick-wrap--multi .train-pick-dropdown {
+            display: none !important;
+        }
+
+        .train-pick-trigger {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            padding: 8px 10px;
             font-size: inherit;
             line-height: 1.35;
             border: 3px solid var(--primary-dark, #1d4ed8);
             border-radius: 10px;
             background: var(--surface, #fff);
             color: inherit;
+            cursor: pointer;
+            text-align: left;
+            overflow: hidden;
+        }
+
+        .train-pick-trigger__label {
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .train-pick-trigger__caret {
+            flex: 0 0 auto;
+            color: var(--primary-dark, #1d4ed8);
+            font-size: 0.85rem;
+            line-height: 1;
+        }
+
+        .train-pick-trigger--on-server-match {
+            color: #166534;
+            background: #bbf7d0;
+        }
+
+        .train-pick-trigger--diff-remote {
+            color: #9a3412;
+            background: #fdba74;
+        }
+
+        .train-pick-trigger--local-only {
+            color: #991b1b;
+            background: #fecaca;
+        }
+
+        .train-pick-trigger:focus {
+            outline: none;
+            border-color: var(--primary, #2563eb);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
+        }
+
+        .train-pick-dropdown {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: calc(100% + 4px);
+            z-index: 300;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            border: 3px solid var(--primary-dark, #1d4ed8);
+            border-radius: 10px;
+            background: var(--surface, #fff);
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
+            overflow: hidden;
+        }
+
+        .train-pick-dropdown[hidden] {
+            display: none !important;
+        }
+
+        .train-pick-list {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            max-height: 12em;
+            min-height: 0;
+            padding: 0;
+            margin: 0;
+            font-size: inherit;
+            line-height: 1.35;
+            border: none;
+            border-radius: 0;
+            background: transparent;
+            color: inherit;
+            overflow-x: hidden;
             overflow-y: auto;
         }
 
@@ -595,8 +697,7 @@
             font-weight: 700;
         }
 
-        #selectAllTrain:focus,
-        .train-pick-list:focus-within {
+        #selectAllTrain:focus {
             outline: none;
             border-color: var(--primary, #2563eb);
             box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
@@ -1202,8 +1303,8 @@
         <div id="idImgTrain" class="training-display" style="display:none;" aria-live="polite"></div>
     </div>
 
-    <div id="idTrainingHeadSticky" class="training-head-sticky">
-        <header class="app-bar" ondblclick="restartTrainingApp()" title="Двойной клик: перезапуск приложения">
+    <div id="idTrainingHeadSticky" class="training-head-sticky" ondblclick="restartTrainingApp()" title="Двойной клик: перезапуск приложения">
+        <header class="app-bar">
             <img src="favicon.svg" alt="" aria-hidden="true">
             <h1 class="app-bar-title"><span id="idAppBarTitleText">Календарь тренировок</span><span id="idAppBarTitleVersion" title="Версия приложения"></span></h1>
             <button type="button" id="btnClearLocalTcjsCache" class="tcjs-clear-cache-btn"
@@ -1290,13 +1391,20 @@
     <section id="trainingControlsTop" class="section-card">
         <div id="idDivAllTrain">
             <div class="field field-train-select">
-                <label for="selectAllTrain">Выбор тренировки:</label>
+                <label for="selectAllTrainTrigger">Выбор тренировки:</label>
                 <div id="idTrainSyncStatus" class="train-sync-status">
                     <div id="idTrainSyncLegend" class="train-sync-legend" style="display:none" aria-hidden="true"></div>
                     <div id="idTrainSyncOfflineMsg" class="train-sync-offline-msg" style="display:none" role="status"></div>
                 </div>
                 <div id="selectAllTrainWrap" class="train-pick-wrap">
-                    <div id="selectAllTrainList" class="train-pick-list" role="listbox" tabindex="0" aria-label="Список тренировок"></div>
+                    <button id="selectAllTrainTrigger" class="train-pick-trigger" type="button"
+                        role="combobox" aria-expanded="false" aria-haspopup="listbox" aria-controls="selectAllTrainList">
+                        <span id="selectAllTrainTriggerLabel" class="train-pick-trigger__label">Выберите тренировку…</span>
+                        <span class="train-pick-trigger__caret" aria-hidden="true">▾</span>
+                    </button>
+                    <div id="selectAllTrainDropdown" class="train-pick-dropdown" hidden>
+                        <div id="selectAllTrainList" class="train-pick-list" role="listbox" aria-label="Список тренировок"></div>
+                    </div>
                     <select id="selectAllTrain" onchange="onSelectTrain(this.selectedIndex,this.options[this.selectedIndex].text);"></select>
                 </div>
             </div>
@@ -3290,6 +3398,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
  var Gl_trainingsLoadedFromLocal = false;
  /** Удалённый index.html успешно загружен для сравнения (показать полную легенду). */
  var Gl_trainRemoteSyncCompared = false;
+ var Gl_trainPickDropdownOpen = false;
  /** Последний e-mail для отправки экспортированных файлов. */
  var TCJS_EXPORT_EMAIL_KEY = "tcjs_export_email_v1";
  var Gl_savedTrainingsBrowseIndex = 0;
@@ -5759,10 +5868,92 @@ window.addEventListener("pageshow", function(){
     var wrap = document.getElementById("selectAllTrainWrap");
     if (!wrap || !selectAllTrain)
       return;
-    if (selectAllTrain.getAttribute("multiple") === "multiple")
+    if (selectAllTrain.getAttribute("multiple") === "multiple") {
       wrap.classList.add("train-pick-wrap--multi");
-    else
+      closeTrainPickDropdown();
+    } else
       wrap.classList.remove("train-pick-wrap--multi");
+  }
+
+  function closeTrainPickDropdown(){
+    var drop = document.getElementById("selectAllTrainDropdown");
+    var trig = document.getElementById("selectAllTrainTrigger");
+    Gl_trainPickDropdownOpen = false;
+    if (drop)
+      drop.hidden = true;
+    if (trig)
+      trig.setAttribute("aria-expanded", "false");
+  }
+
+  function openTrainPickDropdown(){
+    var drop = document.getElementById("selectAllTrainDropdown");
+    var trig = document.getElementById("selectAllTrainTrigger");
+    if (!drop || !trig || !selectAllTrain || selectAllTrain.getAttribute("multiple") === "multiple")
+      return;
+    updateTrainPickTriggerFromSelection();
+    drop.hidden = false;
+    trig.setAttribute("aria-expanded", "true");
+    Gl_trainPickDropdownOpen = true;
+    syncTrainPickListSelection();
+    try {
+      var sel = drop.querySelector(".train-pick-item--selected");
+      if (sel)
+        sel.scrollIntoView({ block: "nearest" });
+    } catch (e) {}
+  }
+
+  function toggleTrainPickDropdown(){
+    if (Gl_trainPickDropdownOpen)
+      closeTrainPickDropdown();
+    else
+      openTrainPickDropdown();
+  }
+
+  function updateTrainPickTriggerFromSelection(){
+    var labelEl = document.getElementById("selectAllTrainTriggerLabel");
+    var trig = document.getElementById("selectAllTrainTrigger");
+    if (!labelEl || !trig || !selectAllTrain)
+      return;
+    var metaIdx = -1;
+    if (selectAllTrain.selectedIndex >= 0 && selectAllTrain.options[selectAllTrain.selectedIndex])
+      metaIdx = Number(selectAllTrain.options[selectAllTrain.selectedIndex].value);
+    var labelText = metaIdx >= 0 ? getTrainDisplayLabelFromMeta(metaIdx) : "Выберите тренировку…";
+    labelEl.textContent = labelText;
+    labelEl.title = metaIdx >= 0 ? labelText : "";
+    trig.className = "train-pick-trigger";
+    trig.title = metaIdx >= 0 ? labelText : "";
+    if (metaIdx >= 0) {
+      var status = Gl_trainRemoteSyncByIndex[metaIdx] || "neutral";
+      trig.classList.add("train-pick-trigger--" + trainSyncStatusToPickClass(status));
+    }
+  }
+
+  function initTrainPickDropdownUi(){
+    if (window._tcjsTrainPickDropdownUiInited)
+      return;
+    window._tcjsTrainPickDropdownUiInited = true;
+    var trig = document.getElementById("selectAllTrainTrigger");
+    if (trig) {
+      trig.addEventListener("click", function(e){
+        e.stopPropagation();
+        toggleTrainPickDropdown();
+      });
+      trig.addEventListener("keydown", function(e){
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          toggleTrainPickDropdown();
+        } else if (e.key === "Escape") {
+          closeTrainPickDropdown();
+        }
+      });
+    }
+    document.addEventListener("click", function(e){
+      if (!Gl_trainPickDropdownOpen)
+        return;
+      var wrap = document.getElementById("selectAllTrainWrap");
+      if (wrap && !wrap.contains(e.target))
+        closeTrainPickDropdown();
+    });
   }
 
   function syncTrainPickListSelection(){
@@ -5789,6 +5980,8 @@ window.addEventListener("pageshow", function(){
       if (Number(selectAllTrain.options[o].value) === metaIdx) {
         selectAllTrain.selectedIndex = o;
         syncTrainPickListSelection();
+        updateTrainPickTriggerFromSelection();
+        closeTrainPickDropdown();
         onSelectTrain(o, getTrainDisplayLabelFromMeta(metaIdx));
         return;
       }
@@ -6875,6 +7068,8 @@ END:VEVENT\n`
       }
     }
     syncTrainPickListSelection();
+    updateTrainPickTriggerFromSelection();
+    closeTrainPickDropdown();
     updateOpenAndroidAppLink();
   }
 
@@ -7499,6 +7694,7 @@ END:VEVENT\n`
 
   function fillForm(loadTrain=null)
   {
+    initTrainPickDropdownUi();
     //GlTest+=1;
     calendar.innerHTML = ''
     currentT.innerHTML = ''
