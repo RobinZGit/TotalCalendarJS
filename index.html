@@ -1406,7 +1406,7 @@
                     <div id="selectAllTrainDropdown" class="train-pick-dropdown" hidden>
                         <div id="selectAllTrainList" class="train-pick-list" role="listbox" aria-label="Список тренировок"></div>
                     </div>
-                    <select id="selectAllTrain" onchange="onSelectTrain(this.selectedIndex,this.options[this.selectedIndex].text);"></select>
+                    <select id="selectAllTrain" onchange="onSelectTrain(this.value);"></select>
                 </div>
             </div>
             <div class="option-grid">
@@ -5812,6 +5812,11 @@ window.addEventListener("pageshow", function(){
     return String(name || "").trim().replace(/^<|>$/g, "").toUpperCase();
   }
 
+  function trainingNamesMatch(a, b){
+    var normalizedA = normalizeTrainingSyncName(a);
+    return !!normalizedA && normalizedA === normalizeTrainingSyncName(b);
+  }
+
   function rithmEntryIsCalendarBlock(node){
     return !!(node && Array.isArray(node) && node.length > 0
       && Array.isArray(node[0]) && node[0][0] instanceof Date);
@@ -6015,7 +6020,7 @@ window.addEventListener("pageshow", function(){
         syncTrainPickListSelection();
         updateTrainPickTriggerFromSelection();
         closeTrainPickDropdown();
-        onSelectTrain(o, getTrainDisplayLabelFromMeta(metaIdx));
+        onSelectTrain(metaIdx);
         return;
       }
     }
@@ -6209,7 +6214,7 @@ window.addEventListener("pageshow", function(){
         return;
       }
       Gl_aMetaRithm = rithm;
-      done(true);
+      done(false);
     });
   }
 
@@ -7116,9 +7121,9 @@ END:VEVENT\n`
       }
     }
     if (loadTrain !== null) {
-      var want = "<" + String(loadTrain).trim() + ">";
+      var want = String(loadTrain).trim();
       for (var o = 0; o < selectAllTrain.options.length; o++) {
-        if (selectAllTrain.options[o].text.trim() === want) {
+        if (trainingNamesMatch(selectAllTrain.options[o].text, want)) {
           selectAllTrain.selectedIndex = o;
           break;
         }
@@ -7773,9 +7778,11 @@ END:VEVENT\n`
   //поиск тренировки в глобальном массиве по наименованию (в угловых скобках)
   function getTrainIndexByName(sName){
     if (sName==undefined) return 0;
+    var wantName = String(sName).trim();
     for(var i=0; i<Gl_aMetaRithm.length; i++)
       for(var j=0; j<Gl_aMetaRithm[i][1].length; j++)
-            if(Gl_aMetaRithm[i][1][j].split('=')[0].trim()==sName.trim()) return i;
+            if(Gl_aMetaRithm[i][1][j].split('=')[0].trim()==wantName
+              || trainingNamesMatch(Gl_aMetaRithm[i][1][j].split('=')[0], wantName)) return i;
   }
 
   function test(){
