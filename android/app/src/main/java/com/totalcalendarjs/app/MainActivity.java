@@ -18,6 +18,13 @@ import android.content.pm.PackageManager;
 import android.os.BatteryManager;
 import android.net.Uri;
 import android.media.AudioAttributes;
+import android.media.AudioFormat;
+import android.media.AudioFocusRequest;
+import android.media.AudioManager;
+import android.media.AudioTrack;
+import android.os.Handler;
+import android.os.Looper;
+import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
@@ -54,7 +61,8 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private static final int HEART_RATE_BLE_PERMISSION_REQUEST_CODE = 56;
     private static final int TRAINING_NOTIFICATION_ID = 1001;
     private static final String TRAINING_NOTIFICATION_CHANNEL_ID = "training_status";
-    private static final int MAX_PENDING_SPEECH_ITEMS = 20;
+    private static final int NATIVE_KEEPALIVE_INTERVAL_MS = 3000;
+    private static final int NATIVE_KEEPALIVE_SAMPLE_RATE = 8000;
     private static final String PREFS_TCJS = "tcjs_prefs";
     private static final String PREF_EXPORT_EMAIL = "export_email";
 
@@ -74,7 +82,25 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private HeartRateBleManager heartRateBleManager;
     private boolean pendingHeartRateScanAfterPermission;
     private BroadcastReceiver batteryEmergencyReceiver;
+    private BroadcastReceiver audioRouteReceiver;
     private long lastBatteryPercentFlushMs;
+    private AudioManager audioManager;
+    private AudioFocusRequest audioFocusRequest;
+    private AudioManager.OnAudioFocusChangeListener legacyAudioFocusListener;
+    private AudioTrack nativeKeepAliveTrack;
+    private Handler trainingKeepAliveHandler;
+    private final Runnable trainingKeepAliveRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!trainingGuardActive) {
+                return;
+            }
+            reinforceTrainingAudioOnUiThread();
+            if (trainingKeepAliveHandler != null) {
+                trainingKeepAliveHandler.postDelayed(this, NATIVE_KEEPALIVE_INTERVAL_MS);
+            }
+        }
+    };
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
@@ -487,6 +513,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
             textToSpeech.setAudioAttributes(new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .setFlags(AudioAttributes.FLAG_AUDIBILITY_ENFORCED)
                     .build());
         }
 
@@ -526,7 +553,12 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         acquireTrainingWakeLock();
         updateTrainingScreenWakeLock();
+        requestTrainingAudioFocus();
+        startNativeKeepAliveAudio();
+        registerAudioRouteReceiver();
+        startNativeKeepAliveTimer();
         showTrainingNotification();
+        pingWebReinforceKeepAlive();
     }
 
     private void stopTrainingGuardOnUiThread() {
@@ -534,6 +566,10 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         releaseTrainingScreenWakeLock();
         releaseTrainingWakeLock();
+        stopNativeKeepAliveTimer();
+        unregisterAudioRouteReceiver();
+        stopNativeKeepAliveAudio();
+        abandonTrainingAudioFocus();
         hideTrainingNotification();
         stopSpeechOnUiThread();
     }
@@ -548,6 +584,10 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         releaseTrainingScreenWakeLock();
         releaseTrainingWakeLock();
+        stopNativeKeepAliveTimer();
+        unregisterAudioRouteReceiver();
+        stopNativeKeepAliveAudio();
+        abandonTrainingAudioFocus();
         hideTrainingNotification();
         stopSpeechOnUiThread();
 
@@ -564,6 +604,10 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         releaseTrainingScreenWakeLock();
         releaseTrainingWakeLock();
+        stopNativeKeepAliveTimer();
+        unregisterAudioRouteReceiver();
+        stopNativeKeepAliveAudio();
+        abandonTrainingAudioFocus();
         hideTrainingNotification();
         stopSpeechOnUiThread();
 
@@ -648,6 +692,234 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         }
     }
 
+    private AudioManager getAudioManager() {
+        if (audioManager == null) {
+            audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        }
+        return audioManager;
+    }
+
+    private void onTrainingAudioFocusChanged(int focusChange) {
+        if (!trainingGuardActive) {
+            return;
+        }
+        if (focusChange == AudioManager.AUDIOFOCUS_GAIN) {
+            ensureNativeKeepAlivePlaying();
+            pingWebReinforceKeepAlive();
+            return;
+        }
+        if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT
+                || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK
+                || focusChange == AudioManager.AUDIOFOCUS_LOSS) {
+            Handler handler = trainingKeepAliveHandler != null
+                    ? trainingKeepAliveHandler
+                    : new Handler(Looper.getMainLooper());
+            handler.postDelayed(() -> {
+                if (trainingGuardActive) {
+                    requestTrainingAudioFocus();
+                    ensureNativeKeepAlivePlaying();
+                    pingWebReinforceKeepAlive();
+                }
+            }, 250);
+        }
+    }
+
+    private void requestTrainingAudioFocus() {
+        AudioManager manager = getAudioManager();
+        if (manager == null) {
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (audioFocusRequest == null) {
+                AudioAttributes attrs = new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .setFlags(AudioAttributes.FLAG_AUDIBILITY_ENFORCED)
+                        .build();
+                audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                        .setAudioAttributes(attrs)
+                        .setAcceptsDelayedFocusGain(true)
+                        .setWillPauseWhenDucked(false)
+                        .setOnAudioFocusChangeListener(this::onTrainingAudioFocusChanged)
+                        .build();
+            }
+            manager.requestAudioFocus(audioFocusRequest);
+            return;
+        }
+        if (legacyAudioFocusListener == null) {
+            legacyAudioFocusListener = this::onTrainingAudioFocusChanged;
+        }
+        manager.requestAudioFocus(
+                legacyAudioFocusListener,
+                AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN
+        );
+    }
+
+    private void abandonTrainingAudioFocus() {
+        AudioManager manager = getAudioManager();
+        if (manager == null) {
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && audioFocusRequest != null) {
+            manager.abandonAudioFocusRequest(audioFocusRequest);
+        } else if (legacyAudioFocusListener != null) {
+            manager.abandonAudioFocus(legacyAudioFocusListener);
+        }
+    }
+
+    private void startNativeKeepAliveAudio() {
+        if (nativeKeepAliveTrack != null) {
+            ensureNativeKeepAlivePlaying();
+            return;
+        }
+        try {
+            int bufferSize = AudioTrack.getMinBufferSize(
+                    NATIVE_KEEPALIVE_SAMPLE_RATE,
+                    AudioFormat.CHANNEL_OUT_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT
+            );
+            if (bufferSize <= 0) {
+                bufferSize = NATIVE_KEEPALIVE_SAMPLE_RATE;
+            }
+            AudioAttributes attrs = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .setFlags(AudioAttributes.FLAG_AUDIBILITY_ENFORCED)
+                    .build();
+            AudioFormat format = new AudioFormat.Builder()
+                    .setSampleRate(NATIVE_KEEPALIVE_SAMPLE_RATE)
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .build();
+            nativeKeepAliveTrack = new AudioTrack(
+                    attrs,
+                    format,
+                    bufferSize,
+                    AudioTrack.MODE_STATIC,
+                    AudioManager.AUDIO_SESSION_ID_GENERATE
+            );
+            short[] samples = new short[bufferSize];
+            for (int i = 0; i < samples.length; i++) {
+                samples[i] = (short) (Math.sin(2 * Math.PI * 220 * i / NATIVE_KEEPALIVE_SAMPLE_RATE) * 8);
+            }
+            nativeKeepAliveTrack.write(samples, 0, samples.length);
+            nativeKeepAliveTrack.setLoopPoints(0, samples.length, -1);
+            nativeKeepAliveTrack.setVolume(0.02f);
+            nativeKeepAliveTrack.play();
+        } catch (Exception ignored) {
+            stopNativeKeepAliveAudio();
+        }
+    }
+
+    private void ensureNativeKeepAlivePlaying() {
+        if (nativeKeepAliveTrack == null) {
+            startNativeKeepAliveAudio();
+            return;
+        }
+        try {
+            if (nativeKeepAliveTrack.getPlayState() != AudioTrack.PLAYSTATE_PLAYING) {
+                nativeKeepAliveTrack.play();
+            }
+        } catch (Exception ignored) {
+            stopNativeKeepAliveAudio();
+            startNativeKeepAliveAudio();
+        }
+    }
+
+    private void stopNativeKeepAliveAudio() {
+        if (nativeKeepAliveTrack == null) {
+            return;
+        }
+        try {
+            if (nativeKeepAliveTrack.getPlayState() == AudioTrack.PLAYSTATE_PLAYING) {
+                nativeKeepAliveTrack.stop();
+            }
+            nativeKeepAliveTrack.release();
+        } catch (Exception ignored) {
+        }
+        nativeKeepAliveTrack = null;
+    }
+
+    private void startNativeKeepAliveTimer() {
+        if (trainingKeepAliveHandler == null) {
+            trainingKeepAliveHandler = new Handler(Looper.getMainLooper());
+        }
+        trainingKeepAliveHandler.removeCallbacks(trainingKeepAliveRunnable);
+        trainingKeepAliveHandler.postDelayed(trainingKeepAliveRunnable, NATIVE_KEEPALIVE_INTERVAL_MS);
+    }
+
+    private void stopNativeKeepAliveTimer() {
+        if (trainingKeepAliveHandler != null) {
+            trainingKeepAliveHandler.removeCallbacks(trainingKeepAliveRunnable);
+        }
+    }
+
+    private void registerAudioRouteReceiver() {
+        if (audioRouteReceiver != null) {
+            return;
+        }
+        audioRouteReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (!trainingGuardActive || intent == null) {
+                    return;
+                }
+                onAudioRouteChanged();
+            }
+        };
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(AudioManager.ACTION_HEADSET_PLUG);
+        filter.addAction(Intent.ACTION_HEADSET_PLUG);
+        filter.addAction(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(audioRouteReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(audioRouteReceiver, filter);
+        }
+    }
+
+    private void unregisterAudioRouteReceiver() {
+        if (audioRouteReceiver == null) {
+            return;
+        }
+        try {
+            unregisterReceiver(audioRouteReceiver);
+        } catch (IllegalArgumentException ignored) {
+        }
+        audioRouteReceiver = null;
+    }
+
+    private void onAudioRouteChanged() {
+        if (!trainingGuardActive) {
+            return;
+        }
+        acquireTrainingWakeLock();
+        requestTrainingAudioFocus();
+        ensureNativeKeepAlivePlaying();
+        pingWebReinforceKeepAlive();
+    }
+
+    private void reinforceTrainingAudioOnUiThread() {
+        if (!trainingGuardActive) {
+            return;
+        }
+        acquireTrainingWakeLock();
+        requestTrainingAudioFocus();
+        ensureNativeKeepAlivePlaying();
+        pingWebReinforceKeepAlive();
+    }
+
+    private void pingWebReinforceKeepAlive() {
+        if (webView == null) {
+            return;
+        }
+        webView.post(() -> webView.evaluateJavascript(
+                "try{if(typeof reinforceTrainingKeepAlive==='function')reinforceTrainingKeepAlive();}catch(e){}",
+                null
+        ));
+    }
+
     private void createTrainingNotificationChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             return;
@@ -656,9 +928,10 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         NotificationChannel channel = new NotificationChannel(
                 TRAINING_NOTIFICATION_CHANNEL_ID,
                 "Тренировка",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_DEFAULT
         );
         channel.setDescription("Показывает активную тренировку в шторке уведомлений.");
+        channel.setShowBadge(false);
 
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         if (notificationManager != null) {
@@ -708,9 +981,21 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setShowWhen(false)
-                .setCategory(Notification.CATEGORY_STATUS)
-                .setPriority(Notification.PRIORITY_LOW)
+                .setCategory(Notification.CATEGORY_SERVICE)
+                .setPriority(Notification.PRIORITY_DEFAULT)
                 .build();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(
+                        TRAINING_NOTIFICATION_ID,
+                        notification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                );
+            } else {
+                startForeground(TRAINING_NOTIFICATION_ID, notification);
+            }
+        }
 
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (notificationManager != null) {
@@ -719,6 +1004,12 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     }
 
     private void hideTrainingNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                stopForeground(true);
+            } catch (Exception ignored) {
+            }
+        }
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (notificationManager != null) {
             notificationManager.cancel(TRAINING_NOTIFICATION_ID);
@@ -919,6 +1210,10 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     protected void onDestroy() {
         flushWebLastTrainingCheckpoint("android_destroy");
         unregisterBatteryEmergencyReceiver();
+        unregisterAudioRouteReceiver();
+        stopNativeKeepAliveTimer();
+        stopNativeKeepAliveAudio();
+        abandonTrainingAudioFocus();
         trainingGuardActive = false;
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         releaseTrainingScreenWakeLock();
@@ -1044,6 +1339,11 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         @JavascriptInterface
         public void speak(String text, double rate) {
             runOnUiThread(() -> speakOnUiThread(text, normalizeSpeechRate(rate)));
+        }
+
+        @JavascriptInterface
+        public void reinforceTrainingAudio() {
+            runOnUiThread(() -> reinforceTrainingAudioOnUiThread());
         }
 
         @JavascriptInterface
