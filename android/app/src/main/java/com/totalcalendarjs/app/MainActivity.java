@@ -24,7 +24,6 @@ import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Handler;
 import android.os.Looper;
-import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
@@ -61,6 +60,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private static final int HEART_RATE_BLE_PERMISSION_REQUEST_CODE = 56;
     private static final int TRAINING_NOTIFICATION_ID = 1001;
     private static final String TRAINING_NOTIFICATION_CHANNEL_ID = "training_status";
+    private static final int MAX_PENDING_SPEECH_ITEMS = 20;
     private static final int NATIVE_KEEPALIVE_INTERVAL_MS = 3000;
     private static final int NATIVE_KEEPALIVE_SAMPLE_RATE = 8000;
     private static final String PREFS_TCJS = "tcjs_prefs";
@@ -985,18 +985,6 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
                 .setPriority(Notification.PRIORITY_DEFAULT)
                 .build();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startForeground(
-                        TRAINING_NOTIFICATION_ID,
-                        notification,
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                );
-            } else {
-                startForeground(TRAINING_NOTIFICATION_ID, notification);
-            }
-        }
-
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (notificationManager != null) {
             notificationManager.notify(TRAINING_NOTIFICATION_ID, notification);
@@ -1004,12 +992,6 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     }
 
     private void hideTrainingNotification() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            try {
-                stopForeground(true);
-            } catch (Exception ignored) {
-            }
-        }
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (notificationManager != null) {
             notificationManager.cancel(TRAINING_NOTIFICATION_ID);
