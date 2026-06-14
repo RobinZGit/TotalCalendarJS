@@ -35,8 +35,11 @@ if (rootBuildTxt) {
     versionCodeFromFile = Integer.parseInt(rootBuildTxt)
 }
 def versionCodeFromCi = effectiveTcjsRun ? Integer.parseInt(effectiveTcjsRun) : 0
-def versionCodeFinal = [versionCodeFromFile, versionCodeFromCi, 1].max()
-def versionNameFinal = "1.0.${versionCodeFinal}"
+def versionCodeDisplay = [versionCodeFromFile, versionCodeFromCi, 1].max()
+def versionCodeStamp = (int) (System.currentTimeMillis() / 1000L)
+/** Монотонно растёт: любая новая сборка ставится поверх старой основной версии. */
+def versionCodeFinal = [versionCodeDisplay, versionCodeStamp].max()
+def versionNameFinal = "1.0.${versionCodeDisplay}"
 /** -PtcjsParallelInstall=true — отдельное приложение на телефоне для сравнения сборок (не заменяет основное). */
 def tcjsParallelInstall = (project.findProperty('tcjsParallelInstall') ?: 'false').toString() == 'true'
 
@@ -53,7 +56,7 @@ android {
     defaultConfig {
         applicationId 'com.totalcalendarjs.app'
         if (tcjsParallelInstall) {
-            applicationIdSuffix ".build${versionCodeFinal}"
+            applicationIdSuffix ".build${versionCodeDisplay}"
             resValue 'string', 'app_name', "TC ${versionNameFinal}"
         } else {
             resValue 'string', 'app_name', 'Total Calendar'

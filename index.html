@@ -316,6 +316,39 @@
             font-weight: 700;
         }
 
+        .training-nav-row--exercise .training-nav-arrow {
+            border: 3px solid #1e40af;
+            color: #1e3a8a;
+            background: #eff6ff;
+            font-weight: 900;
+            box-shadow: 0 0 0 1px rgba(30, 64, 175, 0.3);
+        }
+
+        .training-nav-row--exercise .training-nav-arrow:disabled {
+            opacity: 0.45;
+        }
+
+        .navigation-panel button.nav-ex-done {
+            background: #1d4ed8 !important;
+            color: #fff !important;
+            border: 3px solid #1e3a8a !important;
+            font-weight: 700 !important;
+        }
+
+        .navigation-panel button.nav-ex-current {
+            background: #fef08a !important;
+            color: #1e3a8a !important;
+            border: 3px solid #1e40af !important;
+            font-weight: 800 !important;
+            box-shadow: inset 0 0 0 1px rgba(30, 64, 175, 0.35);
+        }
+
+        .navigation-panel button.nav-ex-pending {
+            background: #fef9c3 !important;
+            color: #1e3a8a !important;
+            border: 2px solid #93c5fd !important;
+        }
+
         .training-nav-center {
             flex: 1 1 auto;
             min-width: 0;
@@ -3654,6 +3687,9 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
    var exerciseNav = isTrainingExerciseNavMode();
    var hasHistory = hasLastSavedTraining();
 
+   if (navRow)
+     navRow.classList.toggle("training-nav-row--exercise", exerciseNav);
+
    if (!exerciseNav && !hasHistory) {
      if (navRow) navRow.style.display = "none";
      return;
@@ -4121,7 +4157,7 @@ var Gl_AudioGuardGain = null
 var Gl_AudioGuardTimer = null
 var Gl_TrainingKeepAliveTimer = null
 var Gl_AudioGuardStopTimer = null
-var Gl_TRAINING_KEEPALIVE_MS = 4000
+var Gl_TRAINING_KEEPALIVE_MS = 1500
 var Gl_BackgroundAudio = null
 var Gl_BackgroundAudioUrl = null
 var Gl_SayInterval = null
@@ -4251,9 +4287,14 @@ function resumeTrainingAudio(){
 function reinforceTrainingKeepAlive(){
   if (!Gl_WakeLockWanted)
     return
+  acquireTrainingWakeLockNative()
   if (document.visibilityState === "visible")
     requestTrainingWakeLock()
   resumeTrainingAudio()
+}
+
+function acquireTrainingWakeLockNative(){
+  callAndroidTraining("startTrainingGuard")
 }
 
 function startTrainingKeepAliveTimers(){
@@ -5348,9 +5389,9 @@ document.addEventListener("visibilitychange", function(){
     return
   if (document.visibilityState === "visible"){
     syncAndroidNoSoundMode()
-    callAndroidTraining("startTrainingGuard")
     requestTrainingWakeLock()
   }
+  acquireTrainingWakeLockNative()
   reinforceTrainingKeepAlive()
 })
 
@@ -6938,7 +6979,7 @@ END:VEVENT\n`
                      syncOnlineWallClockFromTrainingStart()
                      //-----------------------------------------------------------
                      try{
-                       document.getElementById('buttonCurrentTr' + GlnInd).style.background='green'
+                       paintTrainingNavProgress(GlnInd);
                      } catch(e){}
                      scrollTrainingNavToProgress(true);
                      //NEW !! ДОБАВИТЬ СЮДА АНАЛИЗ ДЕЛА С ВЫБОРОМ ДЕЛ С ПОДТВЕРЖДЕНИЕМ ПОЛЬЗОВАТЕЛЯ
@@ -8564,10 +8605,36 @@ END:VEVENT\n`
 
   function paintTrainingNavProgress(activeIndex){
     for (var j = 0; j < activeIndex; j++) {
-      try { document.getElementById('buttonCurrentTr' + j).style.background = 'green'; } catch (e) {}
+      try {
+        var doneBtn = document.getElementById('buttonCurrentTr' + j);
+        if (!doneBtn) continue;
+        doneBtn.className = 'nav-ex-done';
+        doneBtn.style.background = '';
+        doneBtn.style.color = '';
+        doneBtn.style.border = '';
+        doneBtn.style.fontWeight = '';
+      } catch (e) {}
     }
-    for (var k = activeIndex; k < Gl_aRithmLisp.length; k++) {
-      try { document.getElementById('buttonCurrentTr' + k).style.background = 'yellow'; } catch (e) {}
+    try {
+      var curBtn = document.getElementById('buttonCurrentTr' + activeIndex);
+      if (curBtn) {
+        curBtn.className = 'nav-ex-current';
+        curBtn.style.background = '';
+        curBtn.style.color = '';
+        curBtn.style.border = '';
+        curBtn.style.fontWeight = '';
+      }
+    } catch (e) {}
+    for (var k = activeIndex + 1; k < Gl_aRithmLisp.length; k++) {
+      try {
+        var pendingBtn = document.getElementById('buttonCurrentTr' + k);
+        if (!pendingBtn) continue;
+        pendingBtn.className = 'nav-ex-pending';
+        pendingBtn.style.background = '';
+        pendingBtn.style.color = '';
+        pendingBtn.style.border = '';
+        pendingBtn.style.fontWeight = '';
+      } catch (e) {}
     }
   }
 

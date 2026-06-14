@@ -18,8 +18,8 @@ import android.content.pm.PackageManager;
 import android.os.BatteryManager;
 import android.net.Uri;
 import android.media.AudioAttributes;
-import android.os.Build;
-import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
@@ -54,6 +54,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private static final int HEART_RATE_BLE_PERMISSION_REQUEST_CODE = 56;
     private static final int TRAINING_NOTIFICATION_ID = 1001;
     private static final String TRAINING_NOTIFICATION_CHANNEL_ID = "training_status";
+    private static final int TRAINING_TICK_MS = 200;
     private static final int MAX_PENDING_SPEECH_ITEMS = 20;
     private static final String PREFS_TCJS = "tcjs_prefs";
     private static final String PREF_EXPORT_EMAIL = "export_email";
@@ -75,6 +76,20 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     private boolean pendingHeartRateScanAfterPermission;
     private BroadcastReceiver batteryEmergencyReceiver;
     private long lastBatteryPercentFlushMs;
+    private Handler trainingTickHandler;
+    private final Runnable trainingTickRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!trainingGuardActive) {
+                return;
+            }
+            acquireTrainingWakeLock();
+            pingWebTrainingTick();
+            if (trainingTickHandler != null) {
+                trainingTickHandler.postDelayed(this, TRAINING_TICK_MS);
+            }
+        }
+    };
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
@@ -526,16 +541,45 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         acquireTrainingWakeLock();
         updateTrainingScreenWakeLock();
-        showTrainingNotification();
+        TrainingForegroundService.start(this);
+        startTrainingTickTimer();
     }
 
     private void stopTrainingGuardOnUiThread() {
         trainingGuardActive = false;
+        stopTrainingTickTimer();
+        TrainingForegroundService.stop(this);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         releaseTrainingScreenWakeLock();
         releaseTrainingWakeLock();
         hideTrainingNotification();
         stopSpeechOnUiThread();
+    }
+
+    private void startTrainingTickTimer() {
+        if (trainingTickHandler == null) {
+            trainingTickHandler = new Handler(Looper.getMainLooper());
+        }
+        trainingTickHandler.removeCallbacks(trainingTickRunnable);
+        trainingTickHandler.post(trainingTickRunnable);
+    }
+
+    private void stopTrainingTickTimer() {
+        if (trainingTickHandler != null) {
+            trainingTickHandler.removeCallbacks(trainingTickRunnable);
+        }
+    }
+
+    private void pingWebTrainingTick() {
+        if (webView == null) {
+            return;
+        }
+        webView.post(() -> webView.evaluateJavascript(
+                "try{if(typeof fSayInTime==='function')fSayInTime();"
+                        + "if(typeof reinforceTrainingKeepAlive==='function')reinforceTrainingKeepAlive();"
+                        + "}catch(e){}",
+                null
+        ));
     }
 
     private void setNoSoundModeOnUiThread(boolean enabled) {
@@ -545,6 +589,8 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
 
     private void stopSpeechAndFinishOnUiThread() {
         trainingGuardActive = false;
+        stopTrainingTickTimer();
+        TrainingForegroundService.stop(this);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         releaseTrainingScreenWakeLock();
         releaseTrainingWakeLock();
@@ -560,6 +606,8 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
 
     private void restartAppOnUiThread() {
         trainingGuardActive = false;
+        stopTrainingTickTimer();
+        TrainingForegroundService.stop(this);
         noSoundMode = false;
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         releaseTrainingScreenWakeLock();
@@ -919,6 +967,8 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     protected void onDestroy() {
         flushWebLastTrainingCheckpoint("android_destroy");
         unregisterBatteryEmergencyReceiver();
+        stopTrainingTickTimer();
+        TrainingForegroundService.stop(this);
         trainingGuardActive = false;
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         releaseTrainingScreenWakeLock();
