@@ -11,8 +11,11 @@ import java.io.File;
 import java.io.FileNotFoundException;
 
 public final class CalendarIcsProvider extends ContentProvider {
-    static final String AUTHORITY = "com.totalcalendarjs.app.calendarics";
     private static final String CACHE_DIRECTORY = "calendar-imports";
+
+    static String authorityFor(Context context) {
+        return context.getPackageName() + ".calendarics";
+    }
 
     public static File getCalendarCacheDirectory(Context context) {
         File directory = new File(context.getCacheDir(), CACHE_DIRECTORY);
@@ -22,10 +25,10 @@ public final class CalendarIcsProvider extends ContentProvider {
         return directory;
     }
 
-    public static Uri getUriForFile(File file) {
+    public static Uri getUriForFile(Context context, File file) {
         return new Uri.Builder()
                 .scheme("content")
-                .authority(AUTHORITY)
+                .authority(authorityFor(context))
                 .appendPath(file.getName())
                 .build();
     }

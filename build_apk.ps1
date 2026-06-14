@@ -1,3 +1,7 @@
+param(
+  [switch]$Parallel
+)
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
@@ -71,4 +75,15 @@ if (!(Test-Path -LiteralPath $BuiltApk)) {
 $OutApk = Join-Path $RepoRoot "TotalCalendar.apk"
 Copy-Item -Force -LiteralPath $BuiltApk -Destination $OutApk
 Write-Host "APK written to: $OutApk"
+
+if ($Parallel) {
+  Write-Host "Building parallel compare APK (side-by-side install)..."
+  & $GradleExe -p $AndroidProjectDir ":app:assembleRelease" -PtcjsParallelInstall=true --no-daemon
+  if ($LASTEXITCODE -ne 0) {
+    throw "Parallel Gradle build failed with exit code $LASTEXITCODE."
+  }
+  $ParallelOut = Join-Path $RepoRoot "TotalCalendar-parallel.apk"
+  Copy-Item -Force -LiteralPath $BuiltApk -Destination $ParallelOut
+  Write-Host "Parallel APK written to: $ParallelOut"
+}
 

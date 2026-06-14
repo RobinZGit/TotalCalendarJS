@@ -402,7 +402,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
                 outputStream.write(text.getBytes(StandardCharsets.UTF_8));
             }
 
-            Uri uri = CalendarIcsProvider.getUriForFile(file);
+            Uri uri = CalendarIcsProvider.getUriForFile(this, file);
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setDataAndType(uri, "text/calendar");
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);

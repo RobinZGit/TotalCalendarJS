@@ -37,6 +37,8 @@ if (rootBuildTxt) {
 def versionCodeFromCi = effectiveTcjsRun ? Integer.parseInt(effectiveTcjsRun) : 0
 def versionCodeFinal = [versionCodeFromFile, versionCodeFromCi, 1].max()
 def versionNameFinal = "1.0.${versionCodeFinal}"
+/** -PtcjsParallelInstall=true — отдельное приложение на телефоне для сравнения сборок (не заменяет основное). */
+def tcjsParallelInstall = (project.findProperty('tcjsParallelInstall') ?: 'false').toString() == 'true'
 
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('keystore.properties')
@@ -50,6 +52,12 @@ android {
 
     defaultConfig {
         applicationId 'com.totalcalendarjs.app'
+        if (tcjsParallelInstall) {
+            applicationIdSuffix ".build${versionCodeFinal}"
+            resValue 'string', 'app_name', "TC ${versionNameFinal}"
+        } else {
+            resValue 'string', 'app_name', 'Total Calendar'
+        }
         minSdk 23
         targetSdk 36
         versionCode versionCodeFinal

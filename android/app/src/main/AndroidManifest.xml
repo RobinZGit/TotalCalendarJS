@@ -28,7 +28,7 @@
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="Total Calendar"
+        android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
@@ -56,7 +56,7 @@
         </activity>
         <provider
             android:name=".CalendarIcsProvider"
-            android:authorities="com.totalcalendarjs.app.calendarics"
+            android:authorities="${applicationId}.calendarics"
             android:exported="false"
             android:grantUriPermissions="true" />
     </application>
