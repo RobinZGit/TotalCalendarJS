@@ -53,6 +53,10 @@ android {
     namespace 'com.totalcalendarjs.app'
     compileSdk 36
 
+    buildFeatures {
+        resValues true
+    }
+
     defaultConfig {
         applicationId 'com.totalcalendarjs.app'
         if (tcjsParallelInstall) {
