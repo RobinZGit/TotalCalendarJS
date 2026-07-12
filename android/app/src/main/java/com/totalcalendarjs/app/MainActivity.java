@@ -539,10 +539,18 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     }
 
     private void startTrainingGuardOnUiThread() {
+        startTrainingGuardOnUiThread(false);
+    }
+
+    private void startTrainingGuardOnUiThread(boolean forceServiceRefresh) {
+        boolean wasActive = trainingGuardActive;
         trainingGuardActive = true;
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         acquireTrainingWakeLock();
         updateTrainingScreenWakeLock();
+        if (wasActive && !forceServiceRefresh) {
+            return;
+        }
         TrainingForegroundService.start(this);
         startTrainingTickTimer();
     }
@@ -921,7 +929,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
         }
 
         if (trainingGuardActive) {
-            startTrainingGuardOnUiThread();
+            startTrainingGuardOnUiThread(true);
         }
     }
 
@@ -941,7 +949,7 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     protected void onResume() {
         super.onResume();
         if (trainingGuardActive) {
-            startTrainingGuardOnUiThread();
+            startTrainingGuardOnUiThread(true);
         }
     }
 
