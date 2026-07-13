@@ -539,10 +539,14 @@ public final class MainActivity extends Activity implements TextToSpeech.OnInitL
     }
 
     private void startTrainingGuardOnUiThread() {
+        boolean wasActive = trainingGuardActive;
         trainingGuardActive = true;
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         acquireTrainingWakeLock();
         updateTrainingScreenWakeLock();
+        if (wasActive) {
+            return;
+        }
         TrainingForegroundService.start(this);
         startTrainingTickTimer();
     }
