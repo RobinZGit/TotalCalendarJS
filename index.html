@@ -6942,6 +6942,8 @@ END:VEVENT\n`
           scheduleStopTrainingAudioGuard()
           return
         }
+        if(!GlIsRunning)
+          return
 
         var dCurr = new Date();
         if(!GlflSayIntro2)
