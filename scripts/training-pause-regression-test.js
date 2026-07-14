@@ -4,6 +4,22 @@ const path = require("path");
 const vm = require("vm");
 
 const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+const mainActivity = fs.readFileSync(
+  path.join(
+    __dirname,
+    "..",
+    "android",
+    "app",
+    "src",
+    "main",
+    "java",
+    "com",
+    "totalcalendarjs",
+    "app",
+    "MainActivity.java",
+  ),
+  "utf8",
+);
 
 function extractFunction(name, nextName) {
   const start = html.indexOf(`function ${name}(`);
@@ -18,7 +34,7 @@ assert.match(
   "Pause must mark playback stopped before clearing the JavaScript timer",
 );
 assert.match(
-  html,
+  mainActivity,
   /evaluateJavascript\([\s\S]*?fSayInTime\(\)/,
   "The Android native tick must remain covered by this regression test",
 );
