@@ -3988,6 +3988,15 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
 
  function buildTrainingNavigationList(){
    currentT.innerHTML = "";
+   var navItemCount = Math.floor(Gl_aRithmLisp.length / 2);
+   if (navItemCount > 500) {
+     var notice = document.createElement("li");
+     notice.className = "training-nav-summary";
+     notice.textContent = "Подробная навигация скрыта: " + navItemCount
+       + " шагов. Используйте кнопки «назад» и «вперёд».";
+     currentT.appendChild(notice);
+     return;
+   }
    var nId = "";
    var prevId = "*";
    var prevText = "";
@@ -8595,36 +8604,20 @@ END:VEVENT\n`
   }
 
   function paintTrainingNavProgress(activeIndex){
-    for (var j = 0; j < activeIndex; j++) {
+    var navRoot = document.getElementById('currentT');
+    if (!navRoot) return;
+    var navButtons = navRoot.querySelectorAll('button[id^="buttonCurrentTr"]');
+    for (var j = 0; j < navButtons.length; j++) {
       try {
-        var doneBtn = document.getElementById('buttonCurrentTr' + j);
-        if (!doneBtn) continue;
-        doneBtn.className = 'nav-ex-done';
-        doneBtn.style.background = '';
-        doneBtn.style.color = '';
-        doneBtn.style.border = '';
-        doneBtn.style.fontWeight = '';
-      } catch (e) {}
-    }
-    try {
-      var curBtn = document.getElementById('buttonCurrentTr' + activeIndex);
-      if (curBtn) {
-        curBtn.className = 'nav-ex-current';
-        curBtn.style.background = '';
-        curBtn.style.color = '';
-        curBtn.style.border = '';
-        curBtn.style.fontWeight = '';
-      }
-    } catch (e) {}
-    for (var k = activeIndex + 1; k < Gl_aRithmLisp.length; k++) {
-      try {
-        var pendingBtn = document.getElementById('buttonCurrentTr' + k);
-        if (!pendingBtn) continue;
-        pendingBtn.className = 'nav-ex-pending';
-        pendingBtn.style.background = '';
-        pendingBtn.style.color = '';
-        pendingBtn.style.border = '';
-        pendingBtn.style.fontWeight = '';
+        var btn = navButtons[j];
+        var btnIndex = Number(btn.id.substring('buttonCurrentTr'.length));
+        btn.className = btnIndex < activeIndex
+          ? 'nav-ex-done'
+          : (btnIndex === activeIndex ? 'nav-ex-current' : 'nav-ex-pending');
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.style.border = '';
+        btn.style.fontWeight = '';
       } catch (e) {}
     }
   }
