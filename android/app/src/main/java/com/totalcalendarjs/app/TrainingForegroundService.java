@@ -50,7 +50,9 @@ public final class TrainingForegroundService extends Service {
 
         // The training state lives in MainActivity/WebView and cannot survive process death.
         // Do not resurrect a foreground notification without an active training session.
-        if (intent == null || !ACTION_START.equals(intent.getAction())) {
+        if (intent == null
+                || !ACTION_START.equals(intent.getAction())
+                || (flags & START_FLAG_RETRY) != 0) {
             stopForeground(STOP_FOREGROUND_REMOVE);
             stopSelf();
             return START_NOT_STICKY;
