@@ -48,6 +48,14 @@ public final class TrainingForegroundService extends Service {
             return START_NOT_STICKY;
         }
 
+        // The training state lives in MainActivity/WebView and cannot survive process death.
+        // Do not resurrect a foreground notification without an active training session.
+        if (intent == null || !ACTION_START.equals(intent.getAction())) {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
         Notification notification = buildNotification();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -62,7 +70,7 @@ public final class TrainingForegroundService extends Service {
         } else {
             startForeground(NOTIFICATION_ID, notification);
         }
-        return START_STICKY;
+        return START_NOT_STICKY;
     }
 
     @Override
