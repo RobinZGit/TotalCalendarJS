@@ -5676,6 +5676,20 @@ window.addEventListener("pageshow", function(){
   var TCJS_REMOTE_INDEX_NAME = "index.html";
   var TCJS_REMOTE_INDEX_CANONICAL = "https://robinzgit.github.io/TotalCalendarJS/" + TCJS_REMOTE_INDEX_NAME;
   var TCJS_REMOTE_INDEX_RAW = "https://raw.githubusercontent.com/RobinZGit/TotalCalendarJS/master/" + TCJS_REMOTE_INDEX_NAME;
+  //Таймаут сетевых запросов за index.html: без него на мобильных при недоступности хоста селектор тренировок висит пустым
+  var TCJS_REMOTE_FETCH_TIMEOUT_MS = 8000;
+
+  /** fetch с таймаутом (AbortController), чтобы страница не зависала в ожидании сети. */
+  function fetchTcjsNoStore(url){
+    if (typeof AbortController === "function") {
+      var ctrl = new AbortController();
+      var timer = setTimeout(function(){ try { ctrl.abort(); } catch (e) {} }, TCJS_REMOTE_FETCH_TIMEOUT_MS);
+      var p = fetch(url, { cache: "no-store", signal: ctrl.signal });
+      p.then(function(){ clearTimeout(timer); }, function(){ clearTimeout(timer); });
+      return p;
+    }
+    return fetch(url, { cache: "no-store" });
+  }
 
   function getRemoteIndexHtmlUrlList(forSyncCompare){
     var list = [];
@@ -5762,7 +5776,7 @@ window.addEventListener("pageshow", function(){
       }
       var url = urls[idx++];
       var fetchUrl = url + (url.indexOf("?") >= 0 ? "&" : "?") + "tcjs_cb=" + Date.now();
-      fetch(fetchUrl, { cache: "no-store" }).then(function(r){
+      fetchTcjsNoStore(fetchUrl).then(function(r){
         if (!r.ok)
           throw new Error("HTTP " + r.status + " (" + url + ")");
         return r.text().then(function(t){ return { text: t, url: url }; });
@@ -6343,11 +6357,12 @@ window.addEventListener("pageshow", function(){
     done = done || function(){};
     Gl_trainingsLoadedFromLocal = false;
     Gl_trainRemoteSyncCompared = false;
+    //Сверка с сервером идёт В ФОНЕ: раньше UI строился только после ответа сети,
+    //и при недоступности github.io / raw.githubusercontent.com селектор тренировок оставался пустым.
     function finish(fromLocal){
       Gl_trainingsLoadedFromLocal = !!fromLocal;
-      refreshTrainingRemoteSyncDisplay(function(){
-        done(fromLocal);
-      });
+      done(fromLocal);
+      refreshTrainingRemoteSyncDisplay(function(){});
     }
     var local = readLocalTrainingsGenall();
     if (local && String(local).trim()) {
@@ -6374,10 +6389,9 @@ window.addEventListener("pageshow", function(){
               throw new Error("invalid genall");
             saveLocalTrainingsGenall(str);
             Gl_trainingsLoadedFromLocal = true;
-            refreshTrainingRemoteSyncDisplay(function(){
-              loadTrainDataWeb(true);
-              alert('Загружен календарь и список тренировок');
-            });
+            loadTrainDataWeb(true);
+            alert('Загружен календарь и список тренировок');
+            refreshTrainingRemoteSyncDisplay(function(){});
           } catch(e){
             alert('Не удалось прочитать данные, проверьте формат файла. Должен быть js формат (без var!): "Gl-aMetaMetaCalendar=...;Gl_aMetaRithm=...;')
           }
