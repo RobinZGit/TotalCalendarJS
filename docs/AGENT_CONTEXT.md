@@ -4,10 +4,11 @@
 
 - **Дата:** 2026-08-24
 - **Ветка:** master, синхронизирована с origin/master
+- **Версия:** 23 (2026-08-24; счётчик в шапке index.html + app-build.txt)
 
 ## Состояние
 
-Локальный клон `C:\Users\Сергей\VsCodeProjects\TotalCalendarJS` репозитория https://github.com/RobinZGit/TotalCalendarJS. Основной файл — `index.html` (~580 КБ, монолит: данные тренировок + вся логика). Веб-версия: github.io/TotalCalendarJS; APK собирает CI.
+Локальный клон `C:\Users\Сергей\VsCodeProjects\TotalCalendarJS` репозитория https://github.com/RobinZGit/TotalCalendarJS. Основной файл — `index.html` (монолит: данные тренировок + вся логика). Веб-версия: github.io/TotalCalendarJS; APK собирает CI.
 
 ## Сделано в этой сессии
 
@@ -15,13 +16,14 @@
 2. **Исправлено зависание выбора тренировок** (коммит `e0fe22b`, уже в origin):
    - причина: UI строился только после fetch к github.io/raw.githubusercontent.com без таймаута — при недоступности сети селектор оставался пустым даже при данных в localStorage;
    - фикс: `fetchTcjsNoStore()` с AbortController (8 с), построение списка сразу из локальных данных, сверка с сервером в фоне (`loadTrainingsDataThen`, `loadTrainAndCalFromFile`).
-3. **Экспорт тренировки в MP3** (в работе, этот коммит):
+3. **Экспорт тренировки в MP3** (коммит с MP3-кнопками):
    - две кнопки в разделе печати: «MP3 таймер-дорожка» и «MP3 с озвучкой (запись вкладки)»;
    - развёртка пар [интервал мс, текст] — та же, что у .rtm (`tcjsGetExportTimeline` → `getArithm`);
    - таймер-дорожка: OfflineAudioContext, бипы на стартах фраз, паузы = интервалам, миллисекунды точные;
    - кодек lamejs@1.2.0 с CDN (1.2.1 имеет баг `MPEGMode is not defined`), фолбэк в WAV без сети;
    - озвучка: getDisplayMedia(аудио вкладки) + MediaRecorder + предтест захвата TTS (в части Chrome голос в запись не попадает);
    - сохранение: `tcjsSaveBlob`; имя: `<тренировка>_(таймер|озвучка)_<дата>.mp3`.
+4. **Правила проекта дополнены** (по запросу пользователя): перед каждым push — поднять версию на 1 (верхний комментарий index.html, `tcjs-app-build`, `app-build.txt`) вместе с сохранением `docs/AGENT_CONTEXT.md` и `docs/USER_INSTRUCTIONS.md`. Версия поднята 22 → 23.
 
 ## Проверка
 
