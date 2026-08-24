@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TotalCalendarJS | Версия 23 | 2026-08-24 -->
+<!-- TotalCalendarJS | Версия 24 | 2026-08-24 -->
 <!--
 ================================================================================
   БЛОК 1 — index.form.html
@@ -10,8 +10,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="tcjs-build" content="__TCJS_GITHUB_RUN__">
-    <script id="tcjs-app-build" type="text/plain">23
-2026-08-24 19:48:53</script>
+    <script id="tcjs-app-build" type="text/plain">24
+2026-08-24 19:59:37</script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <title>КАЛЕНДАРЬ</title>
@@ -1612,8 +1612,8 @@
         </div>
 
         <div style="margin-top:10px">
-            <button id="btnMp3Timer" class="primary-btn" type="button" style="width:100%" onclick="tcjsExportMp3Timer()">Выгрузить тренировку в MP3 (таймер-дорожка с точными паузами)</button>
-            <button id="btnMp3Voice" class="secondary-btn" type="button" style="width:100%;margin-top:8px" onclick="tcjsExportMp3Voiced()">MP3 с озвучкой (запись звука вкладки, экспериментально)</button>
+            <button id="btnMp3Timer" class="primary-btn" type="button" style="width:100%" onclick="tcjsExportMp3Timer()">MP3 без слов: только сигналы с точными паузами</button>
+            <button id="btnMp3Voice" class="primary-btn" type="button" style="width:100%;margin-top:8px" onclick="tcjsExportMp3Voiced()">MP3 со словами и паузами (запись голоса)</button>
             <div id="idMp3ExportStatus" class="info-note" style="display:none"></div>
         </div>
 
@@ -6997,51 +6997,91 @@ END:VEVENT\n`
     }
   }
 
-  //Озвученный MP3: реальная запись тренировки со звуком вкладки в реальном времени
+  //Старт рекордера на готовом потоке (вкладка или микрофон)
+  function tcjsStartRecorder(stream){
+    var aTracks = stream.getAudioTracks()
+    if (!aTracks.length)
+      throw new Error("В потоке нет звуковой дорожки.")
+    var mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : ""
+    var rec = new MediaRecorder(new MediaStream(aTracks), mime ? { mimeType: mime } : undefined)
+    var chunks = []
+    rec.ondataavailable = function(ev){ if (ev.data && ev.data.size) chunks.push(ev.data) }
+    var stopped = new Promise(function(res){ rec.onstop = res })
+    return { rec: rec, chunks: chunks, stopped: stopped, mime: mime || "audio/webm" }
+  }
+
+  function tcjsGetMicStream(){
+    return navigator.mediaDevices.getUserMedia({ audio: true })
+  }
+
+  //Озвученный MP3: проговариваем тренировку и записываем её в реальном времени.
+  //Слова в файл можно получить двумя путями:
+  //  "tab" - захват звука вкладки (ПК Chrome/Edge; в части версий Chrome TTS не пишется - проверяем предтестом);
+  //  "mic" - запись с микрофона играющего вслух устройства (работает и на планшете).
   async function tcjsExportMp3Voiced(){
     if (Gl_mp3ExportBusy) return
     var timeline = tcjsCheckAndGetTimeline()
     if (!timeline) return
-    if (!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)){
-      alert("Этот браузер не поддерживает запись звука вкладки (getDisplayMedia).\nПопробуйте Chrome/Edge на ПК.")
-      return
-    }
     if (!(window.speechSynthesis && typeof SpeechSynthesisUtterance !== "undefined")){
       alert("Синтез речи недоступен в этом браузере.")
       return
     }
+    var hasTab = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)
+    var hasMic = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+    if (!hasTab && !hasMic){
+      alert("Этот браузер не поддерживает ни запись звука вкладки, ни микрофон.")
+      return
+    }
     var nTotalMs = 0
     for (var i=0;i<timeline.length;i++) nTotalMs += timeline[i].ms
-    if (!confirm("Будет записан ЗВУК ЭТОЙ ВКЛАДКИ.\n\n" +
-      "1) В диалоге выберите «Вкладка Chrome» и ОБЯЗАТЕЛЬНО включите «Также предоставить доступ к звуку вкладки».\n" +
-      "2) Запись идёт в реальном времени (~" + Math.round(nTotalMs/60000) + " мин), вкладку не закрывать.\n\nПродолжить?"))
-      return
+    var sMode = null
+    if (hasTab){
+      if (confirm("СПОСОБ 1 из 2 — ЗАПИСЬ ЗВУКА ВКЛАДКИ (лучшее качество, ПК).\n\n" +
+        "В диалоге доступа выберите «Вкладка Chrome» и включите «Также предоставить доступ к звуку вкладки».\n" +
+        "Если голос не запишется — используйте способ 2 (микрофон).\n\n" +
+        "ОК — этот способ. Отмена — перейти к микрофону."))
+        sMode = "tab"
+    }
+    if (!sMode && hasMic){
+      if (confirm("СПОСОБ 2 из 2 — ЗАПИСЬ ЧЕРЕЗ МИКРОФОН (работает и на планшете).\n\n" +
+        "Устройство должно проигрывать голос ВГЛУХ через динамик, вокруг тихо.\n" +
+        "Запись идёт в реальном времени (~" + Math.round(nTotalMs/60000) + " мин), экран не гасить.\n\n" +
+        "ОК — записывать с микрофона."))
+        sMode = "mic"
+    }
+    if (!sMode) return
     Gl_mp3ExportBusy = true
     tcjsMp3SetButtonsDisabled(true)
     var stream = null
     try{
-      tcjsMp3SetStatus("Проверка захвата голоса…")
-      var test = await tcjsTestTabVoiceCapture()
-      if (!test.ok){
-        tcjsMp3SetStatus("")
-        alert("В этом браузере голос НЕ попадает в запись вкладки (известное ограничение Chrome).\n\nИспользуйте «MP3 таймер-дорожка» — там точные паузы и сигналы начала упражнений.")
-        return
+      if (sMode === "tab"){
+        tcjsMp3SetStatus("Проверка захвата голоса…")
+        var test = await tcjsTestTabVoiceCapture()
+        if (!test.ok){
+          stream = null
+          if (hasMic && confirm("В этом браузере голос НЕ попадает в запись вкладки (известное ограничение Chrome).\n\nПереключиться на запись через МИКРОФОН?"))
+            sMode = "mic"
+          else {
+            tcjsMp3SetStatus("")
+            return
+          }
+        }
       }
-      tcjsMp3SetStatus("Запись тренировки в реальном времени…")
-      stream = await navigator.mediaDevices.getDisplayMedia({ video:true, audio:true })
-      var aTracks = stream.getAudioTracks()
-      if (!aTracks.length){
-        stream.getTracks().forEach(function(t){ t.stop() }); stream = null
-        throw new Error("Не включён доступ к звуку вкладки.")
+      if (sMode === "tab"){
+        tcjsMp3SetStatus("Запись тренировки в реальном времени…")
+        stream = await navigator.mediaDevices.getDisplayMedia({ video:true, audio:true })
+        if (!stream.getAudioTracks().length){
+          stream.getTracks().forEach(function(t){ t.stop() }); stream = null
+          throw new Error("Не включён доступ к звуку вкладки.")
+        }
+      } else {
+        tcjsMp3SetStatus("Включите громкость устройства; запись с микрофона…")
+        stream = await tcjsGetMicStream()
       }
       var aborted = false
-      aTracks[0].onended = function(){ aborted = true }
-      var mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : ""
-      var rec = new MediaRecorder(new MediaStream(aTracks), mime ? { mimeType: mime } : undefined)
-      var chunks = []
-      rec.ondataavailable = function(ev){ if (ev.data && ev.data.size) chunks.push(ev.data) }
-      var stopped = new Promise(function(res){ rec.onstop = res })
-      rec.start()
+      stream.getAudioTracks()[0].onended = function(){ aborted = true }
+      var R = tcjsStartRecorder(stream)
+      R.rec.start()
       await tcjsSleep(500)
       var nRate = Number(document.getElementById("inputRate").value) || 1
       var t0 = performance.now(), tSlotEnd = 0
@@ -7054,13 +7094,13 @@ END:VEVENT\n`
         await tcjsSleep(t0 + tSlotEnd - performance.now())
       }
       await tcjsSleep(aborted ? 200 : 700)
-      rec.stop(); await stopped
+      R.rec.stop(); await R.stopped
       stream.getTracks().forEach(function(t){ t.stop() }); stream = null
       if (aborted)
-        tcjsMp3SetStatus("Запись прервана (прекращён доступ к вкладке).")
+        tcjsMp3SetStatus("Запись прервана.")
       else {
         tcjsMp3SetStatus("Кодирование MP3…")
-        var buf = await tcjsDecodeBlob(new Blob(chunks, { type: mime || "audio/webm" }))
+        var buf = await tcjsDecodeBlob(new Blob(R.chunks, { type: R.mime }))
         var mono = await tcjsToMono22050(buf)
         await tcjsExportEncoded(mono, tcjsMp3BaseName("_озвучка"), 64)
       }
