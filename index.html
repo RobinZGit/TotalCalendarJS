@@ -1610,6 +1610,12 @@
             <button id="btnPrint" class="primary-btn" type="button" style="width:100%" onclick="btnPrintOnClick()">Получить текст тренировки для печати</button>
         </div>
 
+        <div style="margin-top:10px">
+            <button id="btnMp3Timer" class="primary-btn" type="button" style="width:100%" onclick="tcjsExportMp3Timer()">Выгрузить тренировку в MP3 (таймер-дорожка с точными паузами)</button>
+            <button id="btnMp3Voice" class="secondary-btn" type="button" style="width:100%;margin-top:8px" onclick="tcjsExportMp3Voiced()">MP3 с озвучкой (запись звука вкладки, экспериментально)</button>
+            <div id="idMp3ExportStatus" class="info-note" style="display:none"></div>
+        </div>
+
         <div class="info-note">Info: Можно в параметр startwith url-ссылки передать имя тренировки, и форма сразу после запуска покажет ее выбранной</div>
         <div class="info-note">Например: http://localhost:63342/TotalCalendarJS/index.html?_ijt=p3hgufvl6ok7084qaistkcbqgu&_ij_reload&amp;startwith=УПРАЖНЕНИЯ НА ШЕЮ</div>
         </div>
@@ -6681,6 +6687,392 @@ END:VEVENT\n`
       var sText = buildRtmTextFromArithmLisp(aRithmLisp, Gl_currentTrainName);
       download(sText, sanitizeTrainFilename(Gl_currentTrainName) + '.rtm', 'text/plain', true)
   }
+
+
+  // ===== Экспорт текущей тренировки в MP3 (та же развёртка интервал/текст, что и для .rtm) =====
+  var TCJS_MP3_LIB_URLS = [
+    "https://cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js",
+    "https://unpkg.com/lamejs@1.2.0/lame.min.js"
+  ];
+  var Gl_mp3ExportBusy = false;
+
+  function tcjsMp3SetStatus(sText){
+    var el = document.getElementById("idMp3ExportStatus");
+    if (!el) return;
+    el.textContent = sText || "";
+    el.style.display = sText ? "block" : "none";
+  }
+
+  function tcjsMp3SetButtonsDisabled(bDisabled){
+    var b1 = document.getElementById("btnMp3Voice");
+    var b2 = document.getElementById("btnMp3Timer");
+    if (b1) b1.disabled = bDisabled;
+    if (b2) b2.disabled = bDisabled;
+  }
+
+  //Развёртка выбранной тренировки в пары [интервал мс, текст] - как в btnImportTrainOnClick (.rtm)
+  function tcjsGetExportTimeline(){
+    var aRithmLisp = []
+    var aSimult = []
+    if (GltxtSpeek.value.indexOf(Gl_sSimultTrain) >= 0){
+      var arrStr1 = GltxtSpeek.value.split(Gl_sSimultTrain)
+      for (var i=0;i<arrStr1.length;i++)
+        aSimult.push([[], arrStr1[i].split(Gl_sDelim)])
+      aRithmLisp = stus(aSimult,'diff')
+    } else if (GltxtSpeek.value.indexOf(Gl_sNextTrain) >= 0){
+      var arrStr2 = GltxtSpeek.value.split(Gl_sNextTrain)
+      for (var j=0;j<arrStr2.length;j++)
+        aSimult.push([[], arrStr2[j].split(Gl_sDelim)])
+      aRithmLisp = stus(aSimult,'add')
+    } else
+      aRithmLisp = getArithm(GltxtSpeek.value.split(Gl_sDelim));
+
+    var timeline = []
+    for (var k=0; k+1<aRithmLisp.length; k+=2){
+      var nMs = Math.round(Number(aRithmLisp[k]))
+      if (!isFinite(nMs) || nMs < 0) nMs = 1000
+      timeline.push({ ms: nMs, text: tcjsCleanSpeechText(String(aRithmLisp[k+1]).replaceAll('\n',' ')) })
+    }
+    return timeline
+  }
+
+  function tcjsCheckAndGetTimeline(){
+    try{
+      if (!GltxtSpeek || !String(GltxtSpeek.value).trim()){
+        alert("Сначала выберите тренировку в списке.");
+        return null;
+      }
+      var timeline = tcjsGetExportTimeline();
+      if (!timeline.length){
+        alert("Не удалось разобрать тренировку.");
+        return null;
+      }
+      return timeline;
+    }catch(e){
+      alert("Не удалось разобрать тренировку: " + e);
+      return null;
+    }
+  }
+
+  function tcjsCleanSpeechText(sText){
+    var s = String(sText || "")
+    s = s.replace(/\*img\*[\s\S]*?\*img\*/g, " ")   //ссылки на картинки не озвучиваем
+    s = s.replace(/\s+/g, " ").trim()
+    return s
+  }
+
+  function tcjsMp3BaseName(sSuffix){
+    var base = sanitizeTrainFilename(Gl_currentTrainName || "training")
+    return base + sSuffix + "_" + (new Date()).yyyymmddhhmmss("-")
+  }
+
+  function tcjsSleep(nMs){
+    return new Promise(function(resolve){ setTimeout(resolve, Math.max(0, nMs)) })
+  }
+
+  function tcjsSaveBlob(blob, filename){
+    try{
+      var url = URL.createObjectURL(blob)
+      var element = document.createElement('a')
+      element.setAttribute('href', url)
+      element.setAttribute('download', filename)
+      element.style.display = 'none'
+      document.body.appendChild(element)
+      element.click()
+      document.body.removeChild(element)
+      setTimeout(function(){ URL.revokeObjectURL(url) }, 60000)
+    }catch(e){
+      alert("Не удалось сохранить файл: " + e)
+    }
+  }
+
+  function tcjsLoadScript(url){
+    return new Promise(function(resolve, reject){
+      var s = document.createElement("script")
+      s.src = url
+      s.onload = function(){ resolve() }
+      s.onerror = function(){ reject(new Error("не загрузился " + url)) }
+      document.head.appendChild(s)
+      setTimeout(function(){ reject(new Error("таймаут " + url)) }, 12000)
+    })
+  }
+
+  async function tcjsEnsureLamejs(){
+    if (window.lamejs && window.lamejs.Mp3Encoder) return true
+    for (var i=0;i<TCJS_MP3_LIB_URLS.length;i++){
+      try{
+        await tcjsLoadScript(TCJS_MP3_LIB_URLS[i])
+        if (window.lamejs && window.lamejs.Mp3Encoder) return true
+      }catch(e){}
+    }
+    return false
+  }
+
+  //AudioBuffer -> моно 22050 Гц
+  async function tcjsToMono22050(buffer){
+    var nLen = Math.max(1, Math.ceil(buffer.duration * 22050))
+    var ctx = new OfflineAudioContext(1, nLen, 22050)
+    var src = ctx.createBufferSource()
+    src.buffer = buffer
+    src.connect(ctx.destination)
+    src.start(0)
+    return await ctx.startRendering()
+  }
+
+  function tcjsDecodeBlob(blob){
+    return new Promise(function(resolve, reject){
+      var fr = new FileReader()
+      fr.onload = function(){
+        var Ctx = window.AudioContext || window.webkitAudioContext
+        var ctx = new Ctx()
+        ctx.decodeAudioData(fr.result, function(b){ if (ctx.close) ctx.close(); resolve(b) },
+                                       function(e){ if (ctx.close) ctx.close(); reject(e) })
+      }
+      fr.onerror = function(){ reject(new Error("не удалось прочитать запись")) }
+      fr.readAsArrayBuffer(blob)
+    })
+  }
+
+  //Кодирование моно-буфера в MP3; null - если кодек загрузить не удалось
+  function tcjsEncodeMp3Mono(buffer, nKbps){
+    return new Promise(function(resolve){
+      tcjsEnsureLamejs().then(function(ok){
+        if (!ok){ resolve(null); return }
+        try{
+          var enc = new window.lamejs.Mp3Encoder(1, buffer.sampleRate, nKbps || 64)
+          var f32 = buffer.getChannelData(0)
+          var nBlock = 1152
+          var aData = []
+          for (var i=0;i<f32.length;i+=nBlock){
+            var chunk = f32.subarray(i, Math.min(i+nBlock, f32.length))
+            var i16 = new Int16Array(chunk.length)
+            for (var j=0;j<chunk.length;j++){
+              var v = Math.max(-1, Math.min(1, chunk[j]))
+              i16[j] = v < 0 ? v * 0x8000 : v * 0x7FFF
+            }
+            var i8 = enc.encodeBuffer(i16)
+            if (i8.length > 0) aData.push(i8)
+          }
+          var end8 = enc.flush()
+          if (end8.length > 0) aData.push(end8)
+          resolve(new Blob(aData, { type: "audio/mpeg" }))
+        }catch(e){ resolve(null) }
+      })
+    })
+  }
+
+  function tcjsEncodeWavMono(buffer){
+    var f32 = buffer.getChannelData(0)
+    var nBytes = f32.length * 2
+    var ab = new ArrayBuffer(44 + nBytes)
+    var dv = new DataView(ab)
+    function wstr(off, s){ for (var i=0;i<s.length;i++) dv.setUint8(off+i, s.charCodeAt(i)) }
+    wstr(0,"RIFF"); dv.setUint32(4,36+nBytes,true); wstr(8,"WAVE"); wstr(12,"fmt ")
+    dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,1,true)
+    dv.setUint32(24,buffer.sampleRate,true); dv.setUint32(28,buffer.sampleRate*2,true)
+    dv.setUint16(32,2,true); dv.setUint16(34,16,true)
+    wstr(36,"data"); dv.setUint32(40,nBytes,true)
+    var off = 44
+    for (var i=0;i<f32.length;i++,off+=2){
+      var v = Math.max(-1, Math.min(1, f32[i]))
+      dv.setInt16(off, v < 0 ? v * 0x8000 : v * 0x7FFF, true)
+    }
+    return new Blob([ab], { type: "audio/wav" })
+  }
+
+  async function tcjsExportEncoded(buffer, sBaseName, nKbps){
+    var blob = await tcjsEncodeMp3Mono(buffer, nKbps || 64)
+    if (blob){
+      tcjsSaveBlob(blob, sBaseName + ".mp3")
+      tcjsMp3SetStatus("Готово: " + sBaseName + ".mp3")
+      alert("Файл сохранён: " + sBaseName + ".mp3")
+    } else {
+      tcjsSaveBlob(tcjsEncodeWavMono(buffer), sBaseName + ".wav")
+      tcjsMp3SetStatus("MP3-кодек недоступен (нет сети?) — сохранён WAV")
+      alert("MP3-кодек загрузить не удалось (нет доступа к CDN).\nСохранён несжатый WAV: " + sBaseName + ".wav")
+    }
+  }
+
+  function tcjsScheduleBeep(ctx, tStart, nFreq, nDurSec, nVol){
+    var o = ctx.createOscillator()
+    var g = ctx.createGain()
+    o.type = "sine"; o.frequency.value = nFreq
+    var a = 0.005, r = Math.min(0.04, nDurSec / 3)
+    g.gain.setValueAtTime(0.0001, tStart)
+    g.gain.linearRampToValueAtTime(nVol, tStart + a)
+    g.gain.setValueAtTime(nVol, tStart + Math.max(a, nDurSec - r))
+    g.gain.linearRampToValueAtTime(0.0001, tStart + nDurSec)
+    o.connect(g); g.connect(ctx.destination)
+    o.start(tStart); o.stop(tStart + nDurSec + 0.02)
+  }
+
+  //Таймер-дорожка: бип в начале каждой фразы, паузы между бипами равны интервалам тренировки (точно, включая миллисекунды)
+  async function tcjsRenderTimerTrack(timeline){
+    var nLeadMs = 300, nTailMs = 1200
+    var nTotal = nLeadMs + nTailMs
+    for (var i=0;i<timeline.length;i++) nTotal += timeline[i].ms
+    var ctx = new OfflineAudioContext(1, Math.max(1, Math.ceil(22050 * nTotal / 1000)), 22050)
+    tcjsScheduleBeep(ctx, 0.05, 660, 0.12, 0.5)   //сигнал старта
+    var t = nLeadMs / 1000
+    for (var k=0;k<timeline.length;k++){
+      var isLast = (k === timeline.length - 1)
+      if (timeline[k].text)
+        tcjsScheduleBeep(ctx, t, isLast ? 1320 : 880, isLast ? 0.7 : 0.15, isLast ? 0.7 : 0.55)
+      t += timeline[k].ms / 1000
+    }
+    return await ctx.startRendering()
+  }
+
+  async function tcjsExportMp3Timer(){
+    if (Gl_mp3ExportBusy) return
+    var timeline = tcjsCheckAndGetTimeline()
+    if (!timeline) return
+    Gl_mp3ExportBusy = true
+    tcjsMp3SetButtonsDisabled(true)
+    try{
+      tcjsMp3SetStatus("Формирование дорожки…")
+      var buf = await tcjsRenderTimerTrack(timeline)
+      await tcjsExportEncoded(buf, tcjsMp3BaseName("_таймер"), 64)
+    }catch(e){
+      tcjsMp3SetStatus("")
+      alert("Не удалось сформировать MP3: " + e)
+    }finally{
+      Gl_mp3ExportBusy = false
+      tcjsMp3SetButtonsDisabled(false)
+    }
+  }
+
+  function tcjsSpeakOnce(sText, nRate, nTimeoutMs){
+    return Promise.race([
+      new Promise(function(resolve){
+        try{
+          var u = new SpeechSynthesisUtterance(sText)
+          u.rate = nRate
+          u.lang = "ru-RU"
+          u.onend = function(){ resolve(true) }
+          u.onerror = function(){ resolve(false) }
+          window.speechSynthesis.speak(u)
+        }catch(e){ resolve(false) }
+      }),
+      tcjsSleep(nTimeoutMs).then(function(){ try{ window.speechSynthesis.cancel() }catch(e){} ; return false })
+    ])
+  }
+
+  //Захват звука вкладки + короткая тестовая фраза; проверяем, что голос реально пишется
+  //(в ряде версий Chrome TTS в запись вкладки не попадает)
+  async function tcjsTestTabVoiceCapture(){
+    var stream = await navigator.mediaDevices.getDisplayMedia({ video:true, audio:true })
+    var aTracks = stream.getAudioTracks()
+    if (!aTracks.length){
+      stream.getTracks().forEach(function(t){ t.stop() })
+      throw new Error("В диалоге доступа не включён звук.\nВыберите «Вкладку Chrome» и отметьте «Также предоставить доступ к звуку вкладки».")
+    }
+    try{
+      var mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : ""
+      var rec = new MediaRecorder(new MediaStream(aTracks), mime ? { mimeType: mime } : undefined)
+      var chunks = []
+      rec.ondataavailable = function(ev){ if (ev.data && ev.data.size) chunks.push(ev.data) }
+      var stopped = new Promise(function(res){ rec.onstop = res })
+      rec.start()
+      await tcjsSleep(300)
+      await tcjsSpeakOnce("Проверка записи звука, раз, два, три.", 1, 5000)
+      await tcjsSleep(800)
+      rec.stop(); await stopped
+      var blob = new Blob(chunks, { type: mime || "audio/webm" })
+      var buf = await tcjsDecodeBlob(blob)
+      var f = buf.getChannelData(0), sr = buf.sampleRate
+      var winSpeech = Math.floor(sr * 0.5), winSil = Math.floor(sr * 0.4)
+      var fromSpeech = Math.floor(sr * 0.4)
+      var fromSil = Math.max(fromSpeech + winSpeech, f.length - winSil)
+      var rms = function(from, len){
+        var s = 0, n = 0
+        for (var i=from; i<Math.min(from+len, f.length); i++){ s += f[i]*f[i]; n++ }
+        return n ? Math.sqrt(s/n) : 0
+      }
+      var rSpeech = rms(fromSpeech, winSpeech), rSil = rms(fromSil, winSil)
+      return { ok: (rSpeech > 0.008 && rSpeech > rSil * 1.6) }
+    }finally{
+      stream.getTracks().forEach(function(t){ t.stop() })
+    }
+  }
+
+  //Озвученный MP3: реальная запись тренировки со звуком вкладки в реальном времени
+  async function tcjsExportMp3Voiced(){
+    if (Gl_mp3ExportBusy) return
+    var timeline = tcjsCheckAndGetTimeline()
+    if (!timeline) return
+    if (!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)){
+      alert("Этот браузер не поддерживает запись звука вкладки (getDisplayMedia).\nПопробуйте Chrome/Edge на ПК.")
+      return
+    }
+    if (!(window.speechSynthesis && typeof SpeechSynthesisUtterance !== "undefined")){
+      alert("Синтез речи недоступен в этом браузере.")
+      return
+    }
+    var nTotalMs = 0
+    for (var i=0;i<timeline.length;i++) nTotalMs += timeline[i].ms
+    if (!confirm("Будет записан ЗВУК ЭТОЙ ВКЛАДКИ.\n\n" +
+      "1) В диалоге выберите «Вкладка Chrome» и ОБЯЗАТЕЛЬНО включите «Также предоставить доступ к звуку вкладки».\n" +
+      "2) Запись идёт в реальном времени (~" + Math.round(nTotalMs/60000) + " мин), вкладку не закрывать.\n\nПродолжить?"))
+      return
+    Gl_mp3ExportBusy = true
+    tcjsMp3SetButtonsDisabled(true)
+    var stream = null
+    try{
+      tcjsMp3SetStatus("Проверка захвата голоса…")
+      var test = await tcjsTestTabVoiceCapture()
+      if (!test.ok){
+        tcjsMp3SetStatus("")
+        alert("В этом браузере голос НЕ попадает в запись вкладки (известное ограничение Chrome).\n\nИспользуйте «MP3 таймер-дорожка» — там точные паузы и сигналы начала упражнений.")
+        return
+      }
+      tcjsMp3SetStatus("Запись тренировки в реальном времени…")
+      stream = await navigator.mediaDevices.getDisplayMedia({ video:true, audio:true })
+      var aTracks = stream.getAudioTracks()
+      if (!aTracks.length){
+        stream.getTracks().forEach(function(t){ t.stop() }); stream = null
+        throw new Error("Не включён доступ к звуку вкладки.")
+      }
+      var aborted = false
+      aTracks[0].onended = function(){ aborted = true }
+      var mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : ""
+      var rec = new MediaRecorder(new MediaStream(aTracks), mime ? { mimeType: mime } : undefined)
+      var chunks = []
+      rec.ondataavailable = function(ev){ if (ev.data && ev.data.size) chunks.push(ev.data) }
+      var stopped = new Promise(function(res){ rec.onstop = res })
+      rec.start()
+      await tcjsSleep(500)
+      var nRate = Number(document.getElementById("inputRate").value) || 1
+      var t0 = performance.now(), tSlotEnd = 0
+      for (var k=0;k<timeline.length;k++){
+        if (aborted) break
+        tcjsMp3SetStatus("Запись: фраза " + (k+1) + " из " + timeline.length)
+        if (timeline[k].text)
+          await tcjsSpeakOnce(timeline[k].text, nRate, Math.max(8000, timeline[k].text.length * 140))
+        tSlotEnd += timeline[k].ms
+        await tcjsSleep(t0 + tSlotEnd - performance.now())
+      }
+      await tcjsSleep(aborted ? 200 : 700)
+      rec.stop(); await stopped
+      stream.getTracks().forEach(function(t){ t.stop() }); stream = null
+      if (aborted)
+        tcjsMp3SetStatus("Запись прервана (прекращён доступ к вкладке).")
+      else {
+        tcjsMp3SetStatus("Кодирование MP3…")
+        var buf = await tcjsDecodeBlob(new Blob(chunks, { type: mime || "audio/webm" }))
+        var mono = await tcjsToMono22050(buf)
+        await tcjsExportEncoded(mono, tcjsMp3BaseName("_озвучка"), 64)
+      }
+    }catch(e){
+      tcjsMp3SetStatus("")
+      alert("Не удалось записать озвученный MP3: " + (e.message || e))
+    }finally{
+      if (stream) stream.getTracks().forEach(function(t){ t.stop() })
+      Gl_mp3ExportBusy = false
+      tcjsMp3SetButtonsDisabled(false)
+    }
+  }
+  // ===== конец блока экспорта MP3 =====
 
 
   //замена пробелов и пр в имени трени для генерации URL +обратная замена для поиска трени из URL
