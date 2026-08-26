@@ -62,5 +62,18 @@ jobs:
           path: TotalCalendar.apk
           if-no-files-found: error
 
+      - name: Create GitHub Release with APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: auto-build-${{ github.run_number }}
+          name: "Auto Build #${{ github.run_number }}"
+          body: |
+            Автоматическая сборка APK из коммита ${{ github.sha }}
+            Ветка: ${{ github.ref_name }}
+          files: TotalCalendar.apk
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # Отправка APK на почту отключена, чтобы CI не падал без SMTP-секретов.
       # Готовый вариант с Brevo: contrib/build-android-apk-with-email.yml
