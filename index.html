@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- TotalCalendarJS | Версия 25 | 2026-08-26 -->
+<!-- TotalCalendarJS | Версия 26 | 2026-09-27 -->
 <!--
 ================================================================================
   БЛОК 1 — index.form.html
@@ -10,8 +10,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="tcjs-build" content="__TCJS_GITHUB_RUN__">
-    <script id="tcjs-app-build" type="text/plain">25
-2026-08-26 00:00:00</script>
+    <script id="tcjs-app-build" type="text/plain">26
+2026-09-27 00:00:00</script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <title>КАЛЕНДАРЬ</title>
@@ -3561,15 +3561,44 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
    return header + lines.join("\n");
  }
 
+ /* Допустимый диапазон темпа речи — как в приложении (MainActivity.normalizeSpeechRate: 0.1…3).
+    Всё, что вне диапазона (например 1500 — интервал в мс из блока [BEGIN EVAL PARAMETERS]),
+    в поле «Темп речи» не попадает: используется значение по умолчанию. */
+ var TCJS_SPEECH_RATE_MIN = 0.1;
+ var TCJS_SPEECH_RATE_MAX = 3;
+ var TCJS_SPEECH_RATE_DEFAULT = 1.5;
+
+ function normalizeSpeechRateValue(v, fallback){
+   var fb = (fallback === undefined || fallback === null || !isFinite(Number(fallback)))
+     ? TCJS_SPEECH_RATE_DEFAULT : Number(fallback);
+   if (fb < TCJS_SPEECH_RATE_MIN) fb = TCJS_SPEECH_RATE_MIN;
+   if (fb > TCJS_SPEECH_RATE_MAX) fb = TCJS_SPEECH_RATE_DEFAULT;
+   var n = Number(String(v === undefined || v === null ? "" : v).replace(",", ".").trim());
+   if (!isFinite(n)) return fb;
+   if (n < TCJS_SPEECH_RATE_MIN || n > TCJS_SPEECH_RATE_MAX) return fb;
+   return n;
+ }
+
+ /* Единая точка чтения темпа речи для всех мест произнесения. */
+ function getSpeechRate(preferred){
+   var cur = TCJS_SPEECH_RATE_DEFAULT;
+   try {
+     var el = document.getElementById("inputRate");
+     if (el) cur = normalizeSpeechRateValue(el.value, TCJS_SPEECH_RATE_DEFAULT);
+   }catch(e){}
+   if (preferred === undefined || preferred === null || String(preferred) === "")
+     return cur;
+   return normalizeSpeechRateValue(preferred, cur);
+ }
+
  function readTrainingUiSettings(){
    var ns = document.getElementById("idNoSound");
-   var rateEl = document.getElementById("inputRate");
    var stopChk = document.getElementById("idStopSpeakIfNext");
    var stopSpeak = stopChk ? !!stopChk.checked : !!Gl_StopSpeakIfNext;
    Gl_StopSpeakIfNext = stopSpeak;
    return {
      noSound: !!(ns && ns.checked),
-     speechRate: rateEl ? String(rateEl.value || "1.5") : "1.5",
+     speechRate: String(getSpeechRate()),
      stopSpeakIfNext: stopSpeak
    };
  }
@@ -3578,7 +3607,7 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
    if (!snap) return;
    var ui = readTrainingUiSettings();
    var noSound = snap.noSound != null ? !!snap.noSound : ui.noSound;
-   var speechRate = snap.speechRate != null && String(snap.speechRate) !== "" ? String(snap.speechRate) : ui.speechRate;
+   var speechRate = String(getSpeechRate(snap.speechRate));
    var stopSpeakIfNext = snap.stopSpeakIfNext != null ? !!snap.stopSpeakIfNext : ui.stopSpeakIfNext;
    try {
      var ns = document.getElementById("idNoSound");
@@ -3615,7 +3644,11 @@ GI-11 убираем с поверхности. https://www.eledia.ru/_pu/0/6500
      var rateEl = document.getElementById("inputRate");
      if (rateEl && !rateEl._tcjsSettingsSaveBound) {
        rateEl._tcjsSettingsSaveBound = true;
-       rateEl.addEventListener("change", onSettingsChanged);
+       rateEl.addEventListener("change", function () {
+         var fixed = String(getSpeechRate(rateEl.value));
+         if (rateEl.value !== fixed) rateEl.value = fixed;
+         onSettingsChanged();
+       });
        rateEl.addEventListener("input", onSettingsChanged);
      }
    } catch (e) {}
@@ -5103,11 +5136,7 @@ function stopCurrentSpeech(){
 }
 
 function speakWithAndroidTraining(str){
-  var rate = 1
-
-  try{
-    rate = Number(document.getElementById("inputRate").value) || 1
-  }catch(e){}
+  var rate = getSpeechRate()
 
   return callAndroidTraining("speak", String(str), rate)
 }
@@ -5587,6 +5616,7 @@ window.addEventListener("pageshow", function(){
   var Gl_evalParamOverrides = null
   var Gl_evalParamsOnConfirm = null
   var Gl_evalParamsOnCancel = null
+  var Gl_evalParamsShownNames = null   //имена параметров, реально показанных в диалоге
   var Gl_IsGenerated = false    //признак завершения генерации ритма
   var Gl_IntervalId
   //var Gl_CountOfGenTrainRtm = 0
@@ -7087,7 +7117,7 @@ END:VEVENT\n`
       var R = tcjsStartRecorder(stream)
       R.rec.start()
       await tcjsSleep(500)
-      var nRate = Number(document.getElementById("inputRate").value) || 1
+      var nRate = getSpeechRate()
       var t0 = performance.now(), tSlotEnd = 0
       for (var k=0;k<timeline.length;k++){
         if (aborted) break
@@ -7301,7 +7331,7 @@ END:VEVENT\n`
             resumeTrainingAudio()
             if (!speakWithAndroidTraining(str) && typeof SpeechSynthesisUtterance !== "undefined" && window.speechSynthesis){
                 var utterance0 = new SpeechSynthesisUtterance(str);
-                utterance0.rate=document.getElementById("inputRate").value;// 1.5; //скорость речи
+                utterance0.rate=getSpeechRate();// 1.5; //скорость речи
                 window.speechSynthesis.speak(utterance0);
             }
             //
@@ -8487,10 +8517,12 @@ END:VEVENT\n`
     var form = document.getElementById("idEvalParamsForm");
     if (!form) return;
     var inputs = form.querySelectorAll("input[data-eval-param-name]");
+    var shown = Gl_evalParamsShownNames || [];
     var overrides = {};
     for (var i = 0; i < inputs.length; i++) {
       var n = inputs[i].getAttribute("data-eval-param-name");
-      if (n) overrides[n] = inputs[i].value;
+      // в подстановку уходят только те параметры, которые реально показаны в диалоге
+      if (n && shown.indexOf(n) >= 0) overrides[n] = inputs[i].value;
     }
     closeEvalParamsOverlay();
     var fn = Gl_evalParamsOnConfirm;
@@ -8516,6 +8548,8 @@ END:VEVENT\n`
     }
     Gl_evalParamsOnConfirm = onConfirm;
     Gl_evalParamsOnCancel = onCancel;
+    Gl_evalParamsShownNames = [];
+    for (var k = 0; k < entries.length; k++) Gl_evalParamsShownNames.push(entries[k].name);
     form.innerHTML = "";
     for (var i = 0; i < entries.length; i++) {
       var name = entries[i].name;
